@@ -1,0 +1,11 @@
+{
+  "name": "heritage-platform",
+  "private": true,
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "dev:backend": "cd platform && ./mvnw spring-boot:run",
+    "test:backend": "cd platform && ./mvnw test",
+    "build:backend": "cd platform && ./mvnw -DskipTests package"
+  }
+}

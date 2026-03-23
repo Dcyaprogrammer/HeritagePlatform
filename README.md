@@ -2,61 +2,59 @@
 
 Group Coursework for CPT202
 
-## 技术栈
-- Java 21（要求 JDK 21+）
+## Tech Stack
+- Java 21 (JDK 21+ required)
 - Spring Boot 4.0.3
-- Maven Wrapper（无需预装 Maven，使用 `./mvnw`/`mvnw.cmd` 即可）
-- Thymeleaf（服务端渲染）
+- Maven Wrapper (no Maven pre-install required, use `./mvnw` / `mvnw.cmd`)
+- Vue 3 + Vite 5
 
-## 目录结构
+## Project Structure
 ```
 HeritagePlatform/
-├─ platform/                # 后端（Spring Boot）
-│  ├─ src/main/java/...     # 业务代码
-│  ├─ src/main/resources/
-│  │  ├─ templates/         # Thymeleaf 模板
-│  │  └─ static/            # 静态资源（CSS/JS/图片）
+├─ platform/                # Backend (Spring Boot API)
+│  ├─ src/main/java/...     # Business code
+│  ├─ src/main/resources/   # Backend configuration
 │  └─ pom.xml
+├─ frontend/                # Frontend (Vue + Vite)
+│  ├─ src/
+│  ├─ public/
+│  └─ package.json
+├─ package.json             # Monorepo scripts
 └─ README.md
 ```
 
-## 开发环境
-- JDK: 21 或以上
-- Maven: 可选（推荐直接使用仓库中的 Maven Wrapper）
+## Development Environment
+- JDK: 21 or later
+- Maven: optional (recommended to use the Maven Wrapper included in this repo)
+- Node.js: 18+ (LTS recommended)
 
-## 快速开始
-在 `platform/` 目录下：
+## Quick Start
+Start the backend first, then start the frontend.
 
-macOS / Linux:
+1) Start backend (Spring Boot)
 ```bash
-./mvnw spring-boot:run
+npm run dev:backend
 ```
 
-Windows:
+2) Start frontend (Vue)
 ```bash
-mvnw.cmd spring-boot:run
+npm --prefix frontend install
+npm run dev:frontend
 ```
 
-启动后访问：
+Frontend URL:
 ```
-http://localhost:8080
+http://localhost:5173
 ```
 
-首页由 `HomeController` 映射到 `templates/index.html`。
+Backend API example:
+```
+http://localhost:8080/api/health
+```
 
-## 常用命令
-- 运行测试
-  - macOS/Linux: `./mvnw test`
-  - Windows: `mvnw.cmd test`
-- 打包
-  - macOS/Linux: `./mvnw -DskipTests package`
-  - Windows: `mvnw.cmd -DskipTests package`
-- 运行可执行包
-  - `java -jar target/platform-0.0.1-SNAPSHOT.jar`
-
-## 开发提示
-- 页面模板放在 `src/main/resources/templates`，静态资源放在 `src/main/resources/static`。
-- 开发环境已关闭 Thymeleaf 模板缓存，修改模板后可直接刷新浏览器查看效果。
-
-## 后续规划（可选）
-- 如需引入独立前端框架（React/Vue），可在仓库根目录新增 `frontend/`，采用单仓库（monorepo）管理；当前阶段先用 Thymeleaf 提升迭代效率。
+## Common Commands
+- Start backend dev server: `npm run dev:backend`
+- Start frontend dev server: `npm run dev:frontend`
+- Run backend tests: `npm run test:backend`
+- Build backend: `npm run build:backend`
+- Build frontend: `npm run build:frontend`

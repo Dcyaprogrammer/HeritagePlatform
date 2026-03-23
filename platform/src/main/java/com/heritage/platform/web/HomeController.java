@@ -1,12 +1,14 @@
 package com.heritage.platform.web;
 
-import org.springframework.stereotype.Controller;
+import java.util.Map;
+
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
 
-@Controller
+@RestController
 public class HomeController {
-    @GetMapping("/")
-    public String index() {
-        return "index";
+    @GetMapping("/api/health")
+    public Map<String, String> health() {
+        return Map.of("status", "ok");
     }
 }
