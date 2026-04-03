@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Custom Configurations ###
+# Ignore local application properties containing sensitive DB credentials anywhere in the project
+**/application.properties
+**/application-*.properties
+**/*.env
