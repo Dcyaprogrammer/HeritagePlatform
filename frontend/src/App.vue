@@ -22,5 +22,9 @@ onMounted(async () => {
     <h1>Heritage Platform</h1>
     <p>Vue 前端已接入。</p>
     <p>{{ status }}</p>
+
+    <hr />
+    <h2>File Upload</h2>
+    <FileUploader />
   </main>
 </template>
