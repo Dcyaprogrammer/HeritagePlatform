@@ -1,75 +1,56 @@
-//id, username, password_hash, display_name, roles
 package com.heritage.platform.model;
 
-import java.util.HashSet;
-import java.util.Set;
-
-import jakarta.persistence.CollectionTable;
-import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Table;
+import com.heritage.platform.entity.ContributorStatus;
+import com.heritage.platform.entity.Role;
+import jakarta.persistence.*;
+import lombok.Data;
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "heritage_users")
+@Table(name = "users")
+@Data
 public class HeritageUser {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-	@Column(nullable = false, unique = true, length = 64)
-	private String username;
+    @Column(unique = true, nullable = false)
+    private String username;
 
-	@Column(nullable = false, length = 120)
-	private String passwordHash;
+    @Column(unique = true, nullable = false)
+    private String email;
 
-	@Column(nullable = false, length = 120)
-	private String displayName;
+    @Column(nullable = false)
+    private String password;
 
-	@ElementCollection(fetch = FetchType.EAGER)
-	@CollectionTable(name = "heritage_user_roles", joinColumns = @JoinColumn(name = "user_id"))
-	@Column(name = "role", length = 32)
-	private Set<String> roles = new HashSet<>();
+    @Column
+    private String avatar;
 
-	public Long getId() {
-		return id;
-	}
+    @Column
+    private String bio;
 
-	public String getUsername() {
-		return username;
-	}
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role = Role.VIEWER;
 
-	public void setUsername(String username) {
-		this.username = username;
-	}
+    private boolean accountNonLocked = true;
+    private int failedAttempts = 0;
+    private LocalDateTime lockTime;
 
-	public String getPasswordHash() {
-		return passwordHash;
-	}
+    @Column(name = "contributor_status")
+    private ContributorStatus contributorStatus = ContributorStatus.NONE;
 
-	public void setPasswordHash(String passwordHash) {
-		this.passwordHash = passwordHash;
-	}
+    @Column(name = "contributor_reason")
+    private String contributorReason;
 
-	public String getDisplayName() {
-		return displayName;
-	}
+    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
-	public void setDisplayName(String displayName) {
-		this.displayName = displayName;
-	}
 
-	public Set<String> getRoles() {
-		return roles;
-	}
 
-	public void setRoles(Set<String> roles) {
-		this.roles = roles;
-	}
+
+    //pbi4
+    private String resetToken;
+    private LocalDateTime resetTokenExpiry;
 }
