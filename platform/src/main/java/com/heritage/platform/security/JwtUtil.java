@@ -1,14 +1,12 @@
 package com.heritage.platform.security;
 
-import com.heritage.platform.entity.Role;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.SecretKey;        // ← 新增这行
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import javax.crypto.SecretKey;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class JwtUtil {
@@ -18,9 +16,10 @@ public class JwtUtil {
 
     private final SecretKey key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
 
-    public String generateToken(String username, Role role) {
+    public String generateToken(String username, Set<String> roles) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("roles", role.name());
+        String rolesString = roles.stream().collect(Collectors.joining(","));
+        claims.put("roles", rolesString);
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -48,7 +47,19 @@ public class JwtUtil {
     }
 
     public String extractRole(String token) {
-        return extractAllClaims(token).get("roles", String.class);
+        String rolesString = extractAllClaims(token).get("roles", String.class);
+        if (rolesString == null || rolesString.isEmpty()) {
+            return null;
+        }
+        return rolesString;
+    }
+
+    public Set<String> extractRoles(String token) {
+        String rolesString = extractAllClaims(token).get("roles", String.class);
+        if (rolesString == null || rolesString.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return new HashSet<>(Arrays.asList(rolesString.split(",")));
     }
 
     private Claims extractAllClaims(String token) {

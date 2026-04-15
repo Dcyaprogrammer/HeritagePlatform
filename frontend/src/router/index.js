@@ -32,7 +32,9 @@ const routes = [
     path: '/admin',
     component: AdminLayout,
     meta: {
-      title: 'Administration'
+      title: 'Administration',
+      requiresAuth: true,
+      roles: ['ADMIN']
     },
     children: [
       {
@@ -80,13 +82,19 @@ const router = createRouter({
 
 // Navigation guards
 router.beforeEach((to, from, next) => {
-  // Set page title
   document.title = to.meta.title
     ? `${to.meta.title} - Heritage Platform`
     : 'Heritage Platform'
 
-  // TODO: Add authentication check after JWT is implemented
-  // For now, allow all access during development
+  const token = localStorage.getItem('token')
+  const role = localStorage.getItem('role')
+
+  if (to.meta.requiresAuth && !token) {
+    return next({ name: 'Login' })
+  }
+  if (to.meta.roles && !to.meta.roles.includes(role)) {
+    return next({ name: 'Login' })
+  }
 
   next()
 })

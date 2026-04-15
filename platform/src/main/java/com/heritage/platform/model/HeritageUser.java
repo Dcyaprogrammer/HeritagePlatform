@@ -55,6 +55,18 @@ public class HeritageUser {
 	@Column(name = "contributor_reason", columnDefinition = "TEXT")
 	private String contributorReason;
 
+	@Column(name = "failed_attempts")
+	private Integer failedAttempts = 0;
+
+	@Column(name = "lock_time")
+	private LocalDateTime lockTime;
+
+	@Column(name = "reset_token")
+	private String resetToken;
+
+	@Column(name = "reset_token_expiry")
+	private LocalDateTime resetTokenExpiry;
+
 	@Column(name = "created_at", updatable = false)
 	private LocalDateTime createdAt;
 
@@ -143,5 +155,37 @@ public class HeritageUser {
 
 	public void setRoles(Set<String> roles) {
 		this.roles = roles;
+	}
+
+	public Integer getFailedAttempts() {
+		return failedAttempts;
+	}
+
+	public void setFailedAttempts(Integer failedAttempts) {
+		this.failedAttempts = failedAttempts;
+	}
+
+	public LocalDateTime getLockTime() {
+		return lockTime;
+	}
+
+	public void setLockTime(LocalDateTime lockTime) {
+		this.lockTime = lockTime;
+	}
+
+	public String getResetToken() {
+		return resetToken;
+	}
+
+	public void setResetToken(String resetToken) {
+		this.resetToken = resetToken;
+	}
+
+	public LocalDateTime getResetTokenExpiry() {
+		return resetTokenExpiry;
+	}
+
+	public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) {
+		this.resetTokenExpiry = resetTokenExpiry;
 	}
 }

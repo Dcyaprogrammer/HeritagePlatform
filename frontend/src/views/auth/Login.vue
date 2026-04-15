@@ -63,7 +63,8 @@ const handleLogin = async () => {
       const res = await login(loginForm)
       
       if (res.data.code === 200) {
-        const { token, username, role } = res.data.data
+        const { token, username, roles } = res.data.data
+        const role = Array.isArray(roles) ? roles[0] : roles
         setToken(token)
         setUserInfo(username, role)
         

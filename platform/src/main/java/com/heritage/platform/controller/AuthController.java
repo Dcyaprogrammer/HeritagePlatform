@@ -7,9 +7,15 @@ package com.heritage.platform.controller;
 
 import com.heritage.platform.common.ApiResponse;
 import com.heritage.platform.dto.*;
+import com.heritage.platform.model.HeritageUser;
+import com.heritage.platform.repository.HeritageUserRepository;
 import com.heritage.platform.service.AuthService;
 
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,6 +26,7 @@ import org.springframework.web.bind.annotation.*;
 
 public class AuthController {
     @Autowired private AuthService authService;
+    @Autowired private HeritageUserRepository userRepository;
 
     @PostMapping("/register")
     public ApiResponse<Void> register(@RequestBody RegisterRequest req) {
@@ -28,11 +35,11 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<String> login(@RequestBody LoginRequest req,
+    public ApiResponse<Map<String, Object>> login(@RequestBody LoginRequest req,
                                     jakarta.servlet.http.HttpServletRequest request) {
         String clientIp = request.getRemoteAddr();
-        String token = authService.login(req, clientIp);
-        return ApiResponse.success("登录成功111", token);
+        Map<String, Object> result = authService.loginWithDetails(req, clientIp);
+        return ApiResponse.success("登录成功", result);
     }
 
     @GetMapping("/test")
@@ -40,6 +47,25 @@ public class AuthController {
         String username = org.springframework.security.core.context.SecurityContextHolder
                 .getContext().getAuthentication().getName();
         return ApiResponse.success("当前登录用户: " + username, null);
+    }
+
+    @GetMapping("/me")
+    public ApiResponse<Map<String, Object>> getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        HeritageUser user = userRepository.findByUsername(username).orElse(null);
+        
+        if (user == null) {
+            return ApiResponse.error(404, "User not found");
+        }
+        
+        Map<String, Object> userInfo = new java.util.HashMap<>();
+        userInfo.put("username", user.getUsername());
+        userInfo.put("email", user.getEmail());
+        userInfo.put("displayName", user.getDisplayName());
+        userInfo.put("roles", user.getRoles());
+        
+        return ApiResponse.success(userInfo);
     }
 
     @PostMapping("/forgot-password")

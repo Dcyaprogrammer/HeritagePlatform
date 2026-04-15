@@ -15,6 +15,8 @@ import com.heritage.platform.repository.HeritageUserRepository;
 import com.heritage.platform.security.JwtUtil;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,8 +44,8 @@ public class AuthService {
         HeritageUser user = new HeritageUser();
         user.setUsername(req.getUsername());
         user.setEmail(req.getEmail());
-        user.setPassword(passwordEncoder.encode(req.getPassword()));
-        user.setRole(Role.VIEWER);
+        user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+        user.setRoles(new java.util.HashSet<>(java.util.List.of("VIEWER")));
         
         userRepository.save(user);
     }
@@ -57,7 +59,7 @@ public class AuthService {
             throw new RuntimeException("Too many attempts. Please wait for a while.");
         }
 
-        HeritageUser user = userRepository.findByUsername(req.getUsername());
+        HeritageUser user = userRepository.findByUsername(req.getUsername()).orElse(null);
         if (user == null) {
             throw new RuntimeException("用户名或密码错误");
         }
@@ -67,12 +69,12 @@ public class AuthService {
             throw new RuntimeException("账号已被锁定，请15分钟后再试");
         }
 
-        if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
-            user.setFailedAttempts(user.getFailedAttempts() + 1);
+        if (!passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
+            int attempts = user.getFailedAttempts() != null ? user.getFailedAttempts() + 1 : 1;
+            user.setFailedAttempts(attempts);
 
-            if (user.getFailedAttempts() >= 3) {
+            if (attempts >= 3) {
                 user.setLockTime(LocalDateTime.now());
-                user.setAccountNonLocked(false);
             }
             userRepository.save(user);
             throw new RuntimeException("用户名或密码错误");
@@ -80,10 +82,21 @@ public class AuthService {
 
         user.setFailedAttempts(0);
         user.setLockTime(null);
-        user.setAccountNonLocked(true);
         userRepository.save(user);
 
-        return jwtUtil.generateToken(user.getUsername(), user.getRole());
+        return jwtUtil.generateToken(user.getUsername(), user.getRoles());
+    }
+
+    public Map<String, Object> loginWithDetails(LoginRequest req, String clientIp) {
+        String token = login(req, clientIp);
+        HeritageUser user = userRepository.findByUsername(req.getUsername()).orElse(null);
+        
+        Map<String, Object> result = new HashMap<>();
+        result.put("token", token);
+        result.put("username", user.getUsername());
+        result.put("roles", user.getRoles());
+        
+        return result;
     }
 
 
@@ -93,7 +106,7 @@ public class AuthService {
 
     //pbi4
     public void forgotPassword(ForgotPasswordRequest req) {
-        HeritageUser user = userRepository.findByEmail(req.getEmail());
+        HeritageUser user = userRepository.findByEmail(req.getEmail()).orElse(null);
         
         if (user == null) {
             return;
@@ -104,24 +117,21 @@ public class AuthService {
         user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(30));
         userRepository.save(user);
 
-        System.out.println("\nPASSWORD RESET EMAIL：");
-        System.out.println("To: " + req.getEmail());
-        System.out.println("Reset Link: http://localhost:8080/api/auth/reset-password?token=" + token);
-        System.out.println("This link will expire in 30 minutes.");
+        System.out.println("Password reset email sent to: " + req.getEmail());
     }
 
     public void resetPassword(ResetPasswordRequest req) {
-        HeritageUser user = userRepository.findByResetToken(req.getToken());
+        HeritageUser user = userRepository.findByResetToken(req.getToken()).orElse(null);
         if (user == null || user.getResetTokenExpiry() == null ||
             user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("重置链接无效或已过期");
         }
 
-        if (passwordEncoder.matches(req.getNewPassword(), user.getPassword())) {
+        if (passwordEncoder.matches(req.getNewPassword(), user.getPasswordHash())) {
             throw new RuntimeException("新密码不能与旧密码相同");
         }
 
-        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
         userRepository.save(user);

@@ -13,6 +13,14 @@ public interface HeritageUserRepository extends JpaRepository<HeritageUser, Long
 
 	Optional<HeritageUser> findByUsername(String username);
 
+	Optional<HeritageUser> findByEmail(String email);
+
+	Optional<HeritageUser> findByResetToken(String token);
+
+	boolean existsByUsername(String username);
+
+	boolean existsByEmail(String email);
+
 	/**
 	 * Find users by username containing keyword (case insensitive)
 	 * 根据用户名包含的关键词查询用户（不区分大小写）
