@@ -45,7 +45,7 @@ public class AuthService {
         user.setUsername(req.getUsername());
         user.setEmail(req.getEmail());
         user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
-        user.setRoles(new java.util.HashSet<>(java.util.List.of("VIEWER")));
+        user.setRoles(new java.util.HashSet<>(java.util.List.of(Role.VIEWER.name())));
         
         userRepository.save(user);
     }
@@ -64,9 +64,12 @@ public class AuthService {
             throw new RuntimeException("用户名或密码错误");
         }
 
-        if (user.getLockTime() != null && 
-            user.getLockTime().isAfter(LocalDateTime.now().minusMinutes(15))) {
-            throw new RuntimeException("账号已被锁定，请15分钟后再试");
+        if (user.getLockTime() != null) {
+            if (user.getLockTime().isAfter(LocalDateTime.now().minusMinutes(15))) {
+                throw new RuntimeException("账号已被锁定，请15分钟后再试");
+            }
+            user.setLockTime(null);
+            user.setFailedAttempts(0);
         }
 
         if (!passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
@@ -117,7 +120,7 @@ public class AuthService {
         user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(30));
         userRepository.save(user);
 
-        System.out.println("Password reset email sent to: " + req.getEmail());
+        System.out.println("Password reset email sent");
     }
 
     public void resetPassword(ResetPasswordRequest req) {

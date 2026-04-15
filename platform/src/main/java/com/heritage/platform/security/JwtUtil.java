@@ -2,6 +2,7 @@ package com.heritage.platform.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -11,10 +12,17 @@ import java.util.stream.Collectors;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET_KEY = "HeritagePlatform2026SecretKeyForJWTAtLeast32BytesLong!!!";
+    private final String secretKey;
+    private final SecretKey key;
     private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 24;
 
-    private final SecretKey key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    public JwtUtil(@Value("${jwt.secret}") String secretKey) {
+        if (secretKey == null || secretKey.length() < 32) {
+            throw new IllegalStateException("JWT密钥长度必须至少32字节，当前长度: " + (secretKey != null ? secretKey.length() : 0));
+        }
+        this.secretKey = secretKey;
+        this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
+    }
 
     public String generateToken(String username, Set<String> roles) {
         Map<String, Object> claims = new HashMap<>();
