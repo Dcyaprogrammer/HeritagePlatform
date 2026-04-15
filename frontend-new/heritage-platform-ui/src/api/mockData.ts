@@ -1,8 +1,8 @@
 /**
- * 演示数据：配图与正文都在这里改。
- * - 封面：每条资源的 coverUrl
- * - 详情轮播：同一条下 attachments 里 file_path（建议 image/jpeg 等图片类型）
- * - 也可用本地图：把图片放进 public/ 例如 public/heritage/alley.jpg，再写 '/heritage/alley.jpg'
+ * Demo data — edit copy and images here.
+ * - Cover: each resource’s coverUrl
+ * - Detail carousel: attachments[].file_path (use image/jpeg or other image/* MIME types)
+ * - Or use public/: e.g. public/heritage/alley.jpg → '/heritage/alley.jpg'
  */
 import type { Comment, ResourceDetail } from '@/types/resource'
 import pjlA from '@/assets/heritage/pjl.a.jpg'
@@ -15,19 +15,19 @@ import ygB from '@/assets/heritage/yg.b.jpg'
 export const mockResources: ResourceDetail[] = [
   {
     id: 1,
-    title: '平江路历史街区口述史节选',
+    title: 'Oral history excerpt: Pingjiang Road historic district',
     description:
-      '关于春申君对苏州的治理，汉代的《越绝书》以及苏州各时期地方志中多有记载。“平江历史街区是苏州古城保存最完整的区域，这里特殊又精妙的水陆双棋盘格局，能追溯到春申君时期的河道体系基础。”',
-    location_name: '苏州市 · 平江路',
-    copyright_declaration: 'CC BY-NC-SA 4.0 · 社区工作坊授权',
+      'Local chronicles from the Han dynasty’s Yuejue shu to later Suzhou gazetteers record Lord Chunshen’s work on the region’s waterways. Pingjiang Road preserves one of the most intact historic quarters of the old city; its distinctive land–water chessboard layout reflects canal systems that reach back to that early period.',
+    location_name: 'Suzhou, China · Pingjiang Road',
+    copyright_declaration: 'CC BY-NC-SA 4.0 · Community workshop licence',
     status: 'APPROVED',
-    category: { id: 1, name: '口述传统', description: '' },
+    category: { id: 1, name: 'Oral tradition', description: '' },
     tags: [
-      { id: 1, name: '口述史' },
-      { id: 2, name: '街巷' },
+      { id: 1, name: 'oral history' },
+      { id: 2, name: 'historic streets' },
     ],
     coverUrl: pjlA,
-    contributorName: '社区档案组',
+    contributorName: 'Neighbourhood archives group',
     created_at: '2025-11-02T10:00:00Z',
     updated_at: '2025-11-15T14:30:00Z',
     attachments: [
@@ -49,20 +49,20 @@ export const mockResources: ResourceDetail[] = [
   },
   {
     id: 2,
-    title: '传统蓝印花布',
+    title: 'Traditional indigo resist-dyed cloth (lan yin hua bu)',
     description:
-      '桐乡蓝印花布是以植物靛蓝为染料的传统防染技艺制品,起源于秦汉时期,元代传入桐乡地区。其核心工艺采用镂刻花版与物理防染技术，形成蓝白相间的花纹体系，图案多取材民间吉祥纹样。该技艺于2005年列入浙江省首批非物质文化遗产名录，2014年升格为国家级非遗项目，崇福镇与石门镇为主要传承地，丰同裕染坊与桐乡蓝印花布厂为代表性生产保护单位',
-    location_name: '嘉兴桐乡 · 蓝染工坊',
-    copyright_declaration: '仅限教育用途 · 工坊署名须保留',
+      'Tongxiang blue calico uses plant indigo and resist dyeing with carved paper stencils, producing bold blue-and-white folk patterns. The craft entered the Tongxiang area by the Yuan period; it was listed among Zhejiang’s first provincial ICH items in 2005 and recognised nationally in 2014. Chongfu and Shimen are key centres; historic workshops such as Fengtongyu remain reference points for safeguarding and production.',
+    location_name: 'Tongxiang, Jiaxing · Indigo workshop',
+    copyright_declaration: 'Educational use only · Workshop attribution required',
     status: 'APPROVED',
-    category: { id: 2, name: '工艺与器物', description: '' },
+    category: { id: 2, name: 'Craft & objects', description: '' },
     tags: [
-      { id: 4, name: '蓝染' },
-      { id: 5, name: '纹样' },
-      { id: 6, name: '教育材料' },
+      { id: 4, name: 'indigo dyeing' },
+      { id: 5, name: 'patterns' },
+      { id: 6, name: 'learning materials' },
     ],
     coverUrl: lyhbA,
-    contributorName: '浙江省传统手工研究院',
+    contributorName: 'Zhejiang Institute of Traditional Crafts',
     created_at: '2025-10-18T09:00:00Z',
     updated_at: '2025-10-20T11:00:00Z',
     attachments: [
@@ -84,19 +84,19 @@ export const mockResources: ResourceDetail[] = [
   },
   {
     id: 3,
-    title: '渔村潮汛谚语集',
+    title: 'Coastal tide and weather proverbs',
     description:
-      '收集沿海社区流传的潮汛与气象谚语五十余条，并附老一辈渔民的简短释义，用于地方志补充与防灾教育参考。',
-    location_name: '海宁市 · 盐官镇',
-    copyright_declaration: '社区共享 · 转载需注明出处',
+      'A community-compiled set of more than fifty proverbs about tides and weather along the coast, with short explanations from elder fishers. Intended as supplementary material for local gazetteers and hazard-awareness education.',
+    location_name: 'Haining · Yanguan Town',
+    copyright_declaration: 'Community share-alike · Credit the source when reusing',
     status: 'APPROVED',
-    category: { id: 3, name: '语言与知识', description: '' },
+    category: { id: 3, name: 'Language & knowledge', description: '' },
     tags: [
-      { id: 7, name: '谚语' },
-      { id: 8, name: '海洋' },
+      { id: 7, name: 'proverbs' },
+      { id: 8, name: 'maritime' },
     ],
     coverUrl: ygA,
-    contributorName: '盐官镇文化站',
+    contributorName: 'Yanguan Town cultural station',
     created_at: '2025-09-05T08:00:00Z',
     updated_at: '2025-09-10T16:20:00Z',
     attachments: [
@@ -123,18 +123,9 @@ const mockCommentsByResource: Record<number, Comment[]> = {
     {
       id: 1,
       resource_id: 1,
-      user_id: 10,
-      authorName: '李老师',
-      content: '非常适合课堂导读，请问是否有完整音频？',
-      created_at: '2025-11-20T12:00:00Z',
-      updated_at: '2025-11-20T12:00:00Z',
-    },
-    {
-      id: 2,
-      resource_id: 1,
       user_id: 11,
-      authorName: '访客_青禾',
-      content: '石板巷的照片很有年代感，感谢整理。',
+      authorName: 'guest_qinghe',
+      content: 'The stone-lane photos feel very atmospheric. Thanks for compiling this.',
       created_at: '2025-11-22T09:30:00Z',
       updated_at: '2025-11-22T09:30:00Z',
     },
@@ -145,13 +136,20 @@ const mockCommentsByResource: Record<number, Comment[]> = {
       id: 3,
       resource_id: 3,
       user_id: 12,
-      authorName: '海事志愿者',
-      content: '谚语和防灾结合讲解会很有用。',
+      authorName: 'Maritime volunteer',
+      content: 'Pairing the proverbs with disaster-prep talks would work really well.',
       created_at: '2025-10-01T15:00:00Z',
       updated_at: '2025-10-01T15:00:00Z',
     },
   ],
 }
+
+let mockCommentSeq = Math.max(
+  0,
+  ...Object.values(mockCommentsByResource)
+    .flat()
+    .map((c) => c.id),
+)
 
 export function getApprovedResources(): ResourceDetail[] {
   return mockResources.filter((r) => r.status === 'APPROVED')
@@ -165,4 +163,19 @@ export function getResourceById(id: number): ResourceDetail | undefined {
 
 export function getComments(resourceId: number): Comment[] {
   return mockCommentsByResource[resourceId] ?? []
+}
+
+export function postComment(resourceId: number, userId: number, content: string, authorName = 'Demo user'): Comment {
+  const now = new Date().toISOString()
+  const next: Comment = {
+    id: ++mockCommentSeq,
+    resource_id: resourceId,
+    user_id: userId,
+    authorName,
+    content: content.trim(),
+    created_at: now,
+    updated_at: now,
+  }
+  mockCommentsByResource[resourceId] = [next, ...(mockCommentsByResource[resourceId] ?? [])]
+  return next
 }

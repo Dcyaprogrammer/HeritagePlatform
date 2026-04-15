@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { postComment } from '@/api/resource'
 import type { Comment } from '@/types/resource'
 
 const props = defineProps<{
   resourceId: number
   initialComments: Comment[]
+  isLoggedIn: boolean
+  currentUserId: number
   currentUserName?: string
 }>()
 
@@ -20,9 +23,12 @@ const sorted = computed(() =>
 
 function formatTime(iso: string) {
   try {
-    return new Intl.DateTimeFormat('zh-CN', {
-      dateStyle: 'medium',
-      timeStyle: 'short',
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     }).format(new Date(iso))
   } catch {
     return iso
@@ -30,22 +36,12 @@ function formatTime(iso: string) {
 }
 
 async function submit() {
+  if (!props.isLoggedIn) return
   const text = draft.value.trim()
   if (!text) return
   submitting.value = true
   try {
-    await new Promise((r) => setTimeout(r, 280))
-    const name = props.currentUserName ?? '访客'
-    const now = new Date().toISOString()
-    const next: Comment = {
-      id: Date.now(),
-      resource_id: props.resourceId,
-      user_id: 0,
-      authorName: name,
-      content: text,
-      created_at: now,
-      updated_at: now,
-    }
+    const next = await postComment(props.resourceId, props.currentUserId, text)
     comments.value = [next, ...comments.value]
     draft.value = ''
   } finally {
@@ -56,22 +52,28 @@ async function submit() {
 
 <template>
   <section class="comments" aria-labelledby="comments-heading">
-    <h2 id="comments-heading" class="heading">评论与反馈</h2>
-    <p class="hint">欢迎对已发布资源留言；正式上线后需登录再评论。</p>
+    <h2 id="comments-heading" class="heading">Comments &amp; feedback</h2>
+    <p class="hint">
+      {{
+        props.isLoggedIn
+          ? 'Share your thoughts on this resource.'
+          : 'Please sign in to post comments.'
+      }}
+    </p>
 
-    <form class="composer" @submit.prevent="submit">
-      <label class="sr-only" for="comment-body">评论内容</label>
+    <form v-if="props.isLoggedIn" class="composer" @submit.prevent="submit">
+      <label class="sr-only" for="comment-body">Comment</label>
       <textarea
         id="comment-body"
         v-model="draft"
         rows="3"
         class="input"
         maxlength="2000"
-        placeholder="分享您的想法或补充信息"
+        placeholder="Add context, questions, or related information"
       />
       <div class="row">
         <button type="submit" class="btn" :disabled="submitting || !draft.trim()">
-          {{ submitting ? '发送中' : '发表评论' }}
+          {{ submitting ? 'Posting…' : 'Post comment' }}
         </button>
       </div>
     </form>
@@ -85,7 +87,7 @@ async function submit() {
         <p class="content">{{ c.content }}</p>
       </li>
     </ul>
-    <p v-else class="empty">还没有评论。</p>
+    <p v-else class="empty">No comments yet.</p>
   </section>
 </template>
 

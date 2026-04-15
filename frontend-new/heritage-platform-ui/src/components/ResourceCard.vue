@@ -1,4 +1,3 @@
-// test commit
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -10,11 +9,11 @@ const detailHref = computed(() => `/resources/${props.item.id}`)
 
 <template>
   <article class="card">
-    <RouterLink :to="detailHref" class="media-link" :aria-label="`查看：${item.title}`">
+    <RouterLink :to="detailHref" class="media-link" :aria-label="`View: ${item.title}`">
       <div class="media">
-        <img v-if="item.coverUrl" :src="item.coverUrl" :alt="`${item.title} 封面`" loading="lazy" />
-        <div v-else class="placeholder" role="img" aria-label="无封面图">
-          <span>暂无图片</span>
+        <img v-if="item.coverUrl" :src="item.coverUrl" :alt="`${item.title} cover`" loading="lazy" />
+        <div v-else class="placeholder" role="img" aria-label="No cover image">
+          <span>No image</span>
         </div>
       </div>
     </RouterLink>
@@ -23,10 +22,10 @@ const detailHref = computed(() => `/resources/${props.item.id}`)
         <h2 class="title">{{ item.title }}</h2>
       </RouterLink>
       <p v-if="item.location_name" class="location">{{ item.location_name }}</p>
-      <ul v-if="item.tags.length" class="tags" aria-label="标签">
+      <ul v-if="item.tags.length" class="tags" aria-label="Tags">
         <li v-for="t in item.tags" :key="t.id" class="tag">{{ t.name }}</li>
       </ul>
-      <RouterLink :to="detailHref" class="cta">查看详情</RouterLink>
+      <RouterLink :to="detailHref" class="cta">View details</RouterLink>
     </div>
   </article>
 </template>

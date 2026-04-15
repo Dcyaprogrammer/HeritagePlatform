@@ -39,16 +39,16 @@ function go(i: number) {
 </script>
 
 <template>
-  <div class="carousel" role="region" aria-roledescription="carousel" aria-label="资源配图">
+  <div class="carousel" role="region" aria-roledescription="carousel" aria-label="Resource images">
     <template v-if="current">
       <div class="stage">
-        <img :src="current.file_path" :alt="`第 ${index + 1} 张`" class="main-img" />
+        <img :src="current.file_path" :alt="`Image ${index + 1} of ${imageAttachments.length}`" class="main-img" />
         <template v-if="hasMany">
-          <button type="button" class="nav prev" aria-label="上一张" @click="prev">上一张</button>
-          <button type="button" class="nav next" aria-label="下一张" @click="next">下一张</button>
+          <button type="button" class="nav prev" aria-label="Previous image" @click="prev">Previous</button>
+          <button type="button" class="nav next" aria-label="Next image" @click="next">Next</button>
         </template>
       </div>
-      <div v-if="hasMany" class="dots" role="tablist" aria-label="选择图片">
+      <div v-if="hasMany" class="dots" role="tablist" aria-label="Select image">
         <button
           v-for="(img, i) in imageAttachments"
           :key="img.id"
@@ -57,11 +57,11 @@ function go(i: number) {
           :aria-selected="i === index"
           class="dot"
           :class="{ active: i === index }"
-          :aria-label="`第 ${i + 1} 张`"
+          :aria-label="`Image ${i + 1}`"
           @click="go(i)"
         />
       </div>
-      <ul class="thumbs" aria-label="缩略图">
+      <ul class="thumbs" aria-label="Thumbnails">
         <li v-for="(img, i) in imageAttachments" :key="img.id">
           <button type="button" class="thumb" :class="{ active: i === index }" @click="go(i)">
             <img :src="img.file_path" alt="" loading="lazy" />
@@ -69,7 +69,7 @@ function go(i: number) {
         </li>
       </ul>
     </template>
-    <div v-else class="empty">暂无图片附件</div>
+    <div v-else class="empty">No image attachments</div>
   </div>
 </template>
 

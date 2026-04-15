@@ -1,14 +1,25 @@
 <script setup lang="ts">
+<<<<<<< HEAD
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import ResourceImageCarousel from '@/components/ResourceImageCarousel.vue'
 import CommentSection from '@/components/CommentSection.vue'
 import { getComments, getResourceById } from '@/api/mockData'
+=======
+import { computed, onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
+import ResourceImageCarousel from '@/components/ResourceImageCarousel.vue'
+import CommentSection from '@/components/CommentSection.vue'
+import { getComments, getResourceById } from '@/api/resource'
+import { devAuth } from '@/config/auth'
+import type { Comment, ResourceDetail } from '@/types/resource'
+>>>>>>> 31a296c (feat: update View function)
 
 const route = useRoute()
 
 const id = computed(() => Number(route.params.id))
 
+<<<<<<< HEAD
 const resource = computed(() => {
   const n = id.value
   if (Number.isNaN(n)) return undefined
@@ -24,6 +35,37 @@ const comments = computed(() => {
 function formatDate(iso: string) {
   try {
     return new Intl.DateTimeFormat('zh-CN', { dateStyle: 'long' }).format(new Date(iso))
+=======
+const resource = ref<ResourceDetail>()
+const comments = ref<Comment[]>([])
+const loading = ref(false)
+
+async function load() {
+  const n = id.value
+  if (Number.isNaN(n)) return
+  loading.value = true
+  try {
+    resource.value = await getResourceById(n)
+    comments.value = await getComments(n)
+  } catch {
+    resource.value = undefined
+    comments.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(load)
+watch(id, load)
+
+function formatDate(iso: string) {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(new Date(iso))
+>>>>>>> 31a296c (feat: update View function)
   } catch {
     return iso
   }
@@ -31,9 +73,12 @@ function formatDate(iso: string) {
 </script>
 
 <template>
-  <div v-if="resource" class="page inner">
-    <nav class="crumb" aria-label="面包屑">
-      <RouterLink to="/">发现资源</RouterLink>
+  <div v-if="loading" class="page inner notfound">
+    <p>Loading resource...</p>
+  </div>
+  <div v-else-if="resource" class="page inner">
+    <nav class="crumb" aria-label="Breadcrumb">
+      <RouterLink to="/">Discover</RouterLink>
       <span class="sep" aria-hidden="true">/</span>
       <span class="current">{{ resource.title }}</span>
     </nav>
@@ -47,7 +92,7 @@ function formatDate(iso: string) {
           <span v-if="resource.category" class="pill">{{ resource.category.name }}</span>
           <span v-if="resource.location_name" class="loc">{{ resource.location_name }}</span>
         </div>
-        <ul v-if="resource.tags.length" class="tags" aria-label="标签">
+        <ul v-if="resource.tags.length" class="tags" aria-label="Tags">
           <li v-for="t in resource.tags" :key="t.id" class="tag">{{ t.name }}</li>
         </ul>
       </header>
@@ -55,20 +100,20 @@ function formatDate(iso: string) {
       <div class="prose">
         <p class="desc">{{ resource.description }}</p>
         <p v-if="resource.copyright_declaration" class="legal">
-          <strong>版权与使用声明</strong><br />
+          <strong>Copyright &amp; usage</strong><br />
           {{ resource.copyright_declaration }}
         </p>
         <dl class="facts">
           <div v-if="resource.contributorName" class="fact">
-            <dt>贡献者</dt>
+            <dt>Contributor</dt>
             <dd>{{ resource.contributorName }}</dd>
           </div>
           <div class="fact">
-            <dt>发布日期</dt>
+            <dt>Published</dt>
             <dd>{{ formatDate(resource.created_at) }}</dd>
           </div>
           <div class="fact">
-            <dt>最近更新</dt>
+            <dt>Last updated</dt>
             <dd>{{ formatDate(resource.updated_at) }}</dd>
           </div>
         </dl>
@@ -78,14 +123,16 @@ function formatDate(iso: string) {
     <CommentSection
       :resource-id="resource.id"
       :initial-comments="comments"
-      current-user-name="演示用户"
+      :is-logged-in="devAuth.isLoggedIn"
+      :current-user-id="devAuth.userId"
+      :current-user-name="devAuth.userName"
     />
   </div>
 
   <div v-else class="page inner notfound">
-    <h1>未找到资源</h1>
-    <p>该条目不存在、未通过审核或已归档（对访客不可见）。</p>
-    <RouterLink to="/">返回发现页</RouterLink>
+    <h1>Resource not found</h1>
+    <p>This entry does not exist, is not approved, or has been archived and is hidden from visitors.</p>
+    <RouterLink to="/">Back to Discover</RouterLink>
   </div>
 </template>
 

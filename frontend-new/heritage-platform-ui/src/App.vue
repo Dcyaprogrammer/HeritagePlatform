@@ -8,10 +8,10 @@ import { RouterLink, RouterView } from 'vue-router'
       <div class="inner">
         <RouterLink to="/" class="brand">
           <span class="brand-mark" aria-hidden="true" />
-          <span class="brand-text">社区遗产资源</span>
+          <span class="brand-text">Community Heritage</span>
         </RouterLink>
-        <nav class="nav" aria-label="主导航">
-          <RouterLink to="/">发现资源</RouterLink>
+        <nav class="nav" aria-label="Main navigation">
+          <RouterLink to="/">Discover</RouterLink>
         </nav>
       </div>
     </header>
@@ -19,7 +19,7 @@ import { RouterLink, RouterView } from 'vue-router'
       <RouterView />
     </main>
     <footer class="site-footer">
-      <div class="inner muted">社区遗产资源共享平台</div>
+      <div class="inner muted">Community heritage resource sharing platform</div>
     </footer>
   </div>
 </template>

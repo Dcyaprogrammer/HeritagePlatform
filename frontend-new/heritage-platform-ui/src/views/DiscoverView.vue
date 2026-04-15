@@ -33,25 +33,25 @@ const filtered = computed(() => {
 <template>
   <div class="page inner">
     <header class="hero">
-      <h1 class="page-title">发现社区遗产</h1>
-      <p class="lead">浏览已发布的社区遗产资源（当前为演示数据）。</p>
+      <h1 class="page-title">Discover community heritage</h1>
+      <p class="lead">Browse published heritage resources (demo data).</p>
     </header>
 
     <div class="toolbar">
       <label class="field">
-        <span class="label">搜索</span>
-        <input v-model="q" type="search" class="control" placeholder="标题、地点、标签、描述" />
+        <span class="label">Search</span>
+        <input v-model="q" type="search" class="control" placeholder="Title, place, tags, description" />
       </label>
       <label class="field">
-        <span class="label">类别</span>
+        <span class="label">Category</span>
         <select v-model="categoryId" class="control">
-          <option :value="null">全部</option>
+          <option :value="null">All</option>
           <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
       </label>
     </div>
 
-    <p v-if="!filtered.length" class="none">没有匹配的资源。</p>
+    <p v-if="!filtered.length" class="none">No resources match your filters.</p>
 
     <div v-else class="grid">
       <ResourceCard v-for="item in filtered" :key="item.id" :item="item" />
