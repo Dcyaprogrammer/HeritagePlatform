@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import FileUploader from './components/FileUploader.vue'
 
 const status = ref('加载中...')
 
