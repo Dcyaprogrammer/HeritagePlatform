@@ -14,11 +14,14 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/attachments")
 @CrossOrigin(origins = "http://localhost:5173")
 public class AttachmentController {
+    private static final Logger log = LoggerFactory.getLogger(AttachmentController.class);
     
     @Autowired
     private AttachmentRepository attachmentRepository;
@@ -27,9 +30,9 @@ public class AttachmentController {
     
     @PostMapping("/upload")
     public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file) {
-        System.out.println("========== 上传方法被调用了 ==========");
-        System.out.println("文件名：" + file.getOriginalFilename());
-        System.out.println("文件大小：" + file.getSize());
+        log.info("========== Upload method called ==========");
+        log.info("File name: {}", file.getOriginalFilename());
+        log.info("File size: {}", file.getSize());
         
         Map<String, Object> response = new HashMap<>();
         
@@ -53,7 +56,7 @@ public class AttachmentController {
             // 保存文件到磁盘
             Path filePath = Paths.get(UPLOAD_DIR + storedName);
             Files.copy(file.getInputStream(), filePath);
-            System.out.println("文件保存成功，路径：" + filePath.toString());
+            log.info("File saved successfully, path: {}", filePath.toString());
             
             // 判断文件类型
             String fileType = "document";
@@ -76,7 +79,7 @@ public class AttachmentController {
             attachment.setResourceId(0L);  // 临时设为0，等模块4对接后再改
             attachmentRepository.save(attachment);
             
-            System.out.println("数据库保存成功，ID：" + attachment.getId());
+            log.info("Database saved successfully, ID: {}", attachment.getId());
             
             // 返回成功信息（返回 displayName 给前端显示）
             response.put("success", true);
@@ -89,7 +92,7 @@ public class AttachmentController {
             return ResponseEntity.ok(response);
             
         } catch (IOException e) {
-            System.out.println("上传失败：" + e.getMessage());
+            log.error("Upload failed: {}", e.getMessage());
             e.printStackTrace();
             response.put("success", false);
             response.put("message", "Upload failed: " + e.getMessage());
