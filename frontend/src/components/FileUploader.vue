@@ -77,6 +77,7 @@ const triggerFileInput = () => {
 const handleFileSelect = (event) => {
   const files = Array.from(event.target.files)
   addFiles(files)
+  event.target.value = ''
 }
 
 // 处理拖拽
