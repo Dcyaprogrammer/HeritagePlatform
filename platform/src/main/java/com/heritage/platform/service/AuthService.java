@@ -15,6 +15,7 @@ import com.heritage.platform.repository.HeritageUserRepository;
 import com.heritage.platform.security.JwtUtil;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,9 +44,9 @@ public class AuthService {
         HeritageUser user = new HeritageUser();
         user.setUsername(req.getUsername());
         user.setEmail(req.getEmail());
-        user.setPassword(passwordEncoder.encode(req.getPassword()));
-        user.setRole(Role.VIEWER);
-        
+        user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+        user.setRoles(new java.util.HashSet<>(java.util.List.of(Role.VIEWER.name())));
+        user.setDisplayName(req.getUsername());
         userRepository.save(user);
     }
 
@@ -58,22 +59,25 @@ public class AuthService {
             throw new RuntimeException("Too many attempts. Please wait for a while.");
         }
 
-        HeritageUser user = userRepository.findByUsername(req.getUsername());
+        HeritageUser user = userRepository.findByUsername(req.getUsername()).orElse(null);
         if (user == null) {
             throw new RuntimeException("用户名或密码错误");
         }
 
-        if (user.getLockTime() != null && 
-            user.getLockTime().isAfter(LocalDateTime.now().minusMinutes(15))) {
-            throw new RuntimeException("账号已被锁定，请15分钟后再试");
+        if (user.getLockTime() != null) {
+            if (user.getLockTime().isAfter(LocalDateTime.now().minusMinutes(15))) {
+                throw new RuntimeException("账号已被锁定，请15分钟后再试");
+            }
+            user.setLockTime(null);
+            user.setFailedAttempts(0);
         }
 
-        if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
-            user.setFailedAttempts(user.getFailedAttempts() + 1);
+        if (!passwordEncoder.matches(req.getPassword(), user.getPasswordHash())) {
+            int attempts = user.getFailedAttempts() != null ? user.getFailedAttempts() + 1 : 1;
+            user.setFailedAttempts(attempts);
 
-            if (user.getFailedAttempts() >= 3) {
+            if (attempts >= 3) {
                 user.setLockTime(LocalDateTime.now());
-                user.setAccountNonLocked(false);
             }
             userRepository.save(user);
             throw new RuntimeException("用户名或密码错误");
@@ -81,18 +85,19 @@ public class AuthService {
 
         user.setFailedAttempts(0);
         user.setLockTime(null);
-        user.setAccountNonLocked(true);
         userRepository.save(user);
 
-        return jwtUtil.generateToken(user.getUsername(), user.getRole());
+        return jwtUtil.generateToken(user.getUsername(), user.getRoles());
     }
-    // 组员2需要的 loginWithDetails（兼容 /me 接口）
-    public Map<String, Object> loginWithDetails(LoginRequest req, String clientIp) {
-        String token = login(req, clientIp);   // 调用你原来的 login 方法
 
-        Map<String, Object> result = new java.util.HashMap<>();
+    public Map<String, Object> loginWithDetails(LoginRequest req, String clientIp) {
+        String token = login(req, clientIp);
+        HeritageUser user = userRepository.findByUsername(req.getUsername()).orElse(null);
+        
+        Map<String, Object> result = new HashMap<>();
         result.put("token", token);
-        result.put("message", "登录成功");
+        result.put("username", user.getUsername());
+        result.put("roles", user.getRoles());
         
         return result;
     }
@@ -102,12 +107,12 @@ public class AuthService {
 
 
 
-    // pbi4
+    //pbi4
     public void forgotPassword(ForgotPasswordRequest req) {
-        HeritageUser user = userRepository.findByEmail(req.getEmail());
+        HeritageUser user = userRepository.findByEmail(req.getEmail()).orElse(null);
         
         if (user == null) {
-            return;  // 故意不提示，防止枚举用户
+            return;
         }
 
         String token = java.util.UUID.randomUUID().toString();
@@ -115,25 +120,21 @@ public class AuthService {
         user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(30));
         userRepository.save(user);
 
-        // === 修复：删除危险的 System.out.println ===
-        // 生产环境应该发邮件，这里仅打印安全提示
-        System.out.println("\n[密码重置请求] 已为邮箱 " + req.getEmail() + " 生成重置令牌");
-        System.out.println("前端重置链接应为：http://localhost:5173/reset-password?token=" + token);
-        System.out.println("此令牌将在 30 分钟后过期。");
+        System.out.println("Password reset email sent");
     }
 
     public void resetPassword(ResetPasswordRequest req) {
-        HeritageUser user = userRepository.findByResetToken(req.getToken());
+        HeritageUser user = userRepository.findByResetToken(req.getToken()).orElse(null);
         if (user == null || user.getResetTokenExpiry() == null ||
             user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
             throw new RuntimeException("重置链接无效或已过期");
         }
 
-        if (passwordEncoder.matches(req.getNewPassword(), user.getPassword())) {
+        if (passwordEncoder.matches(req.getNewPassword(), user.getPasswordHash())) {
             throw new RuntimeException("新密码不能与旧密码相同");
         }
 
-        user.setPassword(passwordEncoder.encode(req.getNewPassword()));
+        user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
         userRepository.save(user);

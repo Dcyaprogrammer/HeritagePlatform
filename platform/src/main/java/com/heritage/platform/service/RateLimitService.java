@@ -15,7 +15,7 @@ public class RateLimitService {
     private static final int MAX_ATTEMPTS_PER_HOUR = 20;
     private static final int HOUR_IN_SECONDS = 3600;
 
-    public boolean isAllowed(String ip) {
+    public synchronized boolean isAllowed(String ip) {
         LocalDateTime now = LocalDateTime.now();
         attempts.putIfAbsent(ip, new CopyOnWriteArrayList<>());
 

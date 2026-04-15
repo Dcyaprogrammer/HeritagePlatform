@@ -1,24 +1,38 @@
-//操作user的接口
-//id， username, email , password
-//按username Email查询
-
-
-
-
 package com.heritage.platform.repository;
-import com.heritage.platform.model.HeritageUser;
+
+import java.util.Optional;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-//import java.util.Optional;
+
+import com.heritage.platform.model.HeritageUser;
 
 public interface HeritageUserRepository extends JpaRepository<HeritageUser, Long> {
-    HeritageUser findByUsername(String username);
-    HeritageUser findByEmail(String email);    
 
-    //pbi4
-    HeritageUser findByResetToken(String resetToken);
+	Optional<HeritageUser> findByUsername(String username);
 
+	Optional<HeritageUser> findByEmail(String email);
 
-    boolean existsByUsername(String username);
+	Optional<HeritageUser> findByResetToken(String token);
 
-    boolean existsByEmail(String email);
+	boolean existsByUsername(String username);
+
+	boolean existsByEmail(String email);
+
+	/**
+	 * Find users by username containing keyword (case insensitive)
+	 * 根据用户名包含的关键词查询用户（不区分大小写）
+	 */
+	Page<HeritageUser> findByUsernameContainingIgnoreCase(String keyword, Pageable pageable);
+
+	Page<HeritageUser> findByRolesContaining(String role, Pageable pageable);
+
+	Page<HeritageUser> findByUsernameContainingIgnoreCaseAndRolesContaining(
+			String keyword,
+			String role,
+			Pageable pageable);
+
+	List<HeritageUser> findByContributorStatus(String contributorStatus);
 }
