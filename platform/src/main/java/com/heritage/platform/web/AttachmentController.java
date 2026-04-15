@@ -116,21 +116,21 @@ public class AttachmentController {
             File file = new File(attachment.getFilePath());
             if (file.exists()) {
                 boolean deleted = file.delete();
-                System.out.println("删除物理文件：" + attachment.getFilePath() + "，结果：" + deleted);
+                log.info("Deleted physical file: {}, result: {}", attachment.getFilePath(), deleted);
             } else {
-                System.out.println("文件不存在，跳过物理删除：" + attachment.getFilePath());
+                log.warn("File does not exist, skipping physical deletion: {}", attachment.getFilePath());
             }
             
             // 从数据库删除记录
             attachmentRepository.deleteById(id);
-            System.out.println("删除数据库记录，ID：" + id);
+            log.info("Deleted database record, ID: {}", id);
             
             response.put("success", true);
             response.put("message", "File deleted successfully");
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            System.out.println("删除失败：" + e.getMessage());
+            log.error("Delete failed: {}", e.getMessage(), e);
             e.printStackTrace();
             response.put("success", false);
             response.put("message", "Delete failed: " + e.getMessage());
