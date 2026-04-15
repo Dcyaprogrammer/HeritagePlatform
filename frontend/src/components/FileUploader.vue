@@ -128,9 +128,13 @@ const uploadFile = async (file, fileItem) => {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 30000, // 30秒超时
       onUploadProgress: (progressEvent) => {
-        const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-        uploadProgress.value = percent
-      }
+        if (progressEvent.total && progressEvent.total > 0) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          uploadProgress.value = percent
+        } else {
+          uploadProgress.value = 0
+  }
+}
     })
     
     if (response.data.success) {
