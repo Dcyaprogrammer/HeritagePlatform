@@ -46,7 +46,7 @@ public class AuthService {
         user.setEmail(req.getEmail());
         user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
         user.setRoles(new java.util.HashSet<>(java.util.List.of(Role.VIEWER.name())));
-        
+        user.setDisplayName(req.getUsername());
         userRepository.save(user);
     }
 
