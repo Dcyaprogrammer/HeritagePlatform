@@ -53,11 +53,35 @@ CREATE TABLE IF NOT EXISTS resources (
     status VARCHAR(20) DEFAULT 'DRAFT' COMMENT 'DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED',
     contributor_id BIGINT NOT NULL,
     category_id INT NOT NULL,
+--新加的
+    heritage_type_code VARCHAR(64) NULL COMMENT 'Leaf type code, e.g. RIT_BRONZE',
+--
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (contributor_id) REFERENCES users(id),
     FOREIGN KEY (category_id) REFERENCES categories(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+--新加的
+SET @col_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'resources'
+      AND COLUMN_NAME = 'heritage_type_code'
+);
+SET @ddl := IF(
+    @col_exists = 0,
+    'ALTER TABLE resources ADD COLUMN heritage_type_code VARCHAR(64) NULL COMMENT ''Leaf type code, e.g. RIT_BRONZE''',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+--
+
+
+
 
 CREATE TABLE IF NOT EXISTS resource_tags (
     resource_id BIGINT NOT NULL,
