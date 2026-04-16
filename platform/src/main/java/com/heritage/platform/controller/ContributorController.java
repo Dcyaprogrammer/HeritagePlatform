@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.heritage.platform.dto.ApiResponse;
 import com.heritage.platform.dto.UserDTO;
+import com.heritage.platform.entity.Role;
 import com.heritage.platform.model.HeritageUser;
 import com.heritage.platform.repository.HeritageUserRepository;
 
@@ -36,6 +38,7 @@ public class ContributorController {
 	 * Get pending contributor applications / 获取待审批的申请列表
 	 * GET /api/users/pending
 	 */
+	@PreAuthorize("hasRole('ADMIN')")
 	@GetMapping("/users/pending")
 	public ResponseEntity<ApiResponse<List<UserDTO>>> getPendingApplications() {
 		List<HeritageUser> pendingUsers = userRepository.findByContributorStatus("PENDING");
@@ -66,7 +69,7 @@ public class ContributorController {
 		HeritageUser user = userOptional.get();
 
 		// Check if already a contributor / 检查是否已经是贡献者
-		if (user.getRoles().contains("CONTRIBUTOR")) {
+		if (user.getRoles().contains(Role.CONTRIBUTOR.name())) {
 			return ResponseEntity.badRequest()
 					.body(ApiResponse.error(400, "User is already a contributor"));
 		}
@@ -89,6 +92,7 @@ public class ContributorController {
 	 * Approve contributor application / 批准贡献者申请
 	 * PUT /api/user/{username}/approve
 	 */
+	@PreAuthorize("hasRole('ADMIN')")
 	@PutMapping("/user/{username}/approve")
 	public ResponseEntity<ApiResponse<UserDTO>> approveContributor(@PathVariable String username) {
 		Optional<HeritageUser> userOptional = userRepository.findByUsername(username);
@@ -108,8 +112,8 @@ public class ContributorController {
 
 		// Update role and status / 更新角色和状态
 		user.getRoles().clear();
-		user.getRoles().add("VIEWER");
-		user.getRoles().add("CONTRIBUTOR");
+		user.getRoles().add(Role.VIEWER.name());
+		user.getRoles().add(Role.CONTRIBUTOR.name());
 		user.setContributorStatus("APPROVED");
 
 		HeritageUser updatedUser = userRepository.save(user);
@@ -120,6 +124,7 @@ public class ContributorController {
 	 * Reject contributor application / 拒绝贡献者申请
 	 * PUT /api/user/{username}/reject
 	 */
+	@PreAuthorize("hasRole('ADMIN')")
 	@PutMapping("/user/{username}/reject")
 	public ResponseEntity<ApiResponse<UserDTO>> rejectContributor(@PathVariable String username) {
 		Optional<HeritageUser> userOptional = userRepository.findByUsername(username);
@@ -139,7 +144,7 @@ public class ContributorController {
 
 		// Update status only (role stays as VIEWER) / 只更新状态（角色保持VIEWER）
 		user.getRoles().clear();
-		user.getRoles().add("VIEWER");
+		user.getRoles().add(Role.VIEWER.name());
 		user.setContributorStatus("REJECTED");
 
 		HeritageUser updatedUser = userRepository.save(user);

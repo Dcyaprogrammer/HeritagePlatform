@@ -19,7 +19,7 @@ import com.heritage.platform.discovery.dto.SlicePage;
 import com.heritage.platform.discovery.taxonomy.HeritageTypeGroup;
 import com.heritage.platform.discovery.taxonomy.TaxonomyCatalog;
 import com.heritage.platform.discovery.taxonomy.TaxonomyOption;
-import com.heritage.platform.web.ApiEnvelope;
+import com.heritage.platform.common.ApiResponse;
 
 /**
  * 访客大厅用的公开接口，不走登录；数据侧只依赖 {@link PublicDiscoveryService} 里写死的 APPROVED 条件。
@@ -37,28 +37,28 @@ public class PublicDiscoveryController {
 	}
 
 	@GetMapping("/categories")
-	public ApiEnvelope<List<NamedRow>> categories() {
-		return ApiEnvelope.ok(discoveryService.listCategories());
+	public ApiResponse<List<NamedRow>> categories() {
+		return ApiResponse.success(discoveryService.listCategories());
 	}
 
 	@GetMapping("/tags")
-	public ApiEnvelope<List<NamedRow>> tags() {
-		return ApiEnvelope.ok(discoveryService.listTags());
+	public ApiResponse<List<NamedRow>> tags() {
+		return ApiResponse.success(discoveryService.listTags());
 	}
 
 	@GetMapping("/dynasties")
-	public ApiEnvelope<List<TaxonomyOption>> dynasties() {
-		return ApiEnvelope.ok(taxonomy.getDynasties());
+	public ApiResponse<List<TaxonomyOption>> dynasties() {
+		return ApiResponse.success(taxonomy.getDynasties());
 	}
 
 	@GetMapping("/provinces")
-	public ApiEnvelope<List<TaxonomyOption>> provinces() {
-		return ApiEnvelope.ok(taxonomy.getProvinces());
+	public ApiResponse<List<TaxonomyOption>> provinces() {
+		return ApiResponse.success(taxonomy.getProvinces());
 	}
 
 	@GetMapping("/heritage-type-groups")
-	public ApiEnvelope<List<HeritageTypeGroup>> heritageTypeGroups() {
-		return ApiEnvelope.ok(taxonomy.getHeritageTypeGroups());
+	public ApiResponse<List<HeritageTypeGroup>> heritageTypeGroups() {
+		return ApiResponse.success(taxonomy.getHeritageTypeGroups());
 	}
 
 	/**
@@ -74,7 +74,7 @@ public class PublicDiscoveryController {
 	 * @param size              每页条数，默认 10
 	 */
 	@GetMapping("/resources")
-	public ApiEnvelope<?> resources(
+	public ApiResponse<?> resources(
 			@RequestParam(required = false) String q,
 			@RequestParam(required = false) Integer categoryId,
 			@RequestParam(required = false) String tags,
@@ -86,10 +86,10 @@ public class PublicDiscoveryController {
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
 		if ((eraFrom != null) != (eraTo != null)) {
-			return ApiEnvelope.error(400, "年代起止需同时填写或同时留空");
+			return ApiResponse.error(400, "年代起止需同时填写或同时留空");
 		}
 		if (eraFrom != null && eraTo != null && eraFrom.isAfter(eraTo)) {
-			return ApiEnvelope.error(400, "起始时间不能晚于截止时间");
+			return ApiResponse.error(400, "起始时间不能晚于截止时间");
 		}
 
 		List<String> dNorms = null;
@@ -102,7 +102,7 @@ public class PublicDiscoveryController {
 				}
 				String d = taxonomy.normalizeDynastyCode(t).orElse(null);
 				if (d == null) {
-					return ApiEnvelope.error(400, "无效的朝代代码");
+					return ApiResponse.error(400, "无效的朝代代码");
 				}
 				if (!parsed.contains(d)) {
 					parsed.add(d);
@@ -123,7 +123,7 @@ public class PublicDiscoveryController {
 				}
 				String norm = taxonomy.normalizeProvinceCode(t).orElse(null);
 				if (norm == null) {
-					return ApiEnvelope.error(400, "无效的地区代码");
+					return ApiResponse.error(400, "无效的地区代码");
 				}
 				if (!parsed.contains(norm)) {
 					parsed.add(norm);
@@ -144,7 +144,7 @@ public class PublicDiscoveryController {
 				}
 				Optional<List<String>> resolved = taxonomy.resolveHeritageTypeCodesForFilter(t);
 				if (resolved.isEmpty()) {
-					return ApiEnvelope.error(400, "无效的文物类型代码");
+					return ApiResponse.error(400, "无效的文物类型代码");
 				}
 				for (String c : resolved.get()) {
 					if (!parsed.contains(c)) {
@@ -160,11 +160,11 @@ public class PublicDiscoveryController {
 		List<Long> tagIds = PublicDiscoveryService.parseTagIds(tags);
 		SlicePage<PublicResourceSummary> slice = discoveryService.search(q, categoryId, tagIds, dNorms, eraFrom, eraTo,
 				pNorms, hCodes, page, size);
-		return ApiEnvelope.ok(slice);
+		return ApiResponse.success(slice);
 	}
 
 	@GetMapping("/resources/{id}")
-	public ApiEnvelope<PublicResourceDetail> resourceDetail(@PathVariable Long id) {
-		return ApiEnvelope.ok(discoveryService.findApprovedDetail(id).orElse(null));
+	public ApiResponse<PublicResourceDetail> resourceDetail(@PathVariable Long id) {
+		return ApiResponse.success(discoveryService.findApprovedDetail(id).orElse(null));
 	}
 }

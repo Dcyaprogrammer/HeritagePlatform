@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.heritage.platform.dto.ApiResponse;
 import com.heritage.platform.dto.ChangePasswordRequest;
 import com.heritage.platform.dto.UserDTO;
+import com.heritage.platform.entity.Role;
 import com.heritage.platform.model.HeritageUser;
 import com.heritage.platform.repository.HeritageUserRepository;
 
@@ -160,6 +162,7 @@ public class UserController {
 	 * Update user role (Admin only) / 更新用户角色（仅管理员）
 	 * PUT /api/admin/users/{userId}/role?role=CONTRIBUTOR
 	 */
+	@PreAuthorize("hasRole('ADMIN')")
 	@PutMapping("/admin/users/{userId}/role")
 	public ResponseEntity<ApiResponse<UserDTO>> updateUserRole(
 			@PathVariable Long userId,
@@ -178,17 +181,17 @@ public class UserController {
 		switch (role.toUpperCase()) {
 		case "ADMIN":
 			roles.clear();
-			roles.add("ADMIN");
+			roles.add(Role.ADMIN.name());
 			break;
 		case "CONTRIBUTOR":
 			roles.clear();
-			roles.add("VIEWER");
-			roles.add("CONTRIBUTOR");
+			roles.add(Role.VIEWER.name());
+			roles.add(Role.CONTRIBUTOR.name());
 			user.setContributorStatus("APPROVED");
 			break;
 		case "VIEWER":
 			roles.clear();
-			roles.add("VIEWER");
+			roles.add(Role.VIEWER.name());
 			user.setContributorStatus("NONE");
 			break;
 		default:
