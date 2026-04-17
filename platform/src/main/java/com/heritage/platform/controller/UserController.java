@@ -48,8 +48,10 @@ public class UserController {
 	/**
 	 * Get user by username / 根据用户名查询用户
 	 * GET /api/user/{username}
+	 * Security: Only the user themselves or ADMIN can view user details
 	 */
 	@GetMapping("/user/{username}")
+	@PreAuthorize("#username == authentication.name or hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<UserDTO>> getUserByUsername(@PathVariable String username) {
 		Optional<HeritageUser> userOptional = userRepository.findByUsername(username);
 
@@ -128,8 +130,10 @@ public class UserController {
 	/**
 	 * Update user profile / 更新用户资料
 	 * PUT /api/user/{username}
+	 * Security: Only the user themselves can update their profile
 	 */
 	@PutMapping("/user/{username}")
+	@PreAuthorize("#username == authentication.name")
 	public ResponseEntity<ApiResponse<UserDTO>> updateUser(
 			@PathVariable String username,
 			@RequestBody Map<String, String> updates) {
@@ -163,8 +167,10 @@ public class UserController {
 	/**
 	 * Update user role (Admin only) / 更新用户角色（仅管理员）
 	 * PUT /api/admin/users/{userId}/role?role=CONTRIBUTOR
+	 * Security: Only ADMIN can update user roles
 	 */
 	@PutMapping("/admin/users/{userId}/role")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<UserDTO>> updateUserRole(
 			@PathVariable Long userId,
 			@RequestParam String role) {
