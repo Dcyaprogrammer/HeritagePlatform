@@ -31,7 +31,7 @@ public class AuthController {
     @PostMapping("/register")
     public ApiResponse<Void> register(@RequestBody RegisterRequest req) {
         authService.register(req);
-        return ApiResponse.success("注册成功111", null);
+        return ApiResponse.success("User registered successfully", null);
     }
 
     @PostMapping("/login")
@@ -39,14 +39,14 @@ public class AuthController {
                                     jakarta.servlet.http.HttpServletRequest request) {
         String clientIp = request.getRemoteAddr();
         Map<String, Object> result = authService.loginWithDetails(req, clientIp);
-        return ApiResponse.success("登录成功", result);
+        return ApiResponse.success("Login successful", result);
     }
 
     @GetMapping("/test")
     public ApiResponse<String> test() {
         String username = org.springframework.security.core.context.SecurityContextHolder
                 .getContext().getAuthentication().getName();
-        return ApiResponse.success("当前登录用户: " + username, null);
+        return ApiResponse.success("Current user: " + username, null);
     }
 
     @GetMapping("/me")
@@ -77,6 +77,6 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ApiResponse<Void> resetPassword(@RequestBody ResetPasswordRequest req) {
         authService.resetPassword(req);
-        return ApiResponse.success("密码重置成功，请使用新密码登录", null);
+        return ApiResponse.success("Password reset successful, please login with new password", null);
     }
 }
