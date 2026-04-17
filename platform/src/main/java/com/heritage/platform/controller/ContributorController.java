@@ -1,5 +1,7 @@
 package com.heritage.platform.controller;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -107,9 +109,7 @@ public class ContributorController {
 		}
 
 		// Update role and status / 更新角色和状态
-		user.getRoles().clear();
-		user.getRoles().add("VIEWER");
-		user.getRoles().add("CONTRIBUTOR");
+		user.setRoles(new HashSet<>(Arrays.asList("VIEWER", "CONTRIBUTOR")));
 		user.setContributorStatus("APPROVED");
 
 		HeritageUser updatedUser = userRepository.save(user);

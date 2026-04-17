@@ -25,16 +25,16 @@ async function loadDetail() {
     const res = await fetch(`/api/public/resources/${resourceId.value}`)
     const body = await res.json()
     if (body.code !== 200) {
-      err.value = body.message || '加载失败'
+      err.value = body.message || 'Failed to load resource'
       return
     }
     if (!body.data) {
-      err.value = '资源不存在或未通过审核'
+      err.value = 'Resource does not exist or has not been approved'
       return
     }
     detail.value = body.data
   } catch (e) {
-    err.value = '网络或后端异常，请确认已启动 Spring Boot'
+    err.value = 'Network or backend error, please ensure Spring Boot is running'
   } finally {
     loading.value = false
   }
@@ -45,30 +45,30 @@ onMounted(loadDetail)
 
 <template>
   <div class="wrap">
-    <p class="back"><RouterLink to="/">← 返回大厅</RouterLink></p>
+    <p class="back"><RouterLink to="/">← Back to Home</RouterLink></p>
     <section class="panel">
-      <p v-if="loading" class="muted">加载中…</p>
+      <p v-if="loading" class="muted">Loading...</p>
       <p v-else-if="err" class="err">{{ err }}</p>
       <template v-else-if="detail">
         <h1 class="title">{{ detail.title }}</h1>
         <p class="meta">
-          <span v-if="detail.dynastyName">朝代（按录入年份推断）：{{ detail.dynastyName }}</span>
-          <span v-if="detail.provinceName"> · 地区（由地点文本匹配）：{{ detail.provinceName }}</span>
+          <span v-if="detail.dynastyName">Dynasty (inferred from record date): {{ detail.dynastyName }}</span>
+          <span v-if="detail.provinceName"> · Region (matched from location text): {{ detail.provinceName }}</span>
         </p>
-        <p v-if="detail.heritageTypeLabel" class="meta">类型：{{ detail.heritageTypeLabel }}</p>
+        <p v-if="detail.heritageTypeLabel" class="meta">Type: {{ detail.heritageTypeLabel }}</p>
         <p class="meta">
-          <span>馆藏/原分类：{{ detail.categoryName || '未分类' }}</span>
-          <span> · 位置：{{ detail.locationName || '未填写' }}</span>
+          <span>Category: {{ detail.categoryName || 'Uncategorized' }}</span>
+          <span> · Location: {{ detail.locationName || 'Not provided' }}</span>
         </p>
         <p v-if="detail.eraStart || detail.eraEnd" class="meta">
-          录入日期（作年代展示）：{{ detail.eraStart || '—' }} ～ {{ detail.eraEnd || '—' }}
+          Record Date (for era display): {{ detail.eraStart || '—' }} ～ {{ detail.eraEnd || '—' }}
         </p>
-        <p class="meta">更新时间：{{ fmtDate(detail.updatedAt) }}</p>
+        <p class="meta">Last Updated: {{ fmtDate(detail.updatedAt) }}</p>
         <div class="tags">
           <span v-for="tag in detail.tags || []" :key="tag.id" class="tag">{{ tag.name }}</span>
-          <span v-if="!(detail.tags || []).length" class="muted">无标签</span>
+          <span v-if="!(detail.tags || []).length" class="muted">No tags</span>
         </div>
-        <article class="desc">{{ detail.description || '（无描述）' }}</article>
+        <article class="desc">{{ detail.description || '(No description)' }}</article>
       </template>
     </section>
   </div>

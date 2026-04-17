@@ -36,10 +36,10 @@ public class AuthService {
     //pbi1
     public void register(RegisterRequest req) {
         if (userRepository.existsByUsername(req.getUsername())) {
-            throw new RuntimeException("用户名已存在");
+            throw new RuntimeException("Username already exists");
         }
         if (userRepository.existsByEmail(req.getEmail())) {
-            throw new RuntimeException("邮箱已存在");
+            throw new RuntimeException("Email already exists");
         }
         HeritageUser user = new HeritageUser();
         user.setUsername(req.getUsername());
@@ -61,12 +61,12 @@ public class AuthService {
 
         HeritageUser user = userRepository.findByUsername(req.getUsername()).orElse(null);
         if (user == null) {
-            throw new RuntimeException("用户名或密码错误");
+            throw new RuntimeException("Invalid username or password");
         }
 
         if (user.getLockTime() != null) {
             if (user.getLockTime().isAfter(LocalDateTime.now().minusMinutes(15))) {
-                throw new RuntimeException("账号已被锁定，请15分钟后再试");
+                throw new RuntimeException("Account has been locked, please try again after 15 minutes");
             }
             user.setLockTime(null);
             user.setFailedAttempts(0);
@@ -80,7 +80,7 @@ public class AuthService {
                 user.setLockTime(LocalDateTime.now());
             }
             userRepository.save(user);
-            throw new RuntimeException("用户名或密码错误");
+            throw new RuntimeException("Invalid username or password");
         }
 
         user.setFailedAttempts(0);
@@ -127,11 +127,11 @@ public class AuthService {
         HeritageUser user = userRepository.findByResetToken(req.getToken()).orElse(null);
         if (user == null || user.getResetTokenExpiry() == null ||
             user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("重置链接无效或已过期");
+            throw new RuntimeException("Reset link is invalid or has expired");
         }
 
         if (passwordEncoder.matches(req.getNewPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("新密码不能与旧密码相同");
+            throw new RuntimeException("New password cannot be the same as the old password");
         }
 
         user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
