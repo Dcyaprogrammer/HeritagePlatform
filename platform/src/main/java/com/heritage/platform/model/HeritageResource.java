@@ -93,6 +93,10 @@ public class HeritageResource {
 		return version;
 	}
 
+	public void setVersion(Long version) {
+		this.version = version;
+	}
+
 	public HeritageUser getSubmitter() {
 		return submitter;
 	}

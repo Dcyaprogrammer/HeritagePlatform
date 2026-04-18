@@ -37,15 +37,35 @@ export const logout = () => {
   localStorage.removeItem('token')
   localStorage.removeItem('username')
   localStorage.removeItem('role')
+  localStorage.removeItem('roles')
 }
 
 export const getToken = () => localStorage.getItem('token')
 
 export const setToken = (token) => localStorage.setItem('token', token)
 
-export const setUserInfo = (username, role) => {
+export const getStoredRoles = () => {
+  const rawRoles = localStorage.getItem('roles')
+  if (rawRoles) {
+    try {
+      const parsed = JSON.parse(rawRoles)
+      if (Array.isArray(parsed)) {
+        return parsed
+      }
+    } catch {
+      // Fallback to the single-role storage below.
+    }
+  }
+
+  const role = localStorage.getItem('role')
+  return role ? [role] : []
+}
+
+export const setUserInfo = (username, roles) => {
   localStorage.setItem('username', username)
-  localStorage.setItem('role', role)
+  const normalizedRoles = Array.isArray(roles) ? roles : [roles].filter(Boolean)
+  localStorage.setItem('roles', JSON.stringify(normalizedRoles))
+  localStorage.setItem('role', normalizedRoles[0] || '')
 }
 
 export default api

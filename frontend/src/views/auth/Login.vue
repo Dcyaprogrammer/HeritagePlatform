@@ -64,12 +64,15 @@ const handleLogin = async () => {
       
       if (res.data.code === 200) {
         const { token, username, roles } = res.data.data
-        const role = Array.isArray(roles) ? roles[0] : roles
         setToken(token)
-        setUserInfo(username, role)
+        setUserInfo(username, roles)
         
         ElMessage.success('Login successful')
-        router.push('/admin/users')
+        if (Array.isArray(roles) && roles.includes('ADMIN')) {
+          router.push('/admin/users')
+        } else {
+          router.push('/')
+        }
       } else {
         ElMessage.error(res.data.message || 'Login failed')
       }
