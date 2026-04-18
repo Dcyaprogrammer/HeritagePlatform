@@ -30,16 +30,17 @@ public class AuthService {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private RateLimitService rateLimitService;
     @Autowired private JwtUtil jwtUtil;
+    @Autowired private EmailService emailService;
 
 
 
     //pbi1
     public void register(RegisterRequest req) {
         if (userRepository.existsByUsername(req.getUsername())) {
-            throw new RuntimeException("Username already exists");
+            throw new RuntimeException("用户名已存在");
         }
         if (userRepository.existsByEmail(req.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new RuntimeException("邮箱已存在");
         }
         HeritageUser user = new HeritageUser();
         user.setUsername(req.getUsername());
@@ -61,12 +62,12 @@ public class AuthService {
 
         HeritageUser user = userRepository.findByUsername(req.getUsername()).orElse(null);
         if (user == null) {
-            throw new RuntimeException("Invalid username or password");
+            throw new RuntimeException("用户名或密码错误");
         }
 
         if (user.getLockTime() != null) {
             if (user.getLockTime().isAfter(LocalDateTime.now().minusMinutes(15))) {
-                throw new RuntimeException("Account has been locked, please try again after 15 minutes");
+                throw new RuntimeException("账号已被锁定，请15分钟后再试");
             }
             user.setLockTime(null);
             user.setFailedAttempts(0);
@@ -80,7 +81,7 @@ public class AuthService {
                 user.setLockTime(LocalDateTime.now());
             }
             userRepository.save(user);
-            throw new RuntimeException("Invalid username or password");
+            throw new RuntimeException("用户名或密码错误");
         }
 
         user.setFailedAttempts(0);
@@ -107,10 +108,11 @@ public class AuthService {
 
 
 
-    //pbi4
+    //pbi4正式版邮件重置密码
     public void forgotPassword(ForgotPasswordRequest req) {
+        // 1. 正确处理 Optional
         HeritageUser user = userRepository.findByEmail(req.getEmail()).orElse(null);
-        
+
         if (user == null) {
             return;
         }
@@ -120,18 +122,25 @@ public class AuthService {
         user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(30));
         userRepository.save(user);
 
-        System.out.println("Password reset email sent");
+        //EmailService发送邮件
+        try {
+            emailService.sendResetPasswordEmail(req.getEmail(), token);
+            System.out.println("✅ 密码重置邮件已成功发送至：" + req.getEmail());
+        } catch (Exception e) {
+            System.err.println("❌ 发送邮件失败: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public void resetPassword(ResetPasswordRequest req) {
         HeritageUser user = userRepository.findByResetToken(req.getToken()).orElse(null);
         if (user == null || user.getResetTokenExpiry() == null ||
             user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Reset link is invalid or has expired");
+            throw new RuntimeException("重置链接无效或已过期");
         }
 
         if (passwordEncoder.matches(req.getNewPassword(), user.getPasswordHash())) {
-            throw new RuntimeException("New password cannot be the same as the old password");
+            throw new RuntimeException("新密码不能与旧密码相同");
         }
 
         user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
