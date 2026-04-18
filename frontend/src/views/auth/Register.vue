@@ -108,10 +108,14 @@ const handleRegister = async () => {
         })
 
         if (loginRes.data.code === 200) {
-          const { token, username, role } = loginRes.data.data
+          const { token, username, roles } = loginRes.data.data
           setToken(token)
-          setUserInfo(username, role)
-          router.push('/admin/users')
+          setUserInfo(username, roles)
+          if (Array.isArray(roles) && roles.includes('ADMIN')) {
+            router.push('/admin/users')
+          } else {
+            router.push('/')
+          }
         }
       } else {
         ElMessage.error(res.data.message || 'Registration failed')

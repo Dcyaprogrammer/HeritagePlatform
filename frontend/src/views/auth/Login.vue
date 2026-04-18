@@ -64,29 +64,14 @@ const handleLogin = async () => {
       
       if (res.data.code === 200) {
         const { token, username, roles } = res.data.data
-        let role = 'VIEWER' // 默认角色
-        if (Array.isArray(roles)) {
-          if (roles.includes('ADMIN')) {
-            role = 'ADMIN'
-          } else if (roles.includes('CONTRIBUTOR')) {
-            role = 'CONTRIBUTOR'
-          } else {
-            role = roles[0] || 'VIEWER'
-          }
-        } else {
-          role = roles || 'VIEWER'
-        }
         setToken(token)
-        setUserInfo(username, role)
+        setUserInfo(username, roles)
         
         ElMessage.success('Login successful')
-        console.log('Login success - roles from API:', roles)
-        console.log('Role stored:', role)
-        console.log('Redirect to:', role === 'ADMIN' ? '/admin/users' : '/home')
-        if (role === 'ADMIN') {
+        if (Array.isArray(roles) && roles.includes('ADMIN')) {
           router.push('/admin/users')
         } else {
-          router.push('/home')
+          router.push('/')
         }
       } else {
         ElMessage.error(res.data.message || 'Login failed')
