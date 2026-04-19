@@ -1,0 +1,82 @@
+//register测试
+
+
+
+
+package com.heritage.platform.controller;
+
+import com.heritage.platform.common.ApiResponse;
+import com.heritage.platform.dto.*;
+import com.heritage.platform.model.HeritageUser;
+import com.heritage.platform.repository.HeritageUserRepository;
+import com.heritage.platform.service.AuthService;
+
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/auth")
+
+
+
+
+public class AuthController {
+    @Autowired private AuthService authService;
+    @Autowired private HeritageUserRepository userRepository;
+
+    @PostMapping("/register")
+    public ApiResponse<Void> register(@RequestBody RegisterRequest req) {
+        authService.register(req);
+        return ApiResponse.success("User registered successfully", null);
+    }
+
+    @PostMapping("/login")
+    public ApiResponse<Map<String, Object>> login(@RequestBody LoginRequest req,
+                                    jakarta.servlet.http.HttpServletRequest request) {
+        String clientIp = request.getRemoteAddr();
+        Map<String, Object> result = authService.loginWithDetails(req, clientIp);
+        return ApiResponse.success("Login successful", result);
+    }
+
+    @GetMapping("/test")
+    public ApiResponse<String> test() {
+        String username = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication().getName();
+        return ApiResponse.success("Current user: " + username, null);
+    }
+
+    @GetMapping("/me")
+    public ApiResponse<Map<String, Object>> getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        HeritageUser user = userRepository.findByUsername(username).orElse(null);
+        
+        if (user == null) {
+            return ApiResponse.error(404, "User not found");
+        }
+        
+        Map<String, Object> userInfo = new java.util.HashMap<>();
+        userInfo.put("username", user.getUsername());
+        userInfo.put("email", user.getEmail());
+        userInfo.put("displayName", user.getDisplayName());
+        userInfo.put("roles", user.getRoles());
+        
+        return ApiResponse.success(userInfo);
+    }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@RequestBody ForgotPasswordRequest req) {
+        authService.forgotPassword(req);
+        return ApiResponse.success("If that email is registered, you will receive a password reset link shortly.", null);
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@RequestBody ResetPasswordRequest req) {
+        authService.resetPassword(req);
+        return ApiResponse.success("Password reset successful, please login with new password", null);
+    }
+}
