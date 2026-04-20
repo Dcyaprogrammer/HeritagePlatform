@@ -30,6 +30,15 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API Error:', error.response?.data || error.message)
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('username')
+      localStorage.removeItem('role')
+      window.location.href = '/login'
+    }
+    if (error.response?.status === 403) {
+      alert('Permission denied. You do not have access to this resource.')
+    }
     return Promise.reject(error)
   }
 )

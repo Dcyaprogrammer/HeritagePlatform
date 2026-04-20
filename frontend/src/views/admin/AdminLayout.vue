@@ -24,15 +24,54 @@
       </el-aside>
 
       <!-- Main Content -->
-      <el-main class="main-content">
-        <router-view />
-      </el-main>
+      <el-container class="right-container">
+        <!-- Top Header -->
+        <el-header class="top-header">
+          <div class="header-right">
+            <el-dropdown @command="handleCommand">
+              <span class="user-info">
+                <el-avatar :size="32" :src="defaultAvatar" />
+                <span class="username">{{ username || 'Admin' }}</span>
+                <el-icon><ArrowDown /></el-icon>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="profile">Profile</el-dropdown-item>
+                  <el-dropdown-item divided command="logout">Logout</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
+        </el-header>
+
+        <el-main class="main-content">
+          <router-view />
+        </el-main>
+      </el-container>
     </el-container>
   </div>
 </template>
 
 <script setup>
-import { UserFilled, DocumentChecked } from '@element-plus/icons-vue'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { UserFilled, DocumentChecked, ArrowDown } from '@element-plus/icons-vue'
+import { logout } from '../../api/auth.js'
+
+const router = useRouter()
+const username = ref(localStorage.getItem('username') || '')
+const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
+
+const handleCommand = (command) => {
+  if (command === 'profile') {
+    router.push('/profile')
+  } else if (command === 'logout') {
+    logout()
+    ElMessage.success('Logged out')
+    router.push('/login')
+  }
+}
 </script>
 
 <style scoped>
@@ -65,9 +104,45 @@ import { UserFilled, DocumentChecked } from '@element-plus/icons-vue'
   border-right: none;
 }
 
-.main-content {
-  padding: 0;
+.right-container {
   background-color: #f0f2f5;
+}
+
+.top-header {
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.user-info:hover {
+  background-color: #f5f7fa;
+}
+
+.username {
+  font-size: 14px;
+  color: #606266;
+}
+
+.main-content {
+  padding: 20px;
   overflow-y: auto;
 }
 </style>

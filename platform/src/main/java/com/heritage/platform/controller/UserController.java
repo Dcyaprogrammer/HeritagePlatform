@@ -13,6 +13,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -47,8 +48,10 @@ public class UserController {
 	/**
 	 * Get user by username / 根据用户名查询用户
 	 * GET /api/user/{username}
+	 * Security: Only the user themselves or ADMIN can view user details
 	 */
 	@GetMapping("/user/{username}")
+	@PreAuthorize("#username == authentication.name or hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<UserDTO>> getUserByUsername(@PathVariable String username) {
 		Optional<HeritageUser> userOptional = userRepository.findByUsername(username);
 
@@ -65,6 +68,7 @@ public class UserController {
 	 * Get user by ID / 根据ID查询用户
 	 * GET /api/users/{id}
 	 */
+	@PreAuthorize("hasRole('ADMIN')")
 	@GetMapping("/users/{id}")
 	public ResponseEntity<ApiResponse<UserDTO>> getUserById(@PathVariable Long id) {
 		Optional<HeritageUser> userOptional = userRepository.findById(id);
@@ -82,6 +86,7 @@ public class UserController {
 	 * Get all users / 查询所有用户
 	 * GET /api/users
 	 */
+	@PreAuthorize("hasRole('ADMIN')")
 	@GetMapping("/users")
 	public ResponseEntity<ApiResponse<List<UserDTO>>> getAllUsers() {
 		List<HeritageUser> users = userRepository.findAll();
@@ -95,6 +100,7 @@ public class UserController {
 	 * Get paginated user list / 分页查询用户列表
 	 * GET /api/users/page?page=0&size=10&role=VIEWER&keyword=zhang
 	 */
+	@PreAuthorize("hasRole('ADMIN')")
 	@GetMapping("/users/page")
 	public ResponseEntity<ApiResponse<Page<UserDTO>>> getUserPage(
 			@RequestParam(defaultValue = "0") int page,
@@ -124,8 +130,10 @@ public class UserController {
 	/**
 	 * Update user profile / 更新用户资料
 	 * PUT /api/user/{username}
+	 * Security: Only the user themselves can update their profile
 	 */
 	@PutMapping("/user/{username}")
+	@PreAuthorize("#username == authentication.name")
 	public ResponseEntity<ApiResponse<UserDTO>> updateUser(
 			@PathVariable String username,
 			@RequestBody Map<String, String> updates) {
@@ -159,8 +167,10 @@ public class UserController {
 	/**
 	 * Update user role (Admin only) / 更新用户角色（仅管理员）
 	 * PUT /api/admin/users/{userId}/role?role=CONTRIBUTOR
+	 * Security: Only ADMIN can update user roles
 	 */
 	@PutMapping("/admin/users/{userId}/role")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<UserDTO>> updateUserRole(
 			@PathVariable Long userId,
 			@RequestParam String role) {
@@ -215,6 +225,7 @@ public class UserController {
 		return dto;
 	}
 
+	@PreAuthorize("#username == authentication.name or hasRole('ADMIN')")
 	@PutMapping("/user/{username}/password")
 	public ResponseEntity<ApiResponse<?>> changePassword(
 			@PathVariable String username,

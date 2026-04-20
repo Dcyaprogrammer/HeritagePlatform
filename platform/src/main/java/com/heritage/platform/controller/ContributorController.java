@@ -1,5 +1,8 @@
 package com.heritage.platform.controller;
 
+import java.security.Principal;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -7,6 +10,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,8 +39,10 @@ public class ContributorController {
 	/**
 	 * Get pending contributor applications / 获取待审批的申请列表
 	 * GET /api/users/pending
+	 * Security: Only ADMIN can view pending applications
 	 */
 	@GetMapping("/users/pending")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<List<UserDTO>>> getPendingApplications() {
 		List<HeritageUser> pendingUsers = userRepository.findByContributorStatus("PENDING");
 
@@ -50,11 +56,14 @@ public class ContributorController {
 	/**
 	 * Apply to be a contributor / 申请成为贡献者
 	 * POST /api/user/{username}/apply
+	 * Security: Only the user themselves can apply for contributor role
 	 */
 	@PostMapping("/user/{username}/apply")
+	@PreAuthorize("#username == authentication.name")
 	public ResponseEntity<ApiResponse<UserDTO>> applyForContributor(
 			@PathVariable String username,
-			@RequestBody Map<String, String> request) {
+			@RequestBody Map<String, String> request,
+			Principal principal) {
 
 		Optional<HeritageUser> userOptional = userRepository.findByUsername(username);
 
@@ -88,8 +97,10 @@ public class ContributorController {
 	/**
 	 * Approve contributor application / 批准贡献者申请
 	 * PUT /api/user/{username}/approve
+	 * Security: Only ADMIN can approve contributors
 	 */
 	@PutMapping("/user/{username}/approve")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<UserDTO>> approveContributor(@PathVariable String username) {
 		Optional<HeritageUser> userOptional = userRepository.findByUsername(username);
 
@@ -107,9 +118,7 @@ public class ContributorController {
 		}
 
 		// Update role and status / 更新角色和状态
-		user.getRoles().clear();
-		user.getRoles().add("VIEWER");
-		user.getRoles().add("CONTRIBUTOR");
+		user.setRoles(new HashSet<>(Arrays.asList("VIEWER", "CONTRIBUTOR")));
 		user.setContributorStatus("APPROVED");
 
 		HeritageUser updatedUser = userRepository.save(user);
@@ -119,8 +128,10 @@ public class ContributorController {
 	/**
 	 * Reject contributor application / 拒绝贡献者申请
 	 * PUT /api/user/{username}/reject
+	 * Security: Only ADMIN can reject contributors
 	 */
 	@PutMapping("/user/{username}/reject")
+	@PreAuthorize("hasRole('ADMIN')")
 	public ResponseEntity<ApiResponse<UserDTO>> rejectContributor(@PathVariable String username) {
 		Optional<HeritageUser> userOptional = userRepository.findByUsername(username);
 

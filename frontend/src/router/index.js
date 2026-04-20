@@ -3,7 +3,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AdminLayout from '../views/admin/AdminLayout.vue'
 import AdminUserList from '../views/admin/AdminUserList.vue'
 import ContributorReview from '../views/admin/ContributorReview.vue'
+import HomeView from '../views/HomeView.vue'
 import Login from '../views/auth/Login.vue'
+import Profile from '../views/Profile.vue'
 import Register from '../views/auth/Register.vue'
 import HomeView from '../views/HomeView.vue'
 import ResourceDetailView from '../views/ResourceDetailView.vue'
@@ -29,9 +31,24 @@ const routes = [
     path: '/register',
     name: 'Register',
     component: Register,
-    meta: { title: 'Register' }
+    meta:{ title: 'Register' }
+  },
+  // Home page for viewers
+  {
+    path: '/home',
+    name: 'Home',
+    component: HomeView,
+    meta: { title: 'Home', requiresAuth: true }
   },
 
+  // Profile page
+  {
+    path: '/profile',
+    name: 'Profile',
+    component: Profile,
+    meta: { title: 'Profile', requiresAuth: true }
+  },
+  
   {
     path: '/resources/:id',
     name: 'ResourceDetail',
@@ -56,6 +73,12 @@ const routes = [
       requiresAuth: true
     }
   },
+  // Redirect root to home page
+  {
+    path: '/',
+    redirect: '/home'
+
+  },
 
   // Admin routes with nested layout
   {
@@ -76,7 +99,9 @@ const routes = [
         name: 'AdminUserList',
         component: AdminUserList,
         meta: {
-          title: 'User Management'
+          title: 'User Management',
+          requiresAuth: true,
+          roles: ['ADMIN']
         }
       },
       {
@@ -84,7 +109,9 @@ const routes = [
         name: 'ContributorReview',
         component: ContributorReview,
         meta: {
-          title: 'Contributor Review'
+          title: 'Contributor Review',
+          requiresAuth: true,
+          roles: ['ADMIN']
         }
       }
     ]

@@ -30,6 +30,7 @@ public class AuthService {
     @Autowired private PasswordEncoder passwordEncoder;
     @Autowired private RateLimitService rateLimitService;
     @Autowired private JwtUtil jwtUtil;
+    @Autowired private EmailService emailService;
 
 
 
@@ -107,10 +108,11 @@ public class AuthService {
 
 
 
-    //pbi4
+    //pbi4正式版邮件重置密码
     public void forgotPassword(ForgotPasswordRequest req) {
+        // 1. 正确处理 Optional
         HeritageUser user = userRepository.findByEmail(req.getEmail()).orElse(null);
-        
+
         if (user == null) {
             return;
         }
@@ -120,7 +122,14 @@ public class AuthService {
         user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(30));
         userRepository.save(user);
 
-        System.out.println("Password reset email sent");
+        //EmailService发送邮件
+        try {
+            emailService.sendResetPasswordEmail(req.getEmail(), token);
+            System.out.println("✅ 密码重置邮件已成功发送至：" + req.getEmail());
+        } catch (Exception e) {
+            System.err.println("❌ 发送邮件失败: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     public void resetPassword(ResetPasswordRequest req) {

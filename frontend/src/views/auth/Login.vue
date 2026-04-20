@@ -71,7 +71,7 @@ const handleLogin = async () => {
         if (Array.isArray(roles) && roles.includes('ADMIN')) {
           router.push('/admin/users')
         } else {
-          router.push('/')
+          router.push('/home')
         }
       } else {
         ElMessage.error(res.data.message || 'Login failed')

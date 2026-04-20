@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 
 const dynasties = ref([])
 const provinces = ref([])
@@ -26,6 +26,19 @@ const autoSearchEnabled = ref(false)
 
 const eraFromInputRef = ref(null)
 const eraToInputRef = ref(null)
+const router = useRouter()
+
+const isAdmin = computed(() => {
+  return localStorage.getItem('role') === 'ADMIN'
+})
+
+const goToAdmin = () => {
+  router.push('/admin/users')
+}
+
+const goToProfile = () => {
+  router.push('/profile')
+}
 
 /** 与后端 TaxonomyCatalog 一致；接口未返回时兜底（例如未重启的旧后端） */
 const HERITAGE_OTHER_GROUP_FALLBACK = Object.freeze({
@@ -401,6 +414,10 @@ watch(filterWatchKey, () => {
   <div class="wrap">
     <header class="top">
       <h1>Heritage Resource Hall</h1>
+      <div class="header-actions">
+        <button v-if="isAdmin" type="button" class="btn primary" @click="goToAdmin">Admin Panel</button>
+        <button type="button" class="btn" @click="goToProfile">Profile</button>
+      </div>
     </header>
 
     <section class="panel home-search">
@@ -557,10 +574,23 @@ watch(filterWatchKey, () => {
   padding: 32px 20px 64px;
 }
 
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .top h1 {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 26px;
   font-weight: 650;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
 }
 
 .muted {
