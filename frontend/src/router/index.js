@@ -16,7 +16,7 @@ import { getStoredRoles, getToken } from '../api/auth.js'
 const routes = [
   {
     path: '/',
-    name: 'Home',
+    name: 'Landing',
     component: HomeView,
     meta: { title: 'Heritage Resource Hall' }
   },

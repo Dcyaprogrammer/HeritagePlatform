@@ -1,8 +1,11 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { getToken } from '../api/auth.js'
+import ResourceCard from '../components/ResourceCard.vue'
+import { getApprovedResources } from '../api/mockData.js'
 
-const dynasties = ref([])
+const allResources = ref(getApprovedResources())
 const provinces = ref([])
 const heritageGroups = ref([])
 const list = ref([])
@@ -28,6 +31,33 @@ const eraFromInputRef = ref(null)
 const eraToInputRef = ref(null)
 const router = useRouter()
 
+const categories = computed(() => {
+  const map = new Map()
+  for (const r of allResources.value) {
+    if (r.category) map.set(r.category.id, r.category.name)
+  }
+  return [...map.entries()].map(([id, name]) => ({ id, name }))
+})
+
+const categoryId = ref(null)
+
+const filteredResources = computed(() => {
+  const text = q.value.trim().toLowerCase()
+  return allResources.value.filter((r) => {
+    if (categoryId.value != null && r.category?.id !== categoryId.value) return false
+    if (!text) return true
+    const inTitle = (r.title || '').toLowerCase().includes(text)
+    const inDesc = (r.description || '').toLowerCase().includes(text)
+    const inTags = (r.tags || []).some((t) => (t.name || '').toLowerCase().includes(text))
+    const inLoc = (r.location_name ?? '').toLowerCase().includes(text)
+    return inTitle || inDesc || inTags || inLoc
+  })
+})
+
+const isLoggedIn = computed(() => {
+  return !!getToken()
+})
+
 const isAdmin = computed(() => {
   return localStorage.getItem('role') === 'ADMIN'
 })
@@ -38,6 +68,14 @@ const goToAdmin = () => {
 
 const goToProfile = () => {
   router.push('/profile')
+}
+
+const goToLogin = () => {
+  router.push('/login')
+}
+
+const goToRegister = () => {
+  router.push('/register')
 }
 
 /** 与后端 TaxonomyCatalog 一致；接口未返回时兜底（例如未重启的旧后端） */
@@ -169,206 +207,7 @@ async function loadMeta() {
   if (dj.code === 200) {
     dynasties.value = dj.data
   }
-  if (pj.code === 200) {
-    provinces.value = pj.data
-  }
-  if (hj.code === 200) {
-    heritageGroups.value = ensureHeritageOtherGroup(hj.data)
-  }
-}
 
-/** 将 ISO 日期 (yyyy-MM-dd) 格式化为中文年月日展示 */
-function formatIsoToCnYmd(iso) {
-  if (!iso) {
-    return ''
-  }
-  const parts = String(iso).trim().split('-')
-  if (parts.length !== 3) {
-    return ''
-  }
-  const [y, m, d] = parts
-  return `${y}-${m}-${d}`
-}
-
-function openNativeDatePicker(which) {
-  const el = which === 'from' ? eraFromInputRef.value : eraToInputRef.value
-  if (!el) {
-    return
-  }
-  try {
-    if (typeof el.showPicker === 'function') {
-      el.showPicker().catch(() => el.click())
-    } else {
-      el.click()
-    }
-  } catch {
-    el.click()
-  }
-}
-
-function onEraDateShellKeydown(e, which) {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault()
-    openNativeDatePicker(which)
-  }
-}
-
-function onDynastyPick() {
-  const picked = dynastyPickerValue.value
-  if (!picked) {
-    selectedDynastyCodes.value = new Set()
-    return
-  }
-  const next = new Set(selectedDynastyCodes.value)
-  next.add(picked)
-  selectedDynastyCodes.value = next
-  dynastyPickerValue.value = ''
-}
-
-function onProvincePick() {
-  const picked = provincePickerValue.value
-  if (!picked) {
-    selectedProvinceCodes.value = new Set()
-    return
-  }
-  const next = new Set(selectedProvinceCodes.value)
-  next.add(picked)
-  selectedProvinceCodes.value = next
-  provincePickerValue.value = ''
-}
-
-function onTypePick() {
-  const picked = heritageTypePickerValue.value
-  if (!picked) {
-    selectedHeritageTypeCodes.value = new Set()
-    return
-  }
-  const next = new Set(selectedHeritageTypeCodes.value)
-  next.add(picked)
-  selectedHeritageTypeCodes.value = next
-  heritageTypePickerValue.value = ''
-}
-
-function resetFilters() {
-  selectedDynastyCodes.value = new Set()
-  dynastyPickerValue.value = ''
-  eraFrom.value = ''
-  eraTo.value = ''
-  selectedProvinceCodes.value = new Set()
-  provincePickerValue.value = ''
-  selectedHeritageTypeCodes.value = new Set()
-  heritageTypePickerValue.value = ''
-  search(true)
-}
-
-function toggleFilterPanel() {
-  showFilterPanel.value = !showFilterPanel.value
-}
-
-function applyFilters() {
-  search(true)
-  showFilterPanel.value = false
-}
-
-function removeFilterChip(chip) {
-  if (chip.type === 'dynasty') {
-    const next = new Set(selectedDynastyCodes.value)
-    next.delete(chip.value)
-    selectedDynastyCodes.value = next
-  } else if (chip.type === 'dateRange') {
-    eraFrom.value = ''
-    eraTo.value = ''
-  } else if (chip.type === 'province') {
-    const next = new Set(selectedProvinceCodes.value)
-    next.delete(chip.value)
-    selectedProvinceCodes.value = next
-  } else if (chip.type === 'heritageType') {
-    const next = new Set(selectedHeritageTypeCodes.value)
-    next.delete(chip.value)
-    selectedHeritageTypeCodes.value = next
-  }
-}
-
-/** 强制起始 ≤ 截止：改起始则推后截止，改截止则前移起始 */
-function clampEraRange(source) {
-  const a = eraFrom.value
-  const b = eraTo.value
-  if (!a || !b) {
-    return
-  }
-  if (a <= b) {
-    return
-  }
-  if (source === 'from') {
-    eraTo.value = a
-  } else {
-    eraFrom.value = b
-  }
-}
-
-function onEraFromChange() {
-  clampEraRange('from')
-}
-
-function onEraToChange() {
-  clampEraRange('to')
-}
-
-function validateEraRange() {
-  const a = eraFrom.value
-  const b = eraTo.value
-  if ((a && !b) || (!a && b)) {
-    err.value = 'Start and end dates must both be filled or both be empty.'
-    return false
-  }
-  if (a && b && a > b) {
-    clampEraRange('from')
-  }
-  return true
-}
-
-async function search(resetPage) {
-  if (!validateEraRange()) {
-    return
-  }
-  if (resetPage) {
-    page.value = 0
-  }
-  loading.value = true
-  err.value = ''
-  const params = new URLSearchParams()
-  if (q.value.trim()) {
-    params.set('q', q.value.trim())
-  }
-  if (selectedDynastyCodes.value.size > 0) {
-    params.set('dynastyCode', [...selectedDynastyCodes.value].sort().join(','))
-  }
-  if (eraFrom.value && eraTo.value) {
-    params.set('eraFrom', eraFrom.value)
-    params.set('eraTo', eraTo.value)
-  }
-  if (selectedProvinceCodes.value.size > 0) {
-    params.set('provinceCode', [...selectedProvinceCodes.value].sort().join(','))
-  }
-  if (selectedHeritageTypeCodes.value.size > 0) {
-    params.set('heritageTypeCode', [...selectedHeritageTypeCodes.value].sort().join(','))
-  }
-  params.set('page', String(page.value))
-  params.set('size', String(size.value))
-  try {
-    const res = await fetch(`/api/public/resources?${params}`)
-    const body = await res.json()
-    if (body.code !== 200) {
-      err.value = body.message || 'Failed to load resources.'
-      return
-    }
-    list.value = body.data.items
-    total.value = body.data.total
-  } catch {
-    err.value = 'Network or backend error. Please ensure Spring Boot is running.'
-  } finally {
-    loading.value = false
-  }
 }
 
 function summaryLine(item) {
@@ -391,22 +230,7 @@ function summaryLine(item) {
   return parts.length ? parts.join(' · ') : '—'
 }
 
-onMounted(async () => {
-  await loadMeta()
-  await search(true)
-  autoSearchEnabled.value = true
-})
-
-watch(filterWatchKey, () => {
-  if (!autoSearchEnabled.value) {
-    return
-  }
-  if (autoSearchTimer) {
-    clearTimeout(autoSearchTimer)
-  }
-  autoSearchTimer = setTimeout(() => {
-    search(true)
-  }, 250)
+onMounted(() => {
 })
 </script>
 
@@ -415,462 +239,133 @@ watch(filterWatchKey, () => {
     <header class="top">
       <h1>Heritage Resource Hall</h1>
       <div class="header-actions">
-        <button v-if="isAdmin" type="button" class="btn primary" @click="goToAdmin">Admin Panel</button>
-        <button type="button" class="btn" @click="goToProfile">Profile</button>
+        <template v-if="isLoggedIn">
+          <button v-if="isAdmin" type="button" class="btn primary" @click="goToAdmin">Admin Panel</button>
+          <button type="button" class="btn" @click="goToProfile">Profile</button>
+        </template>
+        <template v-else>
+          <button type="button" class="btn" @click="goToLogin">Login</button>
+          <button type="button" class="btn primary" @click="goToRegister">Register</button>
+        </template>
       </div>
     </header>
 
-    <section class="panel home-search">
-      <div class="search-row">
-        <input v-model="q" type="search" class="inp search-input" placeholder="Enter title keywords" @keyup.enter="search(true)" />
-        <button type="button" class="btn primary" :disabled="loading" @click="search(true)">
-          {{ loading ? 'Searching...' : 'Search' }}
-        </button>
-        <button type="button" class="btn" :disabled="loading" @click="toggleFilterPanel">
-          Filter<span v-if="activeFilterCount"> ({{ activeFilterCount }})</span>
-        </button>
-      </div>
-      <div v-if="selectedFilterChips.length" class="chips-row">
-        <span class="chips-label">Selected Filters:</span>
-        <button v-for="chip in selectedFilterChips" :key="chip.key" type="button" class="chip" @click="removeFilterChip(chip)">
-          <span>{{ chip.label }}</span>
-          <span class="chip-close" aria-hidden="true">×</span>
-        </button>
-      </div>
+    <div class="hero">
+      <h2 class="page-title">Discover community heritage</h2>
+      <p class="lead">Browse published heritage resources.</p>
+    </div>
 
-      <div v-if="showFilterPanel" class="filter-panel">
-        <div class="row">
-          <label class="lbl">Dynasty</label>
-          <select v-model="dynastyPickerValue" class="inp" @change="onDynastyPick">
-            <option value="">All</option>
-            <option v-for="d in dynasties" :key="d.code" :value="d.code">
-              {{ selectedDynastyCodes.has(d.code) ? `Selected: ${d.name}` : d.name }}
-            </option>
-          </select>
-        </div>
-        <div class="row">
-          <label class="lbl">Date Range</label>
-          <div class="era-range">
-            <div class="era-date-wrap inp inp-date">
-              <div
-                class="era-date-shell"
-                role="button"
-                tabindex="0"
-                :aria-label="'Start date, ' + (eraFrom ? formatIsoToCnYmd(eraFrom) : 'not selected, click to choose')"
-                @click="openNativeDatePicker('from')"
-                @keydown="onEraDateShellKeydown($event, 'from')"
-              >
-                <span class="era-date-text" :class="{ 'is-empty': !eraFrom }">
-                  {{ eraFrom ? formatIsoToCnYmd(eraFrom) : 'Select start date' }}
-                </span>
-              </div>
-              <input
-                ref="eraFromInputRef"
-                v-model="eraFrom"
-                type="date"
-                class="era-date-sr-only"
-                tabindex="-1"
-                aria-hidden="true"
-                :max="eraTo || undefined"
-                @change="onEraFromChange"
-              />
-            </div>
-            <span class="era-sep">to</span>
-            <div class="era-date-wrap inp inp-date">
-              <div
-                class="era-date-shell"
-                role="button"
-                tabindex="0"
-                :aria-label="'End date, ' + (eraTo ? formatIsoToCnYmd(eraTo) : 'not selected, click to choose')"
-                @click="openNativeDatePicker('to')"
-                @keydown="onEraDateShellKeydown($event, 'to')"
-              >
-                <span class="era-date-text" :class="{ 'is-empty': !eraTo }">
-                  {{ eraTo ? formatIsoToCnYmd(eraTo) : 'Select end date' }}
-                </span>
-              </div>
-              <input
-                ref="eraToInputRef"
-                v-model="eraTo"
-                type="date"
-                class="era-date-sr-only"
-                tabindex="-1"
-                aria-hidden="true"
-                :min="eraFrom || undefined"
-                @change="onEraToChange"
-              />
-            </div>
-          </div>
-          <p class="hint muted">
-            Optional. Start and end dates must be filled together. Start will always be <= end (auto-aligned on conflict).
-            Filtering uses the resource <strong>record creation time</strong> (compared with the date part of `created_at`), not
-            the artifact's historical era.
-          </p>
-        </div>
-        <div class="row">
-          <label class="lbl">Region (Province / Municipality)</label>
-          <select v-model="provincePickerValue" class="inp" @change="onProvincePick">
-            <option value="">All</option>
-            <option v-for="p in provinces" :key="p.code" :value="p.code">
-              {{ selectedProvinceCodes.has(p.code) ? `Selected: ${p.name}` : p.name }}
-            </option>
-          </select>
-        </div>
-        <div class="row">
-          <label class="lbl">Type</label>
-          <div class="type-col">
-            <select v-model="heritageTypePickerValue" class="inp" @change="onTypePick">
-              <option value="">All</option>
-              <template v-for="g in heritageGroups" :key="g.groupCode">
-                <option :value="g.groupCode" class="type-group-option">
-                  {{ selectedHeritageTypeCodes.has(g.groupCode) ? `Selected: ${g.groupName}` : g.groupName }}
-                </option>
-                <option v-for="t in g.types" :key="t.code" :value="t.code">
-                  {{ selectedHeritageTypeCodes.has(t.code) ? `Selected: ${'\u3000' + t.name}` : '\u3000' + t.name }}
-                </option>
-              </template>
-            </select>
-            <p class="hint muted type-hint">
-              You can choose a major category (including all subtypes) or a single subtype to filter resources.
-            </p>
-          </div>
-        </div>
-        <div class="actions">
-          <button type="button" class="btn primary" :disabled="loading" @click="applyFilters">Apply Filters</button>
-          <button type="button" class="btn" :disabled="loading" @click="resetFilters">Reset Filters</button>
-        </div>
-      </div>
-      <p v-if="err" class="err">{{ err }}</p>
-    </section>
+    <div class="toolbar">
+      <label class="field">
+        <span class="label">Search</span>
+        <input v-model="q" type="search" class="control" placeholder="Title, place, tags, description" />
+      </label>
+      <label class="field">
+        <span class="label">Category</span>
+        <select v-model="categoryId" class="control">
+          <option :value="null">All</option>
+          <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+        </select>
+      </label>
+    </div>
 
-    <section class="results">
-      <h2 class="h2">Latest Uploaded Heritage Resources</h2>
-      <p class="muted count">Total {{ total }} items · Page {{ page + 1 }} / {{ totalPages }}</p>
-      <ul class="cards">
-        <li v-for="item in list" :key="item.id" class="card">
-          <h3 class="title">
-            <RouterLink :to="`/resources/${item.id}`" class="title-link">{{ item.title }}</RouterLink>
-          </h3>
-          <p class="meta">{{ summaryLine(item) }}</p>
-          <p class="desc">{{ item.description || '(No description)' }}</p>
-        </li>
-      </ul>
-      <p v-if="!list.length && !loading" class="muted empty">No approved resources match the current criteria.</p>
+    <p v-if="!filteredResources.length" class="none">No resources match your filters.</p>
 
-      <nav v-if="total > size" class="pager">
-        <button type="button" class="btn" :disabled="page <= 0 || loading" @click="page--; search(false)">Previous</button>
-        <button type="button" class="btn" :disabled="page >= totalPages - 1 || loading" @click="page++; search(false)">
-          Next
-        </button>
-      </nav>
-    </section>
+    <div v-else class="grid">
+      <ResourceCard v-for="item in filteredResources" :key="item.id" :item="item" />
+    </div>
+
   </div>
 </template>
 
 <style scoped>
 .wrap {
-  max-width: 880px;
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 32px 20px 64px;
+  padding: 0 1.25rem;
 }
-
 .top {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
+  align-items: center;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--border);
 }
-
-.top h1 {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 650;
-}
-
 .header-actions {
   display: flex;
-  gap: 10px;
+  gap: 0.5rem;
 }
-
-.muted {
-  color: #64748b;
-  font-size: 14px;
-}
-
-.h2 {
-  margin: 0 0 16px;
-  font-size: 17px;
-}
-
-.panel {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 20px 20px 12px;
-  margin-bottom: 28px;
-}
-
-.home-search {
-  padding-bottom: 18px;
-}
-
-.search-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.search-input {
-  min-width: 0;
-}
-
-.chips-row {
-  margin-top: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.chips-label {
-  font-size: 13px;
-  color: #64748b;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #fff;
-  color: #334155;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.chip:hover {
-  border-color: #94a3b8;
-  background: #f8fafc;
-}
-
-.chip-close {
-  font-size: 14px;
-  line-height: 1;
-  color: #64748b;
-}
-
-.filter-panel {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px dashed #d6dde8;
-}
-
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 10px 16px;
-  margin-bottom: 14px;
-}
-
-.lbl {
-  min-width: 120px;
-  padding-top: 8px;
-  font-size: 14px;
-  color: #334155;
-}
-
-.inp {
-  flex: 1;
-  min-width: 200px;
-  padding: 8px 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 15px;
-}
-
-.era-range {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 200px;
-}
-
-.inp-date {
-  min-width: 160px;
-  flex: 0 1 auto;
-}
-
-.era-date-wrap {
-  position: relative;
-  display: inline-flex;
-  flex: 0 1 auto;
-  align-items: stretch;
-  box-sizing: border-box;
-}
-
-.era-date-shell {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  cursor: pointer;
-  outline: none;
-}
-
-.era-date-shell:focus-visible {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #1d4ed8;
-  border-radius: 4px;
-}
-
-.era-date-text {
-  white-space: nowrap;
-  padding-right: 6px;
-  user-select: none;
-}
-
-.era-date-text.is-empty {
-  color: #94a3b8;
-}
-
-.era-date-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.era-sep {
-  color: #64748b;
-  font-size: 14px;
-}
-
-.hint {
-  width: 100%;
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.type-col {
-  flex: 1;
-  min-width: 200px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.type-hint {
-  margin: 0;
-}
-
-.type-group-option {
-  font-weight: 650;
-}
-
-.actions {
-  margin-top: 8px;
-  display: flex;
-  gap: 10px;
-}
-
 .btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: 1px solid #94a3b8;
-  background: #fff;
-  font-size: 14px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: white;
   cursor: pointer;
 }
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .btn.primary {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
-  color: #fff;
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
 }
-
-.err {
-  color: #b91c1c;
-  font-size: 14px;
-  margin-top: 10px;
+.hero {
+  margin: 1.5rem 0;
 }
-
-.count {
-  margin: 0 0 12px;
+.page-title {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-serif);
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 700;
 }
-
-.cards {
-  list-style: none;
-  padding: 0;
+.lead {
   margin: 0;
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 0.975rem;
+}
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+  align-items: flex-end;
+}
+.field {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.35rem;
+  min-width: min(100%, 220px);
+  flex: 1;
 }
-
-.card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
+.label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.control {
+  padding: 0.55rem 0.75rem;
   border-radius: 8px;
-  padding: 16px 18px;
+  border: 1px solid var(--border);
+  font-family: inherit;
+  font-size: 0.9375rem;
+  background: var(--surface);
 }
-
-.title {
-  margin: 0 0 6px;
-  font-size: 18px;
-  line-height: 1.35;
+.grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.25rem;
 }
-
-.title-link {
-  color: #1d4ed8;
-  text-decoration: none;
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
-
-.title-link:hover {
-  text-decoration: underline;
+@media (min-width: 960px) {
+  .grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
-
-.meta {
-  margin: 0 0 8px;
-  font-size: 13px;
-  color: #64748b;
-}
-
-.desc {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.55;
-  color: #334155;
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.empty {
-  padding: 24px 0;
-}
-
-.pager {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
+.none {
+  color: var(--muted);
+  font-size: 0.9375rem;
 }
 </style>
