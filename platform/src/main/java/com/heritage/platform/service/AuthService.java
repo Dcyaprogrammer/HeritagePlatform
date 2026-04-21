@@ -5,7 +5,6 @@
 
 package com.heritage.platform.service;
 
-import com.heritage.platform.config.PasswordConfig;
 import com.heritage.platform.dto.*;
 
 import com.heritage.platform.model.HeritageUser;
