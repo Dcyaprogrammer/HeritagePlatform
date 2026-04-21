@@ -5,27 +5,27 @@
 ```mermaid
 erDiagram
     %% 1. User & Permission Module
-    USERS {
+    HERITAGE_USERS {
         bigint id PK "Primary Key"
         varchar username "Username"
         varchar password_hash "Encrypted Password"
         varchar email "Email"
-        varchar full_name "Full Name / Display Name" 
+        varchar display_name "Display Name" 
+        varchar avatar "Avatar Image URL"
         text bio "User Profile / Bio"
-        varchar avatar_url "Avatar Image URL"
-        varchar status "Status: PENDING_APPROVAL, ACTIVE, DISABLED"
+        varchar contributor_status "Status: NONE, APPROVED, REJECTED"
+        text contributor_reason "Application Reason"
+        int failed_attempts "Login failed attempts"
+        datetime lock_time "Account lock time"
+        varchar reset_token "Password reset token"
+        datetime reset_token_expiry "Token expiry time"
         datetime created_at "Creation Time"
         datetime updated_at "Update Time"
     }
     
-    ROLES {
-        int id PK "Primary Key"
-        varchar name "Role Name: ADMIN, REVIEWER, CONTRIBUTOR, VIEWER"
-    }
-    
-    USER_ROLES {
+    HERITAGE_USER_ROLES {
         bigint user_id PK, FK "User ID"
-        int role_id PK, FK "Role ID"
+        varchar role PK "Role: ADMIN, CONTRIBUTOR, VIEWER"
     }
 
     %% 2. Core Resource Module
@@ -36,8 +36,9 @@ erDiagram
         varchar location_name "Location / Place"
         varchar copyright_declaration "Copyright / Usage Declaration"
         varchar status "Status: DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED"
-        bigint contributor_id FK "Contributor ID (Linked to Users)"
+        bigint contributor_id FK "Contributor ID (Linked to HeritageUsers)"
         int category_id FK "Category ID (Linked to Categories)"
+        varchar heritage_type_code "Leaf type code, e.g. RIT_BRONZE"
         datetime created_at "Creation Time"
         datetime updated_at "Update Time"
     }
@@ -72,7 +73,7 @@ erDiagram
     REVIEW_LOGS {
         bigint id PK "Primary Key"
         bigint resource_id FK "Reviewed Resource ID"
-        bigint reviewer_id FK "Reviewer ID (Linked to Users)"
+        bigint reviewer_id FK "Reviewer ID (Linked to HeritageUsers)"
         varchar action "Action: APPROVE, REJECT"
         text feedback_comment "Rejection/Feedback Comment"
         datetime created_at "Review Time"
@@ -88,15 +89,14 @@ erDiagram
     }
 
     %% Relationships
-    USERS ||--o{ USER_ROLES : "assigned to"
-    ROLES ||--o{ USER_ROLES : "contains"
-    USERS ||--o{ RESOURCES : "submits (Contributor)"
+    HERITAGE_USERS ||--o{ HERITAGE_USER_ROLES : "assigned to"
+    HERITAGE_USERS ||--o{ RESOURCES : "submits (Contributor)"
     CATEGORIES ||--o{ RESOURCES : "belongs to"
     RESOURCES ||--o{ RESOURCE_TAGS : "has tags"
     TAGS ||--o{ RESOURCE_TAGS : "associated with"
     RESOURCES ||--o{ ATTACHMENTS : "contains (Media)"
     RESOURCES ||--o{ REVIEW_LOGS : "undergoes review"
-    USERS ||--o{ REVIEW_LOGS : "executes review (Reviewer)"
+    HERITAGE_USERS ||--o{ REVIEW_LOGS : "executes review (Reviewer)"
     RESOURCES ||--o{ COMMENTS : "receives comments"
-    USERS ||--o{ COMMENTS : "posts comments"
+    HERITAGE_USERS ||--o{ COMMENTS : "posts comments"
 ```

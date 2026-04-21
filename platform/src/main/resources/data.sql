@@ -4,24 +4,17 @@
 -- 使用 INSERT IGNORE 防止重复插入报错
 -- =========================================================
 
--- 1. 插入基础角色
-INSERT IGNORE INTO roles (id, name) VALUES 
+-- 1. 插入测试用户 (密码都是 123456)
+INSERT IGNORE INTO heritage_users (id, username, password_hash, email, display_name, bio, contributor_status, created_at, updated_at) VALUES
+(1, 'admin', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe', 'admin@example.com', 'System Admin', 'I am the admin.', 'APPROVED', NOW(), NOW()),
+(2, 'reviewer', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe', 'reviewer@example.com', 'Content Reviewer', 'I review submissions.', 'APPROVED', NOW(), NOW()),
+(3, 'contributor', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe', 'contributor@example.com', 'Local Contributor', 'I share heritage stories.', 'APPROVED', NOW(), NOW());
+
+-- 2. 分配角色
+INSERT IGNORE INTO heritage_user_roles (user_id, role) VALUES 
 (1, 'ADMIN'),
-(2, 'REVIEWER'),
-(3, 'CONTRIBUTOR'),
-(4, 'VIEWER');
-
--- 2. 插入测试用户 (密码都是 123456)
-INSERT IGNORE INTO users (id, username, password_hash, email, full_name, bio, status, created_at, updated_at) VALUES
-(1, 'admin', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjQsG40k1u', 'admin@example.com', 'System Admin', 'I am the admin.', 'ACTIVE', NOW(), NOW()),
-(2, 'reviewer', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjQsG40k1u', 'reviewer@example.com', 'Content Reviewer', 'I review submissions.', 'ACTIVE', NOW(), NOW()),
-(3, 'contributor', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjQsG40k1u', 'contributor@example.com', 'Local Contributor', 'I share heritage stories.', 'ACTIVE', NOW(), NOW());
-
--- 3. 分配角色
-INSERT IGNORE INTO user_roles (user_id, role_id) VALUES 
-(1, 1),
-(2, 2),
-(3, 3);
+(2, 'ADMIN'),
+(3, 'CONTRIBUTOR');
 
 -- 4. 插入分类 (Categories)
 INSERT IGNORE INTO categories (id, name, description, created_at) VALUES

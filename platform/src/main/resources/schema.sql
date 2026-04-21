@@ -3,30 +3,29 @@ CREATE DATABASE IF NOT EXISTS heritage_platform DEFAULT CHARACTER SET utf8mb4 CO
 USE heritage_platform;
 
 -- 1. Identity & Governance (Users & Roles)
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS heritage_users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    full_name VARCHAR(100),
+    username VARCHAR(64) NOT NULL UNIQUE,
+    password_hash VARCHAR(120) NOT NULL,
+    email VARCHAR(100),
+    display_name VARCHAR(120) NOT NULL,
+    avatar VARCHAR(500),
     bio TEXT,
-    avatar_url VARCHAR(255),
-    status VARCHAR(20) DEFAULT 'PENDING_APPROVAL' COMMENT 'PENDING_APPROVAL, ACTIVE, DISABLED',
+    contributor_status VARCHAR(20) DEFAULT 'NONE',
+    contributor_reason TEXT,
+    failed_attempts INT DEFAULT 0,
+    lock_time DATETIME,
+    reset_token VARCHAR(255),
+    reset_token_expiry DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS roles (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE COMMENT 'ADMIN, REVIEWER, CONTRIBUTOR, VIEWER'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE IF NOT EXISTS user_roles (
+CREATE TABLE IF NOT EXISTS heritage_user_roles (
     user_id BIGINT NOT NULL,
-    role_id INT NOT NULL,
-    PRIMARY KEY (user_id, role_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+    role VARCHAR(32) NOT NULL,
+    PRIMARY KEY (user_id, role),
+    FOREIGN KEY (user_id) REFERENCES heritage_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 2. Master Data (Categories & Tags)
@@ -58,7 +57,7 @@ CREATE TABLE IF NOT EXISTS resources (
 --
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (contributor_id) REFERENCES users(id),
+    FOREIGN KEY (contributor_id) REFERENCES heritage_users(id),
     FOREIGN KEY (category_id) REFERENCES categories(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -109,7 +108,7 @@ CREATE TABLE IF NOT EXISTS review_logs (
     feedback_comment TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
-    FOREIGN KEY (reviewer_id) REFERENCES users(id)
+    FOREIGN KEY (reviewer_id) REFERENCES heritage_users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS comments (
@@ -120,5 +119,5 @@ CREATE TABLE IF NOT EXISTS comments (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES heritage_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
