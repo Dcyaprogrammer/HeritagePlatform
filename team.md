@@ -3,7 +3,7 @@
 **Current User:** Team Leader (dopamine) & Developer for Module 4 (Resource Drafting Engine)
 
 ## 1. Project Overview
-A web-based community heritage resource sharing and curation platform. Contributors submit resources, Reviewers moderate them, and Viewers can search and browse approved entries.
+A web-based community heritage resource sharing and curation platform. Contributors submit resources, Admins moderate them, and Viewers can search and browse approved entries.
 
 ## 2. Tech Stack
 * **Frontend:** Vue.js 3 + TypeScript
@@ -32,9 +32,8 @@ A web-based community heritage resource sharing and curation platform. Contribut
 ## 4. Core Database Schema Context
 The AI must reference these tables when generating JPA Entities, MyBatis Mappers, or SQL queries for Module 4.
 
-* `users`: `id`, `username`, `password_hash`, `email`, `full_name`, `bio`, `avatar_url`, `status`, `created_at`, `updated_at`
-* `roles`: `id`, `name`
-* `user_roles`: `user_id`, `role_id`
+* `heritage_users`: `id`, `username`, `password_hash`, `email`, `display_name`, `avatar`, `bio`, `contributor_status`, `contributor_reason`, `failed_attempts`, `lock_time`, `reset_token`, `reset_token_expiry`, `created_at`, `updated_at`
+* `heritage_user_roles`: `user_id`, `role`
 * `categories`: `id`, `name`, `description`, `created_at`
 * `tags`: `id`, `name`, `created_at`
 * `resources` (Core Entity): `id`, `title`, `description`, `location_name`, `copyright_declaration`, `status`, `contributor_id` (FK), `category_id` (FK), `created_at`, `updated_at`.

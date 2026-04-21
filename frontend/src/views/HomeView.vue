@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { getToken } from '../api/auth.js'
+import { getToken, logout } from '../api/auth.js'
 import ResourceCard from '../components/ResourceCard.vue'
 import { getApprovedResources } from '../api/mockData.js'
 
@@ -54,12 +54,13 @@ const filteredResources = computed(() => {
   })
 })
 
-const isLoggedIn = computed(() => {
-  return !!getToken()
-})
+const isLoggedIn = ref(!!getToken())
+const isAdmin = ref(localStorage.getItem('role') === 'ADMIN')
 
-const isAdmin = computed(() => {
-  return localStorage.getItem('role') === 'ADMIN'
+// Update on route change or when storage changes
+onMounted(() => {
+  isLoggedIn.value = !!getToken()
+  isAdmin.value = localStorage.getItem('role') === 'ADMIN'
 })
 
 const goToAdmin = () => {
@@ -76,6 +77,13 @@ const goToLogin = () => {
 
 const goToRegister = () => {
   router.push('/register')
+}
+
+const handleLogout = () => {
+  logout()
+  isLoggedIn.value = false
+  isAdmin.value = false
+  router.push('/login')
 }
 
 /** 与后端 TaxonomyCatalog 一致；接口未返回时兜底（例如未重启的旧后端） */
@@ -242,6 +250,7 @@ onMounted(() => {
         <template v-if="isLoggedIn">
           <button v-if="isAdmin" type="button" class="btn primary" @click="goToAdmin">Admin Panel</button>
           <button type="button" class="btn" @click="goToProfile">Profile</button>
+          <button type="button" class="btn" @click="handleLogout">Logout</button>
         </template>
         <template v-else>
           <button type="button" class="btn" @click="goToLogin">Login</button>
