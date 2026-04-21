@@ -7,7 +7,6 @@ import HomeView from '../views/HomeView.vue'
 import Login from '../views/auth/Login.vue'
 import Profile from '../views/Profile.vue'
 import Register from '../views/auth/Register.vue'
-import HomeView from '../views/HomeView.vue'
 import ResourceDetailView from '../views/ResourceDetailView.vue'
 import SubmissionsView from '../views/SubmissionsView.vue'
 import FeedbackView from '../views/FeedbackView.vue'
@@ -17,7 +16,7 @@ import { getStoredRoles, getToken } from '../api/auth.js'
 const routes = [
   {
     path: '/',
-    name: 'Home',
+    name: 'Landing',
     component: HomeView,
     meta: { title: 'Heritage Resource Hall' }
   },

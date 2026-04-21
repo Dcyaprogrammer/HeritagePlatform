@@ -1,139 +1,223 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import ResourceImageCarousel from '../components/ResourceImageCarousel.vue'
+import CommentSection from '../components/CommentSection.vue'
+import { getComments, getResourceById } from '../api/mockData.js'
 
 const route = useRoute()
 const loading = ref(true)
-const err = ref('')
-const detail = ref(null)
+const resource = ref(null)
+const comments = ref([])
 
-const resourceId = computed(() => route.params.id)
+const id = computed(() => Number(route.params.id))
 
-function fmtDate(value) {
-  if (!value) {
-    return '—'
-  }
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
-}
-
-async function loadDetail() {
+async function load() {
+  const n = id.value
+  if (Number.isNaN(n)) return
   loading.value = true
-  err.value = ''
-  detail.value = null
   try {
-    const res = await fetch(`/api/public/resources/${resourceId.value}`)
-    const body = await res.json()
-    if (body.code !== 200) {
-      err.value = body.message || 'Failed to load resource'
-      return
-    }
-    if (!body.data) {
-      err.value = 'Resource does not exist or has not been approved'
-      return
-    }
-    detail.value = body.data
-  } catch (e) {
-    err.value = 'Network or backend error, please ensure Spring Boot is running'
+    // 模拟网络请求延迟
+    await new Promise(resolve => setTimeout(resolve, 300))
+    resource.value = getResourceById(n)
+    comments.value = getComments(n)
+  } catch {
+    resource.value = null
+    comments.value = []
   } finally {
     loading.value = false
   }
 }
 
-onMounted(loadDetail)
+onMounted(load)
+watch(id, load)
+
+function formatDate(iso) {
+  try {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(new Date(iso))
+  } catch {
+    return iso
+  }
+}
 </script>
 
 <template>
-  <div class="wrap">
-    <p class="back"><RouterLink to="/">← Back to Home</RouterLink></p>
-    <section class="panel">
-      <p v-if="loading" class="muted">Loading...</p>
-      <p v-else-if="err" class="err">{{ err }}</p>
-      <template v-else-if="detail">
-        <h1 class="title">{{ detail.title }}</h1>
-        <p class="meta">
-          <span v-if="detail.dynastyName">Dynasty (inferred from record date): {{ detail.dynastyName }}</span>
-          <span v-if="detail.provinceName"> · Region (matched from location text): {{ detail.provinceName }}</span>
-        </p>
-        <p v-if="detail.heritageTypeLabel" class="meta">Type: {{ detail.heritageTypeLabel }}</p>
-        <p class="meta">
-          <span>Category: {{ detail.categoryName || 'Uncategorized' }}</span>
-          <span> · Location: {{ detail.locationName || 'Not provided' }}</span>
-        </p>
-        <p v-if="detail.eraStart || detail.eraEnd" class="meta">
-          Record Date (for era display): {{ detail.eraStart || '—' }} ～ {{ detail.eraEnd || '—' }}
-        </p>
-        <p class="meta">Last Updated: {{ fmtDate(detail.updatedAt) }}</p>
-        <div class="tags">
-          <span v-for="tag in detail.tags || []" :key="tag.id" class="tag">{{ tag.name }}</span>
-          <span v-if="!(detail.tags || []).length" class="muted">No tags</span>
+  <div v-if="loading" class="page inner notfound">
+    <p>Loading resource...</p>
+  </div>
+  <div v-else-if="resource" class="page inner">
+    <nav class="crumb" aria-label="Breadcrumb">
+      <RouterLink to="/">Discover</RouterLink>
+      <span class="sep" aria-hidden="true">/</span>
+      <span class="current">{{ resource.title }}</span>
+    </nav>
+
+    <ResourceImageCarousel :attachments="resource.attachments || []" />
+
+    <article class="article">
+      <header class="head">
+        <h1 class="title">{{ resource.title }}</h1>
+        <div class="meta">
+          <span v-if="resource.category" class="pill">{{ resource.category.name }}</span>
+          <span v-if="resource.location_name" class="loc">{{ resource.location_name }}</span>
         </div>
-        <article class="desc">{{ detail.description || '(No description)' }}</article>
-      </template>
-    </section>
+        <ul v-if="resource.tags && resource.tags.length" class="tags" aria-label="Tags">
+          <li v-for="t in resource.tags" :key="t.id" class="tag">{{ t.name }}</li>
+        </ul>
+      </header>
+
+      <div class="prose">
+        <p class="desc">{{ resource.description }}</p>
+        <p v-if="resource.copyright_declaration" class="legal">
+          <strong>Copyright &amp; usage</strong><br />
+          {{ resource.copyright_declaration }}
+        </p>
+        <dl class="facts">
+          <div v-if="resource.contributorName" class="fact">
+            <dt>Contributor</dt>
+            <dd>{{ resource.contributorName }}</dd>
+          </div>
+          <div class="fact">
+            <dt>Published</dt>
+            <dd>{{ formatDate(resource.created_at) }}</dd>
+          </div>
+          <div class="fact">
+            <dt>Last updated</dt>
+            <dd>{{ formatDate(resource.updated_at) }}</dd>
+          </div>
+        </dl>
+      </div>
+    </article>
+
+    <CommentSection
+      :resource-id="resource.id"
+      :initial-comments="comments"
+      :is-logged-in="true"
+      :current-user-id="999"
+      current-user-name="Test User"
+    />
+  </div>
+
+  <div v-else class="page inner notfound">
+    <h1>Resource not found</h1>
+    <p>This entry does not exist, is not approved, or has been archived and is hidden from visitors.</p>
+    <RouterLink to="/">Back to Discover</RouterLink>
   </div>
 </template>
 
 <style scoped>
-.wrap {
-  max-width: 880px;
+.inner {
+  max-width: 800px;
   margin: 0 auto;
-  padding: 32px 20px 64px;
+  padding: 0 1.25rem;
 }
-
-.back {
-  margin-bottom: 12px;
+.notfound {
+  padding-top: 4rem;
+  text-align: center;
 }
-
-.back a {
-  color: #1d4ed8;
-  text-decoration: none;
+.crumb {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin-bottom: 1.25rem;
+  margin-top: 1rem;
 }
-
-.panel {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 20px;
+.crumb a {
+  color: var(--accent);
 }
-
+.sep {
+  margin: 0 0.35rem;
+  opacity: 0.6;
+}
+.current {
+  color: var(--ink);
+}
+.article {
+  margin-top: 1.75rem;
+}
+.head {
+  margin-bottom: 1.25rem;
+}
 .title {
-  margin: 0 0 10px;
+  margin: 0 0 0.65rem;
+  font-family: var(--font-serif);
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  line-height: 1.3;
 }
-
 .meta {
-  color: #64748b;
-  font-size: 14px;
-  margin: 0 0 8px;
-}
-
-.tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 12px 0 16px;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.65rem;
 }
-
-.tag {
-  border: 1px solid #cbd5e1;
-  border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 13px;
-  color: #334155;
+.pill {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
 }
-
-.desc {
+.loc {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.tags {
+  list-style: none;
   margin: 0;
-  white-space: pre-wrap;
-  line-height: 1.7;
-  color: #334155;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
 }
-
-.muted {
-  color: #64748b;
+.tag {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: #ffffff;
+  border: none;
+  font-weight: 500;
 }
-
-.err {
-  color: #b91c1c;
+.prose {
+  margin-top: 1.5rem;
+}
+.desc {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+.legal {
+  background: var(--surface);
+  padding: 1rem;
+  border-left: 4px solid var(--border);
+  font-size: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  background: var(--surface);
+  padding: 1.25rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.fact dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+.fact dd {
+  margin: 0;
+  font-weight: 500;
 }
 </style>
