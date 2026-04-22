@@ -35,9 +35,7 @@ const routes = [
   // Home page for viewers
   {
     path: '/home',
-    name: 'Home',
-    component: HomeView,
-    meta: { title: 'Home', requiresAuth: true }
+    redirect: '/'
   },
 
   // Profile page
@@ -109,6 +107,26 @@ const routes = [
         component: ContributorReview,
         meta: {
           title: 'Contributor Review',
+          requiresAuth: true,
+          roles: ['ADMIN']
+        }
+      },
+      {
+        path: 'resource-review',
+        name: 'ResourceReviewCenter',
+        component: ResourceReviewCenter,
+        meta: {
+          title: 'Resource Review',
+          requiresAuth: true,
+          roles: ['ADMIN']
+        }
+      },
+      {
+        path: 'resource-review/:id',
+        name: 'ResourceReviewDetail',
+        component: ResourceReviewDetail,
+        meta: {
+          title: 'Resource Review Detail',
           requiresAuth: true,
           roles: ['ADMIN']
         }

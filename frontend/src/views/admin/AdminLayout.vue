@@ -20,6 +20,12 @@
             </el-icon>
             <span>Contributor Review</span>
           </el-menu-item>
+          <el-menu-item index="/admin/resource-review">
+            <el-icon>
+            <DocumentChecked />
+            </el-icon>
+            <span>Resource Review</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 

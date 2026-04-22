@@ -1,7 +1,9 @@
 package com.heritage.platform.model;
 
 public enum ResourceStatus {
-	Pending,
-	Approved,
-	Rejected
+	DRAFT,
+	PENDING_REVIEW,
+	APPROVED,
+	REJECTED,
+	ARCHIVED
 }
