@@ -142,4 +142,13 @@ export const rejectContributor = (username) =>
 export const updateUserRole = (userId, role) =>
   api.put(`/admin/users/${userId}/role`, null, { params: { role } })
 
+export const getPendingResources = () => api.get('/review/pending')
+export const getResourceForReview = (id) =>
+  api.get(`/review/resources/${id}`)
+export const approveResource = (id, version) =>
+  api.post(`/review/resources/${id}/approve`, { version })
+export const rejectResource = (id, version, rejectionReason) =>
+  api.post(`/review/resources/${id}/reject`, { version, rejectionReason })
+
+
 export default api

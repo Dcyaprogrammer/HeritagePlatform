@@ -11,6 +11,8 @@ import ResourceDetailView from '../views/ResourceDetailView.vue'
 import SubmissionsView from '../views/SubmissionsView.vue'
 import FeedbackView from '../views/FeedbackView.vue'
 import { getStoredRoles, getToken } from '../api/auth.js'
+import ResourceReviewCenter from '../views/admin/ResourceReviewCenter.vue'
+import ResourceReviewDetail from '../views/admin/ResourceReviewDetail.vue'
 
 // Route configuration
 const routes = [
@@ -100,6 +102,26 @@ const routes = [
         component: ContributorReview,
         meta: {
           title: 'Contributor Review',
+          requiresAuth: true,
+          roles: ['ADMIN']
+        }
+      },
+      {
+        path: 'resource-review',
+        name: 'ResourceReviewCenter',
+        component: ResourceReviewCenter,
+        meta: {
+          title: 'Resource Review',
+          requiresAuth: true,
+          roles: ['ADMIN']
+        }
+      },
+      {
+        path: 'resource-review/:id',
+        name: 'ResourceReviewDetail',
+        component: ResourceReviewDetail,
+        meta: {
+          title: 'Resource Review Detail',
           requiresAuth: true,
           roles: ['ADMIN']
         }

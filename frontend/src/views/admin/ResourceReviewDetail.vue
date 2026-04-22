@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { getReviewDetail } from '../api'
+import { getReviewDetail } from '../../api'
 import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
@@ -17,7 +17,7 @@ onMounted(async () => {
 
 <template>
     <main class="container">
-        <button @click="router.push('/review')">Back</button>
+        <button @click="router.push('/admin/resource-review')">Back</button>
 
         <p v-if="error" style="color:#b91c1c;">{{ error }}</p>
 
@@ -36,3 +36,4 @@ onMounted(async () => {
 .card { padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 10px; margin-top: 12px; }
 button { border: 1px solid #e5e7eb; background: white; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
 </style>
+
