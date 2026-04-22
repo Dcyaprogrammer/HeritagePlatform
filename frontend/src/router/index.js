@@ -11,8 +11,6 @@ import ResourceDetailView from '../views/ResourceDetailView.vue'
 import SubmissionsView from '../views/SubmissionsView.vue'
 import FeedbackView from '../views/FeedbackView.vue'
 import { getStoredRoles, getToken } from '../api/auth.js'
-import ResourceReviewCenter from '../views/admin/ResourceReviewCenter.vue'
-import ResourceReviewDetail from '../views/admin/ResourceReviewDetail.vue'
 
 // Route configuration
 const routes = [
@@ -32,8 +30,9 @@ const routes = [
     path: '/register',
     name: 'Register',
     component: Register,
-    meta: { title: 'Register' }
+    meta:{ title: 'Register' }
   },
+  // Home page for viewers
   {
     path: '/home',
     redirect: '/'
@@ -46,7 +45,7 @@ const routes = [
     component: Profile,
     meta: { title: 'Profile', requiresAuth: true }
   },
-
+  
   {
     path: '/resources/:id',
     name: 'ResourceDetail',
@@ -70,6 +69,12 @@ const routes = [
       title: 'Feedback Detail',
       requiresAuth: true
     }
+  },
+  // Redirect root to home page
+  {
+    path: '/',
+    redirect: '/home'
+
   },
 
   // Admin routes with nested layout
