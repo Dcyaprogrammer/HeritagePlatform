@@ -35,7 +35,7 @@ public class HeritageResource {
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 20)
-	private ResourceStatus status = ResourceStatus.Pending;
+	private ResourceStatus status = ResourceStatus.DRAFT;
 
 	@Version
 	private Long version;

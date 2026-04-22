@@ -2,18 +2,19 @@ package com.heritage.platform.web;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.heritage.platform.common.ApiResponse;
 import com.heritage.platform.service.ReviewService;
-import java.util.NoSuchElementException;
-
-
 
 @RestController
 @RequestMapping("/api/review")
@@ -34,7 +35,7 @@ public class ReviewController {
         public String rejectionReason;
     }
 
-    public static class PendingItem{
+    public static class PendingItem {
         public Long id;
         public String title;
         public String submitterName;
@@ -46,46 +47,54 @@ public class ReviewController {
     }
 
     @GetMapping("/pending")
-    public ResponseEntity<List<PendingItem>> pending() {
-        return ResponseEntity.ok(reviewService.listPending()); // 下一步实现
+    public ResponseEntity<ApiResponse<List<PendingItem>>> pending() {
+        return ResponseEntity.ok(ApiResponse.success(reviewService.listPending()));
     }
 
     @GetMapping("/resources/{id}")
-    public ResponseEntity<ResourceDetail> detail(@PathVariable Long id) {
-        ResourceDetail d = reviewService.getDetail(id); // 下一步实现
-        if(d == null){
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<ApiResponse<ResourceDetail>> detail(@PathVariable Long id) {
+        ResourceDetail detail = reviewService.getDetail(id);
+        if (detail == null) {
+            return ResponseEntity.status(404).body(ApiResponse.error(404, "Resource not found"));
         }
-        return ResponseEntity.ok(d);
+        return ResponseEntity.ok(ApiResponse.success(detail));
     }
 
     @PostMapping("/resources/{id}/approve")
-    public ResponseEntity<Void> approve(@PathVariable Long id,
-                                        @RequestBody ApproveRequest request) {
+    public ResponseEntity<ApiResponse<String>> approve(
+            @PathVariable Long id,
+            @RequestBody ApproveRequest request,
+            Authentication authentication) {
         try {
-            reviewService.approve(id, request.version, null);
-            return ResponseEntity.ok().build();
+            String adminUsername = authentication == null ? null : authentication.getName();
+            reviewService.approve(id, request.version, adminUsername);
+            return ResponseEntity.ok(ApiResponse.success("Approved"));
         } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(ApiResponse.error(404, "Resource not found"));
         } catch (ReviewService.ConflictException e) {
-            return ResponseEntity.status(409).build();
+            return ResponseEntity.status(409)
+                    .body(ApiResponse.error(409, "This resource has been processed by another admin, please refresh the list"));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(ApiResponse.error(400, e.getMessage()));
         }
     }
 
     @PostMapping("/resources/{id}/reject")
-    public ResponseEntity<Void> reject(@PathVariable Long id, @RequestBody RejectRequest request) {
+    public ResponseEntity<ApiResponse<String>> reject(
+            @PathVariable Long id,
+            @RequestBody RejectRequest request,
+            Authentication authentication) {
         try {
-            reviewService.reject(id, request.version, null, request.rejectionReason);            
-            return ResponseEntity.ok().build();
+            String adminUsername = authentication == null ? null : authentication.getName();
+            reviewService.reject(id, request.version, adminUsername, request.rejectionReason);
+            return ResponseEntity.ok(ApiResponse.success("Rejected"));
         } catch (NoSuchElementException e) {
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(404).body(ApiResponse.error(404, "Resource not found"));
         } catch (ReviewService.ConflictException e) {
-            return ResponseEntity.status(409).build();
+            return ResponseEntity.status(409)
+                    .body(ApiResponse.error(409, "This resource has been processed by another admin, please refresh the list"));
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(ApiResponse.error(400, e.getMessage()));
         }
     }
-
 }

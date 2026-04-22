@@ -4,17 +4,18 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Service;
 
+import com.heritage.platform.model.HeritageUser;
 import com.heritage.platform.model.HeritageResource;
+import com.heritage.platform.model.ResourceStatus;
 import com.heritage.platform.repository.HeritageResourceRepository;
 import com.heritage.platform.repository.HeritageUserRepository;
 import com.heritage.platform.web.ResourceDetail;
 import com.heritage.platform.web.ReviewController.PendingItem;
-import com.heritage.platform.repository.HeritageUserRepository;
-import com.heritage.platform.model.HeritageUser;
-import com.heritage.platform.model.ResourceStatus;
+
 import jakarta.transaction.Transactional;
 
 @Service
@@ -33,7 +34,7 @@ public class ReviewService {
         List<PendingItem> stale = new ArrayList<>();
         List<PendingItem> normal = new ArrayList<>();
 
-        List<HeritageResource> pending = resources.findByStatusOrderBySubmittedAtDesc(ResourceStatus.Pending);
+        List<HeritageResource> pending = resources.findByStatusOrderBySubmittedAtDesc(ResourceStatus.PENDING_REVIEW);
 
         for(HeritageResource r : pending){
             boolean isStale = r.getSubmittedAt().isBefore(staleThreshold);
@@ -90,19 +91,19 @@ public class ReviewService {
     }
 
     @Transactional
-    public void approve(Long id, Long version,String reviewerName) {
-        HeritageResource r = resources.findById(id).orElseThrow(() -> new ConflictException("Resource not found"));
-        if(r.getStatus() != ResourceStatus.Pending){
+    public void approve(Long id, Long version, String adminUsername) {
+        HeritageResource r = resources.findById(id).orElseThrow(() -> new NoSuchElementException("Resource not found"));
+        if(r.getStatus() != ResourceStatus.PENDING_REVIEW){
             throw new IllegalArgumentException("not pending");
         }
 
-        if(version == null || version != r.getVersion()){
+        if (version == null || !version.equals(r.getVersion())) {
             throw new ConflictException("Version mismatch");
         }
 
-        HeritageUser reviewer = users.findByUsername(reviewerName).orElse(null);
+        HeritageUser reviewer = adminUsername == null ? null : users.findByUsername(adminUsername).orElse(null);
 
-        r.setStatus(ResourceStatus.Approved);
+        r.setStatus(ResourceStatus.APPROVED);
         r.setReviewedAt(Instant.now());
         r.setReviewedBy(reviewer);
         r.setRejectionReason(null);
@@ -111,27 +112,27 @@ public class ReviewService {
     }
 
     @Transactional
-    public void reject(Long id, Long version,String reviewerName,String reason) {
-        if(reason == null || reason.isEmpty()){
+    public void reject(Long id, Long version, String adminUsername, String reason) {
+        if (reason == null || reason.trim().isEmpty()) {
             throw new IllegalArgumentException("reason is required");
         }
 
-        HeritageResource r = resources.findById(id).orElseThrow(() -> new ConflictException("Resource not found"));
+        HeritageResource r = resources.findById(id).orElseThrow(() -> new NoSuchElementException("Resource not found"));
 
-        if(r.getStatus() != ResourceStatus.Pending){
+        if(r.getStatus() != ResourceStatus.PENDING_REVIEW){
             throw new IllegalArgumentException("not pending");
         }
 
-        if(version == null || version != r.getVersion()){
+        if (version == null || !version.equals(r.getVersion())) {
             throw new ConflictException("Version mismatch");
         }
         
-        HeritageUser reviewer = users.findByUsername(reviewerName).orElse(null);
+        HeritageUser reviewer = adminUsername == null ? null : users.findByUsername(adminUsername).orElse(null);
 
-        r.setStatus(ResourceStatus.Rejected);
+        r.setStatus(ResourceStatus.REJECTED);
         r.setReviewedAt(Instant.now());
         r.setReviewedBy(reviewer);
-        r.setRejectionReason(reason);
+        r.setRejectionReason(reason.trim());
 
         resources.save(r);
     }

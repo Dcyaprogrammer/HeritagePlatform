@@ -61,6 +61,133 @@ CREATE TABLE IF NOT EXISTS resources (
     FOREIGN KEY (category_id) REFERENCES categories(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Ensure columns required by review module exist on existing databases.
+-- These are no-op on fresh databases that already include them.
+SET @col_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'resources'
+      AND COLUMN_NAME = 'category'
+);
+SET @ddl := IF(
+    @col_exists = 0,
+    'ALTER TABLE resources ADD COLUMN category VARCHAR(120) NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @col_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'resources'
+      AND COLUMN_NAME = 'submitted_at'
+);
+SET @ddl := IF(
+    @col_exists = 0,
+    'ALTER TABLE resources ADD COLUMN submitted_at DATETIME NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @col_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'resources'
+      AND COLUMN_NAME = 'version'
+);
+SET @ddl := IF(
+    @col_exists = 0,
+    'ALTER TABLE resources ADD COLUMN version BIGINT NOT NULL DEFAULT 0',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @col_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'resources'
+      AND COLUMN_NAME = 'submitter_id'
+);
+SET @ddl := IF(
+    @col_exists = 0,
+    'ALTER TABLE resources ADD COLUMN submitter_id BIGINT NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @col_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'resources'
+      AND COLUMN_NAME = 'reviewed_by_id'
+);
+SET @ddl := IF(
+    @col_exists = 0,
+    'ALTER TABLE resources ADD COLUMN reviewed_by_id BIGINT NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @col_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'resources'
+      AND COLUMN_NAME = 'reviewed_at'
+);
+SET @ddl := IF(
+    @col_exists = 0,
+    'ALTER TABLE resources ADD COLUMN reviewed_at DATETIME NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @col_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'resources'
+      AND COLUMN_NAME = 'rejection_reason'
+);
+SET @ddl := IF(
+    @col_exists = 0,
+    'ALTER TABLE resources ADD COLUMN rejection_reason VARCHAR(4000) NULL',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Backfill compatibility values where possible
+UPDATE resources
+SET submitter_id = contributor_id
+WHERE submitter_id IS NULL;
+
+UPDATE resources
+SET submitted_at = created_at
+WHERE submitted_at IS NULL;
+
+UPDATE resources
+SET category = CAST(category_id AS CHAR)
+WHERE category IS NULL;
+
 --新加的
 SET @col_exists := (
     SELECT COUNT(*)

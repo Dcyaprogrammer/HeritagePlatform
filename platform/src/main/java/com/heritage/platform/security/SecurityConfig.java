@@ -37,6 +37,7 @@ public class SecurityConfig {
                  "/api/auth/login", 
                  "/api/auth/forgot-password", 
                  "/api/auth/reset-password").permitAll()
+                .requestMatchers("/api/review/**").hasRole("ADMIN")
 
 
                 .anyRequest().authenticated()
