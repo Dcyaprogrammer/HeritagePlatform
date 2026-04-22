@@ -40,6 +40,8 @@
         stripe
         style="width: 100%"
         empty-text="No pending resources"
+        @row-click="openDetail"
+        class="clickable-table"
       >
         <el-table-column type="index" width="50" />
 
@@ -77,9 +79,11 @@ import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh, Timer } from '@element-plus/icons-vue'
 import { getPendingResources } from '../../api/user.js'
+import { useRouter } from 'vue-router'
 
 const loading = ref(false)
 const items = ref([])
+const router = useRouter()
 
 const pendingCount = computed(() => items.value.length)
 
@@ -99,6 +103,11 @@ const fetchPending = async () => {
 const formatDate = (value) => {
   if (!value) return '-'
   return new Date(value).toLocaleString()
+}
+
+const openDetail = (row) => {
+  if (!row?.id) return
+  router.push(`/admin/resource-review/${row.id}`)
 }
 
 onMounted(fetchPending)
@@ -177,5 +186,9 @@ onMounted(fetchPending)
 .table-header .title {
   font-weight: 600;
   color: #303133;
+}
+
+.clickable-table :deep(.el-table__row) {
+  cursor: pointer;
 }
 </style>
