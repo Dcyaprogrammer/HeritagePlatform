@@ -55,9 +55,9 @@ public class AttachmentController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            File uploadDir = new File(uploadDir);
-            if (!uploadDir.exists()) {
-                uploadDir.mkdirs();
+            File dir = new File(this.uploadDir);
+            if (!dir.exists()) {
+                dir.mkdirs();
             }
 
             String originalName = file.getOriginalFilename();
