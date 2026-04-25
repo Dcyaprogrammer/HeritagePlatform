@@ -1,439 +1,228 @@
 <template>
   <div class="upload-container">
-    <!-- Drop zone -->
-    <div
+    <!-- 拖拽区域 -->
+    <div 
       class="drop-zone"
       @dragover.prevent
       @drop.prevent="handleDrop"
       @click="triggerFileInput"
     >
-      <input
-        type="file"
-        ref="fileInput"
-        style="display: none"
+      <input 
+        type="file" 
+        ref="fileInput" 
+        style="display: none" 
         @change="handleFileSelect"
         multiple
       />
       <p>Drag & drop files here, or click to select</p>
-      <p style="font-size: 12px; color: #999">
-        Supports images, PDF, Word, etc.
-      </p>
+      <p style="font-size: 12px; color: #999;">Supports images, PDF, Word, etc.</p>
     </div>
-
-    <!-- File list -->
+    
+    <!-- 文件列表 -->
     <div class="file-list" v-if="uploadedFiles.length > 0">
       <h4>Uploaded Files:</h4>
-      <div
-        v-for="(file, index) in uploadedFiles"
-        :key="index"
-        class="file-item"
-        @click="openPreview(file)"
-      >
-        <!-- image preview -->
+      <div v-for="(file, index) in uploadedFiles" :key="index" class="file-item">
+        <!-- 图片预览 -->
         <div v-if="file.isImage" class="image-preview-container">
           <img :src="file.preview" class="file-preview" />
           <div class="image-hover">
             <img :src="file.preview" class="hover-image" />
           </div>
         </div>
-        <!-- Document icon -->
+        <!-- 文档图标 -->
         <div v-else class="file-icon">
-          <i
-            v-if="file.name.endsWith('.pdf')"
-            class="fas fa-file-pdf"
-            style="color: #e74c3c; font-size: 24px"
-          ></i>
-          <i
-            v-else-if="
-              file.name.endsWith('.doc') || file.name.endsWith('.docx')
-            "
-            class="fas fa-file-word"
-            style="color: #2b579a; font-size: 24px"
-          ></i>
-          <i
-            v-else-if="
-              file.name.endsWith('.mp4') ||
-              file.name.endsWith('.mov') ||
-              file.name.endsWith('.avi')
-            "
-            class="fas fa-file-video"
-            style="color: #9b59b6; font-size: 24px"
-          ></i>
-          <i
-            v-else-if="
-              file.name.endsWith('.mp3') || file.name.endsWith('.m4a')
-            "
-            class="fas fa-file-audio"
-            style="color: #f39c12; font-size: 24px"
-          ></i>
-          <i
-            v-else-if="file.name.endsWith('.jpg') || file.name.endsWith('.png')"
-            class="fas fa-file-image"
-            style="color: #27ae60; font-size: 24px"
-          ></i>
-          <i
-            v-else
-            class="fas fa-file"
-            style="color: #7f8c8d; font-size: 24px"
-          ></i>
+          <i v-if="file.name.endsWith('.pdf')" class="fas fa-file-pdf" style="color: #e74c3c; font-size: 24px;"></i>
+          <i v-else-if="file.name.endsWith('.doc') || file.name.endsWith('.docx')" class="fas fa-file-word" style="color: #2b579a; font-size: 24px;"></i>
+          <i v-else-if="file.name.endsWith('.jpg') || file.name.endsWith('.png')" class="fas fa-file-image" style="color: #27ae60; font-size: 24px;"></i>
+          <i v-else class="fas fa-file" style="color: #7f8c8d; font-size: 24px;"></i>
         </div>
         <span class="file-name">{{ file.displayName || file.name }}</span>
         <span v-if="file.uploaded" class="success-check">
           <i class="fas fa-check-circle"></i>
         </span>
         <span class="file-size">{{ formatFileSize(file.size) }}</span>
-        <button @click.stop="removeFile(index)" class="delete-btn">×</button>
+        <button @click="removeFile(index)" class="delete-btn">×</button>
       </div>
     </div>
-
-    <!-- Upload progress -->
+    
+    <!-- 上传进度 -->
     <div v-if="uploading" class="progress-bar">
       <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
       <span>{{ uploadProgress }}%</span>
     </div>
 
-    <!-- Error message -->
+    <!-- 错误提示 -->
     <div v-if="errorMessage" class="error-message">
       {{ errorMessage }}
-    </div>
-  </div>
-  <!-- Preview Modal -->
-  <div v-if="previewFile" class="modal" @click="closePreview">
-    <div class="modal-content" @click.stop>
-      <span class="modal-close" @click="closePreview">&times;</span>
-
-      <!-- Image preview -->
-      <img
-        v-if="previewFile.isImage"
-        :src="previewFile.preview"
-        class="modal-image"
-      />
-
-      <!-- Video preview -->
-      <video
-        v-else-if="previewFile.isVideo"
-        :src="previewFile.preview"
-        class="modal-video"
-        controls
-        autoplay
-      ></video>
-
-      <!-- PDF preview (embedded) -->
-      <div
-        v-else-if="previewFile.name && previewFile.name.endsWith('.pdf')"
-        class="modal-pdf"
-      >
-        <iframe
-          v-if="previewFile.previewUrl"
-          :src="previewFile.previewUrl"
-          class="modal-iframe"
-          frameborder="0"
-        ></iframe>
-        <div v-else class="modal-error">
-          <p>Cannot preview PDF</p>
-          <a href="#" @click.prevent="downloadFile(previewFile)">Download</a>
-        </div>
-      </div>
-
-      <!-- Word document preview -->
-      <div
-        v-else-if="
-          previewFile.name &&
-          (previewFile.name.endsWith('.doc') ||
-            previewFile.name.endsWith('.docx'))
-        "
-        class="modal-doc"
-      >
-        <div>
-          <p>
-            Current environment does not support online preview of Word, please
-            download and view
-          </p>
-          <p>{{ previewFile.displayName || previewFile.name }}</p>
-          <a
-            href="#"
-            @click.prevent="downloadFile(previewFile)"
-            class="modal-link"
-            >Download to view</a
-          >
-        </div>
-      </div>
-
-      <!-- Other file types -->
-      <div v-else class="modal-other">
-        <i class="fas fa-file" style="font-size: 64px; color: #7f8c8d"></i>
-        <p>{{ previewFile.displayName || previewFile.name }}</p>
-        <a
-          href="#"
-          @click.prevent="downloadFile(previewFile)"
-          class="modal-link"
-          >Download file</a
-        >
-      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
-import axios from "axios";
+import { ref } from 'vue'
+import axios from 'axios'
 
-const uploadedFiles = ref([]);
-const uploading = ref(false);
-const uploadProgress = ref(0);
-const errorMessage = ref("");
-const fileInput = ref(null);
+const uploadedFiles = ref([])
+const uploading = ref(false)
+const uploadProgress = ref(0)
+const errorMessage = ref('')
+const fileInput = ref(null)
 
-// Trigger hidden file input dialog
+// 触发文件选择框
 const triggerFileInput = () => {
-  fileInput.value.click();
-};
+  fileInput.value.click()
+}
 
-// Handle File Selection
+// 处理文件选择
 const handleFileSelect = (event) => {
-  const files = Array.from(event.target.files);
-  addFiles(files);
-  event.target.value = "";
-};
+  const files = Array.from(event.target.files)
+  addFiles(files)
+  event.target.value = ''
+}
 
-/// Handle file selection from system file picker
+// 处理拖拽
 const handleDrop = (event) => {
-  const files = Array.from(event.dataTransfer.files);
-  addFiles(files);
-};
+  const files = Array.from(event.dataTransfer.files)
+  addFiles(files)
+}
 
-// Handle dropped files from drag-and-drop
+// 添加文件到列表并上传
 const addFiles = (files) => {
-  files.forEach((file) => {
-    // Create preview
+  files.forEach(file => {
+    // 创建预览
     const fileItem = {
       name: file.name,
       size: file.size,
-      isImage: file.type.startsWith("image/"),
-      isVideo: file.type.startsWith("video/"),
-      preview: URL.createObjectURL(file),
-      rawFile: file,
-    };
-    uploadedFiles.value.push(fileItem);
+      isImage: file.type.startsWith('image/'),
+      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
+      rawFile: file
+    }
+    uploadedFiles.value.push(fileItem)
+    
+    // 上传到后端
+    uploadFile(file, fileItem)
+  })
+}
 
-    // Upload to backend
-    uploadFile(file, fileItem);
-  });
-};
-
-// ----- Chunked upload constants -----
-const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per chunk
-const CHUNK_CONCURRENCY = 3; // parallel uploads
-
-// Upload entry: small files → single upload, large files → chunked upload
+// 上传文件到后端
 const uploadFile = async (file, fileItem) => {
-  uploading.value = true;
-  uploadProgress.value = 0;
-  errorMessage.value = "";
-
-  // Files > 50MB use chunked upload, no upper limit
-  if (file.size > 50 * 1024 * 1024) {
-    await uploadByChunks(file, fileItem);
-  } else {
-    await uploadSingle(file, fileItem);
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  uploading.value = true
+  uploadProgress.value = 0
+  errorMessage.value = ''
+  
+  // 前端文件大小检查（10MB限制）
+  const maxSize = 10 * 1024 * 1024 // 10MB
+  if (file.size > maxSize) {
+    errorMessage.value = `File too large: ${formatFileSize(file.size)}. Maximum size is 10MB`
+    fileItem.uploadError = true
+    uploading.value = false
+    setTimeout(() => { errorMessage.value = '' }, 5000)
+    return
   }
-
-  uploading.value = false;
-  setTimeout(() => { uploadProgress.value = 0; }, 1000);
-};
-
-// ----- Standard single upload (files ≤ 50MB) -----
-const uploadSingle = async (file, fileItem) => {
-  const formData = new FormData();
-  formData.append("file", file);
-
+  
   try {
-    const response = await axios.post("/api/attachments/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-      timeout: 180000,
+    const response = await axios.post('/api/attachments/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 30000, // 30秒超时
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total && progressEvent.total > 0) {
-          uploadProgress.value = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total,
-          );
-        }
-      },
-    });
-    handleUploadSuccess(response.data, fileItem, file);
-  } catch (error) {
-    handleUploadError(error, fileItem);
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          uploadProgress.value = percent
+        } else {
+          uploadProgress.value = 0
   }
-};
-
-// ----- Chunked upload (files > 50MB) -----
-const uploadByChunks = async (file, fileItem) => {
-  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-  const uploadId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-  let completedBytes = 0;
-
-  const uploadOneChunk = async (chunkIndex) => {
-    const start = chunkIndex * CHUNK_SIZE;
-    const end = Math.min(start + CHUNK_SIZE, file.size);
-    const blob = file.slice(start, end);
-
-    const formData = new FormData();
-    formData.append("file", blob, file.name);
-    formData.append("uploadId", uploadId);
-    formData.append("chunkIndex", chunkIndex);
-    formData.append("totalChunks", totalChunks);
-
-    await axios.post("/api/attachments/upload/chunk", formData, {
-      timeout: 60000,
-    });
-    completedBytes += blob.size;
-    uploadProgress.value = Math.round((completedBytes * 100) / file.size);
-  };
-
-  const uploadWithRetry = async (chunkIndex, retries = 3) => {
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        await uploadOneChunk(chunkIndex);
-        return;
-      } catch (err) {
-        if (attempt === retries) throw err;
-        await new Promise((r) => setTimeout(r, 2000 * attempt));
-      }
+}
+    })
+    
+    if (response.data.success) {
+      fileItem.id = response.data.attachmentId
+      fileItem.displayName = response.data.displayName
+      fileItem.uploaded = true
+      fileItem.serverPath = response.data.filePath
+      console.log('Upload success', response.data)
     }
-  };
-
-  try {
-    // Upload chunks in parallel batches
-    for (let i = 0; i < totalChunks; i += CHUNK_CONCURRENCY) {
-      const batch = [];
-      for (let j = i; j < i + CHUNK_CONCURRENCY && j < totalChunks; j++) {
-        batch.push(uploadWithRetry(j));
-      }
-      await Promise.all(batch);
-    }
-
-    // All chunks done — trigger merge
-    const mergeResp = await axios.post("/api/attachments/upload/merge", null, {
-      params: { uploadId, fileName: file.name, totalChunks },
-      timeout: 120000,
-    });
-    handleUploadSuccess(mergeResp.data, fileItem, file);
   } catch (error) {
-    handleUploadError(error, fileItem);
+    console.error('Upload failed:', error)
+    
+    // 根据错误类型设置不同的用户提示
+    let userMessage = ''
+    
+    if (error.code === 'ERR_NETWORK') {
+      userMessage = 'Network error: Cannot connect to server. Please check if backend is running on port 8080'
+      console.error('Backend may not be running or network is down')
+    } else if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      userMessage = 'Upload timeout: Connection took too long. Please check your network and try again'
+      console.error('Upload timeout after 30 seconds')
+    } else if (error.response) {
+      // 服务器返回了错误响应
+      const status = error.response.status
+      const data = error.response.data
+      
+      if (status === 413) {
+        userMessage = 'File too large for server. Maximum size is 10MB'
+        console.error('File size exceeded server limit')
+      } else if (status === 500) {
+        userMessage = 'Server error occurred. Please try again later'
+        console.error('Server error:', data)
+      } else if (data?.message) {
+        userMessage = `Upload failed: ${data.message}`
+      } else {
+        userMessage = `Upload failed with status ${status}`
+      }
+    } else if (error.message) {
+      userMessage = `Upload failed: ${error.message}`
+    } else {
+      userMessage = 'Upload failed for unknown reason. Please try again'
+    }
+    
+    errorMessage.value = userMessage
+    fileItem.uploadError = true
+    
+    // 5秒后自动清除错误提示
+    setTimeout(() => {
+      errorMessage.value = ''
+    }, 5000)
+  } finally {
+    uploading.value = false
+    setTimeout(() => { uploadProgress.value = 0 }, 1000)
   }
-};
+}
 
-// ----- Shared helpers -----
-const handleUploadSuccess = (data, fileItem, file) => {
-  if (data.success) {
-    fileItem.id = data.attachmentId;
-    fileItem.displayName = data.displayName;
-    fileItem.uploaded = true;
-    fileItem.serverPath = data.filePath;
-    fileItem.previewUrl =
-      data.previewUrl ||
-      (data.attachmentId ? `/api/attachments/${data.attachmentId}/preview` : "");
-    fileItem.downloadUrl =
-      data.downloadUrl ||
-      (data.attachmentId ? `/api/attachments/${data.attachmentId}/download` : "");
-  }
-};
-
-const handleUploadError = (error, fileItem) => {
-  let userMessage = "";
-  if (error.code === "ERR_NETWORK") {
-    userMessage = "Network error: Cannot connect to server.";
-  } else if (error.code === "ECONNABORTED" || error.message.includes("timeout")) {
-    userMessage = "Upload timeout.";
-  } else if (error.response) {
-    const s = error.response.status;
-    const d = error.response.data;
-    if (s === 413) userMessage = "File too large for server.";
-    else if (s === 500) userMessage = "Server error.";
-    else userMessage = d?.message || `Upload failed (${s})`;
-  } else {
-    userMessage = error.message || "Upload failed.";
-  }
-  errorMessage.value = userMessage;
-  fileItem.uploadError = true;
-  setTimeout(() => { errorMessage.value = ""; }, 5000);
-};
-
-// Delete file from list and server
+// 删除文件
 const removeFile = async (index) => {
-  const file = uploadedFiles.value[index];
-
-  // Call backend delete API if file was already uploaded
+  const file = uploadedFiles.value[index]
+  
+  // 如果文件已经上传到服务器，调用后端删除接口
   if (file.id) {
     try {
-      await axios.delete(`/api/attachments/${file.id}`);
-      console.log("File deleted from server");
+      await axios.delete(`/api/attachments/${file.id}`)
+      console.log('文件已从服务器删除')
     } catch (error) {
-      console.error("Delete failed", error);
-      alert(
-        "Delete failed：" + (error.response?.data?.message || error.message),
-      );
-      return; // Don't remove from list if deletion fails
+      console.error('删除失败', error)
+      alert('删除失败：' + (error.response?.data?.message || error.message))
+      return  // 删除失败就不从列表中移除
     }
   }
-
-  // Release preview URL
+  
+  // 释放预览URL
   if (file.preview) {
-    URL.revokeObjectURL(file.preview);
+    URL.revokeObjectURL(file.preview)
   }
+  
+  // 从列表中移除
+  uploadedFiles.value.splice(index, 1)
+  console.log('已从列表中移除')
+}
 
-  // Remove from list
-  uploadedFiles.value.splice(index, 1);
-  console.log("It has been removed from list.");
-};
-
-// Preview modal
-const previewFile = ref(null);
-
-const openPreview = (file) => {
-  previewFile.value = file;
-};
-
-const closePreview = () => {
-  previewFile.value = null;
-};
-
-const downloadFile = async (file) => {
-  if (!file?.id) {
-    errorMessage.value = "File not uploaded yet, cannot download";
-    return;
-  }
-
-  try {
-    const response = await axios.get(
-      file.downloadUrl || `/api/attachments/${file.id}/download`,
-      {
-        responseType: "blob",
-      },
-    );
-    const blobUrl = URL.createObjectURL(response.data);
-    const link = document.createElement("a");
-    link.href = blobUrl;
-    link.download = file.displayName || file.name || "downloaded-file";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
-  } catch (error) {
-    console.error("Download failed:", error);
-    errorMessage.value = "Download failed, please try again";
-    setTimeout(() => {
-      errorMessage.value = "";
-    }, 5000);
-  }
-};
-
-// Format file size in bytes to human-readable string
+// 格式化文件大小
 const formatFileSize = (bytes) => {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-};
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
 </script>
 
 <style scoped>
@@ -570,72 +359,7 @@ const formatFileSize = (bytes) => {
   font-size: 14px;
   margin-left: 6px;
 }
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal-content {
-  position: relative;
-  max-width: 90%;
-  max-height: 90%;
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-}
-.modal-close {
-  position: absolute;
-  top: 10px;
-  right: 20px;
-  font-size: 28px;
-  cursor: pointer;
-}
-.modal-image,
-.modal-video {
-  max-width: 100%;
-  max-height: 80vh;
-}
-.modal-iframe {
-  width: 800px;
-  height: 600px;
-  max-width: 90vw;
-  max-height: 70vh;
-  border: none;
-}
 
-.modal-pdf,
-.modal-doc,
-.modal-other {
-  text-align: center;
-  padding: 20px;
-  min-width: 300px;
-}
-
-.modal-link {
-  display: inline-block;
-  margin-top: 15px;
-  padding: 8px 16px;
-  background: #409eff;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-}
-
-.modal-link:hover {
-  background: #66b1ff;
-}
-
-.modal-error {
-  text-align: center;
-  padding: 40px;
-}
 @keyframes fadeIn {
   from {
     opacity: 0;
