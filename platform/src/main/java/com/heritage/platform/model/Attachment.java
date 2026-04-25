@@ -12,7 +12,7 @@ public class Attachment {
     private Long id;
     
     @Column(name = "resource_id")
-    private Long resourceId;  // 关联的资源ID，暂时先不用
+    private Long resourceId;  // associated resource ID (unused for now, FK will be enabled after integration with team member 4)
 
     @Column(name = "stored_name")
     private String storedName;   
@@ -34,14 +34,8 @@ public class Attachment {
     
     
     public Attachment() {}
-    
-    public Attachment(String filePath, String fileType) {
-        this.filePath = filePath;
-        this.fileType = fileType;
-        this.createdAt = LocalDateTime.now();
-    }
-    
-   
+
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     

@@ -3,9 +3,13 @@
     <!-- Drop zone -->
     <div
       class="drop-zone"
+      role="button"
+      tabindex="0"
       @dragover.prevent
       @drop.prevent="handleDrop"
       @click="triggerFileInput"
+      @keydown.enter="triggerFileInput"
+      @keydown.space.prevent="triggerFileInput"
     >
       <input
         type="file"
@@ -24,8 +28,8 @@
     <div class="file-list" v-if="uploadedFiles.length > 0">
       <h4>Uploaded Files:</h4>
       <div
-        v-for="(file, index) in uploadedFiles"
-        :key="index"
+        v-for="file in uploadedFiles"
+        :key="file.uid"
         class="file-item"
         @click="openPreview(file)"
       >
@@ -78,18 +82,16 @@
           ></i>
         </div>
         <span class="file-name">{{ file.displayName || file.name }}</span>
-        <span v-if="file.uploaded" class="success-check">
+        <span v-if="file.uploaded && !file.uploading" class="success-check">
           <i class="fas fa-check-circle"></i>
         </span>
         <span class="file-size">{{ formatFileSize(file.size) }}</span>
-        <button @click.stop="removeFile(index)" class="delete-btn">×</button>
+        <!-- Per-file progress bar -->
+        <div v-if="file.uploading" class="file-progress">
+          <div class="file-progress-fill" :style="{ width: file.progress + '%' }"></div>
+        </div>
+        <button @click.stop="removeFile(file.uid)" class="delete-btn">×</button>
       </div>
-    </div>
-
-    <!-- Upload progress -->
-    <div v-if="uploading" class="progress-bar">
-      <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
-      <span>{{ uploadProgress }}%</span>
     </div>
 
     <!-- Error message -->
@@ -179,10 +181,10 @@ import { ref } from "vue";
 import axios from "axios";
 
 const uploadedFiles = ref([]);
-const uploading = ref(false);
-const uploadProgress = ref(0);
 const errorMessage = ref("");
 const fileInput = ref(null);
+
+let uidCounter = 0;
 
 // Trigger hidden file input dialog
 const triggerFileInput = () => {
@@ -205,14 +207,19 @@ const handleDrop = (event) => {
 // Handle dropped files from drag-and-drop
 const addFiles = (files) => {
   files.forEach((file) => {
-    // Create preview
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
     const fileItem = {
+      uid: ++uidCounter,
       name: file.name,
       size: file.size,
-      isImage: file.type.startsWith("image/"),
-      isVideo: file.type.startsWith("video/"),
-      preview: URL.createObjectURL(file),
+      isImage,
+      isVideo,
+      preview: isImage || isVideo ? URL.createObjectURL(file) : null,
       rawFile: file,
+      uploading: true,
+      progress: 0,
+      removed: false,
     };
     uploadedFiles.value.push(fileItem);
 
@@ -227,8 +234,8 @@ const CHUNK_CONCURRENCY = 3; // parallel uploads
 
 // Upload entry: small files → single upload, large files → chunked upload
 const uploadFile = async (file, fileItem) => {
-  uploading.value = true;
-  uploadProgress.value = 0;
+  fileItem.uploading = true;
+  fileItem.progress = 0;
   errorMessage.value = "";
 
   // Files > 50MB use chunked upload, no upper limit
@@ -238,8 +245,7 @@ const uploadFile = async (file, fileItem) => {
     await uploadSingle(file, fileItem);
   }
 
-  uploading.value = false;
-  setTimeout(() => { uploadProgress.value = 0; }, 1000);
+  fileItem.uploading = false;
 };
 
 // ----- Standard single upload (files ≤ 50MB) -----
@@ -253,7 +259,7 @@ const uploadSingle = async (file, fileItem) => {
       timeout: 180000,
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total && progressEvent.total > 0) {
-          uploadProgress.value = Math.round(
+          fileItem.progress = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total,
           );
         }
@@ -287,7 +293,7 @@ const uploadByChunks = async (file, fileItem) => {
       timeout: 60000,
     });
     completedBytes += blob.size;
-    uploadProgress.value = Math.round((completedBytes * 100) / file.size);
+    fileItem.progress = Math.round((completedBytes * 100) / file.size);
   };
 
   const uploadWithRetry = async (chunkIndex, retries = 3) => {
@@ -325,6 +331,14 @@ const uploadByChunks = async (file, fileItem) => {
 
 // ----- Shared helpers -----
 const handleUploadSuccess = (data, fileItem, file) => {
+  // If the file was removed during upload, clean up on the server immediately
+  if (fileItem.removed) {
+    if (data.attachmentId) {
+      axios.delete(`/api/attachments/${data.attachmentId}`).catch(() => {});
+    }
+    return;
+  }
+
   if (data.success) {
     fileItem.id = data.attachmentId;
     fileItem.displayName = data.displayName;
@@ -360,21 +374,23 @@ const handleUploadError = (error, fileItem) => {
 };
 
 // Delete file from list and server
-const removeFile = async (index) => {
-  const file = uploadedFiles.value[index];
+const removeFile = (uid) => {
+  const idx = uploadedFiles.value.findIndex((f) => f.uid === uid);
+  if (idx === -1) return;
+  const file = uploadedFiles.value[idx];
+
+  // If still uploading, mark as removed so handleUploadSuccess cleans up
+  if (file.uploading) {
+    file.removed = true;
+    uploadedFiles.value.splice(idx, 1);
+    return;
+  }
 
   // Call backend delete API if file was already uploaded
   if (file.id) {
-    try {
-      await axios.delete(`/api/attachments/${file.id}`);
-      console.log("File deleted from server");
-    } catch (error) {
+    axios.delete(`/api/attachments/${file.id}`).catch((error) => {
       console.error("Delete failed", error);
-      alert(
-        "Delete failed：" + (error.response?.data?.message || error.message),
-      );
-      return; // Don't remove from list if deletion fails
-    }
+    });
   }
 
   // Release preview URL
@@ -383,8 +399,7 @@ const removeFile = async (index) => {
   }
 
   // Remove from list
-  uploadedFiles.value.splice(index, 1);
-  console.log("It has been removed from list.");
+  uploadedFiles.value.splice(idx, 1);
 };
 
 // Preview modal
@@ -454,6 +469,10 @@ const formatFileSize = (bytes) => {
   border-color: #409eff;
   background: #f5f7fa;
 }
+.drop-zone:focus {
+  outline: 2px solid #409eff;
+  outline-offset: 2px;
+}
 .file-list {
   margin-top: 20px;
 }
@@ -518,6 +537,20 @@ const formatFileSize = (bytes) => {
   font-size: 12px;
   color: #999;
 }
+.file-progress {
+  width: 80px;
+  height: 6px;
+  background: #e0e0e0;
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.file-progress-fill {
+  height: 100%;
+  background: #409eff;
+  transition: width 0.3s;
+  border-radius: 3px;
+}
 .delete-btn {
   background: none;
   border: none;
@@ -535,26 +568,6 @@ const formatFileSize = (bytes) => {
 .delete-btn:hover {
   color: #f56c6c;
   background: rgba(245, 108, 108, 0.1);
-}
-.progress-bar {
-  margin-top: 10px;
-  height: 20px;
-  background: #e0e0e0;
-  border-radius: 10px;
-  overflow: hidden;
-  position: relative;
-}
-.progress-fill {
-  height: 100%;
-  background: #409eff;
-  transition: width 0.3s;
-}
-.progress-bar span {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 12px;
-  line-height: 20px;
 }
 .error-message {
   background-color: #fef0f0;
