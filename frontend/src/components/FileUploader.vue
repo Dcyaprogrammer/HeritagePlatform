@@ -3,24 +3,21 @@
     <!-- Drop zone -->
     <div
       class="drop-zone"
-      role="button"
-      tabindex="0"
       @dragover.prevent
       @drop.prevent="handleDrop"
       @click="triggerFileInput"
-      @keydown.enter="triggerFileInput"
-      @keydown.space.prevent="triggerFileInput"
     >
       <input
         type="file"
         ref="fileInput"
         style="display: none"
+        accept=".jpg,.jpeg,.png,.gif,.bmp,.webp,.pdf,.doc,.docx,.txt,.mp4,.mov,.avi,.mkv,.mp3,.wav,.m4a,.flac"
         @change="handleFileSelect"
         multiple
       />
       <p>Drag & drop files here, or click to select</p>
       <p style="font-size: 12px; color: #999">
-        Supports images, PDF, Word, etc.
+        Supports images, documents (PDF/Word), video, and audio files
       </p>
     </div>
 
@@ -28,8 +25,8 @@
     <div class="file-list" v-if="uploadedFiles.length > 0">
       <h4>Uploaded Files:</h4>
       <div
-        v-for="file in uploadedFiles"
-        :key="file.uid"
+        v-for="(file, index) in uploadedFiles"
+        :key="index"
         class="file-item"
         @click="openPreview(file)"
       >
@@ -43,35 +40,27 @@
         <!-- Document icon -->
         <div v-else class="file-icon">
           <i
-            v-if="file.name.endsWith('.pdf')"
+            v-if="file.name.toLowerCase().endsWith('.pdf')"
             class="fas fa-file-pdf"
             style="color: #e74c3c; font-size: 24px"
           ></i>
           <i
-            v-else-if="
-              file.name.endsWith('.doc') || file.name.endsWith('.docx')
-            "
+            v-else-if="file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')"
             class="fas fa-file-word"
             style="color: #2b579a; font-size: 24px"
           ></i>
           <i
-            v-else-if="
-              file.name.endsWith('.mp4') ||
-              file.name.endsWith('.mov') ||
-              file.name.endsWith('.avi')
-            "
+            v-else-if="file.name.toLowerCase().endsWith('.mp4') || file.name.toLowerCase().endsWith('.mov') || file.name.toLowerCase().endsWith('.avi') || file.name.toLowerCase().endsWith('.mkv')"
             class="fas fa-file-video"
             style="color: #9b59b6; font-size: 24px"
           ></i>
           <i
-            v-else-if="
-              file.name.endsWith('.mp3') || file.name.endsWith('.m4a')
-            "
+            v-else-if="file.name.toLowerCase().endsWith('.mp3') || file.name.toLowerCase().endsWith('.wav') || file.name.toLowerCase().endsWith('.m4a') || file.name.toLowerCase().endsWith('.flac')"
             class="fas fa-file-audio"
             style="color: #f39c12; font-size: 24px"
           ></i>
           <i
-            v-else-if="file.name.endsWith('.jpg') || file.name.endsWith('.png')"
+            v-else-if="file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg') || file.name.toLowerCase().endsWith('.png') || file.name.toLowerCase().endsWith('.gif') || file.name.toLowerCase().endsWith('.bmp') || file.name.toLowerCase().endsWith('.webp')"
             class="fas fa-file-image"
             style="color: #27ae60; font-size: 24px"
           ></i>
@@ -82,16 +71,18 @@
           ></i>
         </div>
         <span class="file-name">{{ file.displayName || file.name }}</span>
-        <span v-if="file.uploaded && !file.uploading" class="success-check">
+        <span v-if="file.uploaded" class="success-check">
           <i class="fas fa-check-circle"></i>
         </span>
         <span class="file-size">{{ formatFileSize(file.size) }}</span>
-        <!-- Per-file progress bar -->
-        <div v-if="file.uploading" class="file-progress">
-          <div class="file-progress-fill" :style="{ width: file.progress + '%' }"></div>
-        </div>
-        <button @click.stop="removeFile(file.uid)" class="delete-btn">×</button>
+        <button @click.stop="removeFile(index)" class="delete-btn">×</button>
       </div>
+    </div>
+
+    <!-- Upload progress -->
+    <div v-if="uploading" class="progress-bar">
+      <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
+      <span>{{ mergingPhase ? 'Verifying...' : uploadProgress + '%' }}</span>
     </div>
 
     <!-- Error message -->
@@ -181,10 +172,11 @@ import { ref } from "vue";
 import axios from "axios";
 
 const uploadedFiles = ref([]);
+const uploading = ref(false);
+const uploadProgress = ref(0);
+const mergingPhase = ref(false);
 const errorMessage = ref("");
 const fileInput = ref(null);
-
-let uidCounter = 0;
 
 // Trigger hidden file input dialog
 const triggerFileInput = () => {
@@ -207,19 +199,29 @@ const handleDrop = (event) => {
 // Handle dropped files from drag-and-drop
 const addFiles = (files) => {
   files.forEach((file) => {
-    const isImage = file.type.startsWith("image/");
-    const isVideo = file.type.startsWith("video/");
+    // Validate file type before adding to list
+    if (!isAllowedFileExt(file.name)) {
+      errorMessage.value = `"${file.name}" is not a supported file type`;
+      setTimeout(() => { errorMessage.value = ""; }, 5000);
+      return;
+    }
+
+    // Friendly reminder for very large files (still allowed)
+    if (file.size > 500 * 1024 * 1024) {
+      const ok = confirm(
+        `${file.name} is ${formatFileSize(file.size)}. Large files may take a while to upload. Continue?`
+      );
+      if (!ok) return;
+    }
+
+    // Create preview
     const fileItem = {
-      uid: ++uidCounter,
       name: file.name,
       size: file.size,
-      isImage,
-      isVideo,
-      preview: isImage || isVideo ? URL.createObjectURL(file) : null,
+      isImage: file.type.startsWith("image/"),
+      isVideo: file.type.startsWith("video/"),
+      preview: URL.createObjectURL(file),
       rawFile: file,
-      uploading: true,
-      progress: 0,
-      removed: false,
     };
     uploadedFiles.value.push(fileItem);
 
@@ -232,10 +234,31 @@ const addFiles = (files) => {
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per chunk
 const CHUNK_CONCURRENCY = 3; // parallel uploads
 
+// Allowed file extensions matching backend whitelist
+const ALLOWED_EXTS = [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp",
+  ".pdf", ".doc", ".docx", ".txt", ".mp4", ".mov", ".avi", ".mkv",
+  ".mp3", ".wav", ".m4a", ".flac"];
+
+const isAllowedFileExt = (name) => {
+  const dot = name.lastIndexOf(".");
+  if (dot === -1) return false;
+  return ALLOWED_EXTS.includes(name.substring(dot).toLowerCase());
+};
+
+const toHex = (bytes) =>
+  Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+
+const calculateFileHash = async (file) => {
+  const buffer = await file.arrayBuffer();
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  return toHex(new Uint8Array(digest));
+};
+
 // Upload entry: small files → single upload, large files → chunked upload
 const uploadFile = async (file, fileItem) => {
-  fileItem.uploading = true;
-  fileItem.progress = 0;
+  uploading.value = true;
+  uploadProgress.value = 0;
+  mergingPhase.value = false;
   errorMessage.value = "";
 
   // Files > 50MB use chunked upload, no upper limit
@@ -245,7 +268,8 @@ const uploadFile = async (file, fileItem) => {
     await uploadSingle(file, fileItem);
   }
 
-  fileItem.uploading = false;
+  uploading.value = false;
+  setTimeout(() => { uploadProgress.value = 0; }, 1000);
 };
 
 // ----- Standard single upload (files ≤ 50MB) -----
@@ -259,7 +283,7 @@ const uploadSingle = async (file, fileItem) => {
       timeout: 180000,
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total && progressEvent.total > 0) {
-          fileItem.progress = Math.round(
+          uploadProgress.value = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total,
           );
         }
@@ -276,6 +300,12 @@ const uploadByChunks = async (file, fileItem) => {
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
   const uploadId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
+  // Skip client-side hash for files > 100MB to avoid loading entire file into memory.
+  // Server-side SHA-256 check still runs during merge.
+  const fileHash = file.size > 100 * 1024 * 1024
+    ? "skipped"
+    : await calculateFileHash(file);
+
   let completedBytes = 0;
 
   const uploadOneChunk = async (chunkIndex) => {
@@ -288,12 +318,14 @@ const uploadByChunks = async (file, fileItem) => {
     formData.append("uploadId", uploadId);
     formData.append("chunkIndex", chunkIndex);
     formData.append("totalChunks", totalChunks);
+    formData.append("fileName", file.name);
+    formData.append("chunkSize", CHUNK_SIZE);
 
     await axios.post("/api/attachments/upload/chunk", formData, {
       timeout: 60000,
     });
     completedBytes += blob.size;
-    fileItem.progress = Math.round((completedBytes * 100) / file.size);
+    uploadProgress.value = Math.round((completedBytes * 100) / file.size);
   };
 
   const uploadWithRetry = async (chunkIndex, retries = 3) => {
@@ -319,26 +351,23 @@ const uploadByChunks = async (file, fileItem) => {
     }
 
     // All chunks done — trigger merge
+    mergingPhase.value = true;
+    uploadProgress.value = 100;
+    const verifyTimeout = Math.max(60000, Math.ceil(file.size / (1024 * 1024)) * 30);
     const mergeResp = await axios.post("/api/attachments/upload/merge", null, {
-      params: { uploadId, fileName: file.name, totalChunks },
-      timeout: 120000,
+      params: { uploadId, fileName: file.name, totalChunks, chunkSize: CHUNK_SIZE, fileHash },
+      timeout: verifyTimeout,
     });
+    mergingPhase.value = false;
     handleUploadSuccess(mergeResp.data, fileItem, file);
   } catch (error) {
+    mergingPhase.value = false;
     handleUploadError(error, fileItem);
   }
 };
 
 // ----- Shared helpers -----
 const handleUploadSuccess = (data, fileItem, file) => {
-  // If the file was removed during upload, clean up on the server immediately
-  if (fileItem.removed) {
-    if (data.attachmentId) {
-      axios.delete(`/api/attachments/${data.attachmentId}`).catch(() => {});
-    }
-    return;
-  }
-
   if (data.success) {
     fileItem.id = data.attachmentId;
     fileItem.displayName = data.displayName;
@@ -374,23 +403,21 @@ const handleUploadError = (error, fileItem) => {
 };
 
 // Delete file from list and server
-const removeFile = (uid) => {
-  const idx = uploadedFiles.value.findIndex((f) => f.uid === uid);
-  if (idx === -1) return;
-  const file = uploadedFiles.value[idx];
-
-  // If still uploading, mark as removed so handleUploadSuccess cleans up
-  if (file.uploading) {
-    file.removed = true;
-    uploadedFiles.value.splice(idx, 1);
-    return;
-  }
+const removeFile = async (index) => {
+  const file = uploadedFiles.value[index];
 
   // Call backend delete API if file was already uploaded
   if (file.id) {
-    axios.delete(`/api/attachments/${file.id}`).catch((error) => {
+    try {
+      await axios.delete(`/api/attachments/${file.id}`);
+      console.log("File deleted from server");
+    } catch (error) {
       console.error("Delete failed", error);
-    });
+      alert(
+        "Delete failed：" + (error.response?.data?.message || error.message),
+      );
+      return; // Don't remove from list if deletion fails
+    }
   }
 
   // Release preview URL
@@ -399,7 +426,8 @@ const removeFile = (uid) => {
   }
 
   // Remove from list
-  uploadedFiles.value.splice(idx, 1);
+  uploadedFiles.value.splice(index, 1);
+  console.log("It has been removed from list.");
 };
 
 // Preview modal
@@ -469,10 +497,6 @@ const formatFileSize = (bytes) => {
   border-color: #409eff;
   background: #f5f7fa;
 }
-.drop-zone:focus {
-  outline: 2px solid #409eff;
-  outline-offset: 2px;
-}
 .file-list {
   margin-top: 20px;
 }
@@ -537,20 +561,6 @@ const formatFileSize = (bytes) => {
   font-size: 12px;
   color: #999;
 }
-.file-progress {
-  width: 80px;
-  height: 6px;
-  background: #e0e0e0;
-  border-radius: 3px;
-  overflow: hidden;
-  flex-shrink: 0;
-}
-.file-progress-fill {
-  height: 100%;
-  background: #409eff;
-  transition: width 0.3s;
-  border-radius: 3px;
-}
 .delete-btn {
   background: none;
   border: none;
@@ -568,6 +578,26 @@ const formatFileSize = (bytes) => {
 .delete-btn:hover {
   color: #f56c6c;
   background: rgba(245, 108, 108, 0.1);
+}
+.progress-bar {
+  margin-top: 10px;
+  height: 20px;
+  background: #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+.progress-fill {
+  height: 100%;
+  background: #409eff;
+  transition: width 0.3s;
+}
+.progress-bar span {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  line-height: 20px;
 }
 .error-message {
   background-color: #fef0f0;

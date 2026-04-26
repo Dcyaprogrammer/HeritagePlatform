@@ -2,7 +2,7 @@ package com.heritage.platform.controller;
 
 import com.heritage.platform.model.Attachment;
 import com.heritage.platform.repository.AttachmentRepository;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.ContentDisposition;
@@ -11,14 +11,19 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
-import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.InputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.security.DigestOutputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Stream;
@@ -31,47 +36,59 @@ import org.slf4j.LoggerFactory;
 public class AttachmentController {
     private static final Logger log = LoggerFactory.getLogger(AttachmentController.class);
 
-    private final AttachmentRepository attachmentRepository;
-    private final String uploadDir;
-    private final String chunkDir;
+    @Autowired
+    private AttachmentRepository attachmentRepository;
 
-    private static final int MAX_TOTAL_CHUNKS = 10000;
-    private static final String UPLOAD_ID_REGEX = "^[a-zA-Z0-9_-]+$";
+    private final String UPLOAD_DIR = System.getProperty("user.dir") + "/uploads/";
+    private final String CHUNK_DIR = System.getProperty("user.dir") + "/uploads/chunks/";
 
-    public AttachmentController(AttachmentRepository attachmentRepository,
-                                 @Value("${app.upload.dir:uploads}") String uploadDir) {
-        this.attachmentRepository = attachmentRepository;
-        String baseDir = System.getProperty("user.dir") + "/" + uploadDir + "/";
-        this.uploadDir = baseDir;
-        this.chunkDir = baseDir + "chunks/";
-    }
+    // Allowed file extensions for heritage platform (images, documents, video, audio)
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
+        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp",
+        ".pdf", ".doc", ".docx", ".txt",
+        ".mp4", ".mov", ".avi", ".mkv",
+        ".mp3", ".wav", ".m4a", ".flac"
+    );
 
+    // ----- Standard single upload -----
     @PostMapping("/upload")
     public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file) {
         log.info("========== Upload method called ==========");
         log.info("File name: {}", file.getOriginalFilename());
         log.info("File size: {}", file.getSize());
-
+        
         Map<String, Object> response = new HashMap<>();
-
+        
         try {
-            File dir = new File(this.uploadDir);
-            if (!dir.exists()) {
-                dir.mkdirs();
+            // Create upload directory
+            File uploadDir = new File(UPLOAD_DIR);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs();
+            }
+            
+            // Get original file name and validate type
+            String originalName = file.getOriginalFilename();
+            if (!isAllowedFileType(originalName)) {
+                response.put("success", false);
+                response.put("message", "File type not allowed");
+                return ResponseEntity.status(400).body(response);
             }
 
-            String originalName = file.getOriginalFilename();
             String fileExtension = "";
             if (originalName != null && originalName.contains(".")) {
                 fileExtension = originalName.substring(originalName.lastIndexOf("."));
             }
-
+            
+            // Generate unique file name for storage
             String storedName = System.currentTimeMillis() + "_" + System.nanoTime() + fileExtension;
-
-            Path filePath = Paths.get(uploadDir + storedName);
+            
+            // Save file to disk
+            checkDiskSpace(file.getSize());
+            Path filePath = Paths.get(UPLOAD_DIR + storedName);
             Files.copy(file.getInputStream(), filePath);
-            log.info("File saved successfully, path: {}", filePath);
-
+            log.info("File saved successfully, path: {}", filePath.toString());
+            
+            // Determine file type
             String fileType = "document";
             String lowerName = originalName != null ? originalName.toLowerCase() : "";
             if (file.getContentType() != null && file.getContentType().startsWith("image")) {
@@ -80,12 +97,13 @@ public class AttachmentController {
                 fileType = "pdf";
             } else if (lowerName.endsWith(".doc") || lowerName.endsWith(".docx")) {
                 fileType = "word";
-            } else if (lowerName.endsWith(".mp4") || lowerName.endsWith(".mov") || lowerName.endsWith(".avi")) {
+            } else if (lowerName.endsWith(".mp4") || lowerName.endsWith(".mov") || lowerName.endsWith(".avi") || lowerName.endsWith(".mkv")) {
                 fileType = "video";
-            } else if (lowerName.endsWith(".mp3") || lowerName.endsWith(".wav") || lowerName.endsWith(".m4a")) {
+            } else if (lowerName.endsWith(".mp3") || lowerName.endsWith(".wav") || lowerName.endsWith(".m4a") || lowerName.endsWith(".flac")) {
                 fileType = "audio";
             }
 
+            // Save to database
             Attachment attachment = new Attachment();
             attachment.setStoredName(storedName);
             attachment.setDisplayName(originalName);
@@ -93,21 +111,12 @@ public class AttachmentController {
             attachment.setFileType(fileType);
             attachment.setFileSize(file.getSize());
             attachment.setCreatedAt(LocalDateTime.now());
-            attachment.setResourceId(null);
-
-            // Save to database — clean up the stored file if persistence fails
-            try {
-                attachmentRepository.save(attachment);
-            } catch (Exception e) {
-                Files.deleteIfExists(filePath);
-                log.error("Database save failed, orphan file cleaned up: {}", filePath, e);
-                response.put("success", false);
-                response.put("message", "Database save failed");
-                return ResponseEntity.status(500).body(response);
-            }
-
+            attachment.setResourceId(null); // 暂设为 null，对接组员4后改为真实 resource_id
+            attachmentRepository.save(attachment);
+            
             log.info("Database saved successfully, ID: {}", attachment.getId());
-
+            
+            // Return success response (displayName for frontend display)
             response.put("success", true);
             response.put("attachmentId", attachment.getId());
             response.put("displayName", originalName);
@@ -117,9 +126,9 @@ public class AttachmentController {
             response.put("downloadUrl", "/api/attachments/" + attachment.getId() + "/download");
             response.put("fileSize", file.getSize());
             response.put("message", "Upload success");
-
+            
             return ResponseEntity.ok(response);
-
+            
         } catch (IOException e) {
             log.error("Upload failed: {}", e.getMessage());
             e.printStackTrace();
@@ -129,32 +138,38 @@ public class AttachmentController {
         }
     }
 
+    // ----- Chunked upload: receive one chunk (writes directly to final file) -----
     @PostMapping("/upload/chunk")
     public ResponseEntity<Map<String, Object>> uploadChunk(
             @RequestParam("file") MultipartFile file,
             @RequestParam("uploadId") String uploadId,
             @RequestParam("chunkIndex") int chunkIndex,
-            @RequestParam("totalChunks") int totalChunks) {
+            @RequestParam("totalChunks") int totalChunks,
+            @RequestParam("fileName") String fileName,
+            @RequestParam("chunkSize") long chunkSize) {
         Map<String, Object> response = new HashMap<>();
-
-        if (uploadId == null || !uploadId.matches(UPLOAD_ID_REGEX)) {
-            response.put("success", false);
-            response.put("message", "Invalid uploadId");
-            return ResponseEntity.status(400).body(response);
-        }
-        if (totalChunks <= 0 || totalChunks > MAX_TOTAL_CHUNKS ||
-            chunkIndex < 0 || chunkIndex >= totalChunks) {
-            response.put("success", false);
-            response.put("message", "Invalid chunkIndex or totalChunks");
-            return ResponseEntity.status(400).body(response);
-        }
-
         try {
-            Path chunkDirPath = Paths.get(chunkDir, uploadId);
-            Files.createDirectories(chunkDirPath);
-            Path chunkFile = chunkDirPath.resolve(chunkIndex + ".part");
-            file.transferTo(chunkFile.toFile());
-            log.info("Chunk {}/{} saved for uploadId={}", chunkIndex + 1, totalChunks, uploadId);
+            File uploadDir = new File(UPLOAD_DIR);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs();
+            }
+
+            // Generate target filename (same as merge would produce)
+            String fileExtension = "";
+            if (fileName != null && fileName.contains(".")) {
+                fileExtension = fileName.substring(fileName.lastIndexOf("."));
+            }
+            String storedName = uploadId + fileExtension;
+            Path targetFile = Paths.get(UPLOAD_DIR, storedName);
+
+            // Write chunk directly at its final position in the target file
+            byte[] data = file.getBytes();
+            try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(targetFile.toFile(), "rw")) {
+                raf.seek(chunkIndex * chunkSize);
+                raf.write(data);
+            }
+
+            log.info("Chunk {}/{} written to target file for uploadId={}", chunkIndex + 1, totalChunks, uploadId);
             response.put("success", true);
             return ResponseEntity.ok(response);
         } catch (IOException e) {
@@ -165,66 +180,67 @@ public class AttachmentController {
         }
     }
 
+    // ----- Chunked upload: verify and finalize (chunks are already written directly to target file) -----
     @PostMapping("/upload/merge")
     public ResponseEntity<Map<String, Object>> mergeChunks(
             @RequestParam("uploadId") String uploadId,
             @RequestParam("fileName") String fileName,
-            @RequestParam("totalChunks") int totalChunks) {
+            @RequestParam("totalChunks") int totalChunks,
+            @RequestParam("chunkSize") long chunkSize,
+            @RequestParam("fileHash") String fileHash) {
         Map<String, Object> response = new HashMap<>();
-
-        if (uploadId == null || !uploadId.matches(UPLOAD_ID_REGEX)) {
-            response.put("success", false);
-            response.put("message", "Invalid uploadId");
-            return ResponseEntity.status(400).body(response);
-        }
-        if (totalChunks <= 0 || totalChunks > MAX_TOTAL_CHUNKS) {
-            response.put("success", false);
-            response.put("message", "Invalid totalChunks");
-            return ResponseEntity.status(400).body(response);
-        }
-
-        Path chunkDirPath = Paths.get(chunkDir, uploadId);
-        if (!Files.exists(chunkDirPath)) {
-            response.put("success", false);
-            response.put("message", "Chunk directory not found");
-            return ResponseEntity.status(400).body(response);
-        }
-
-        String fileExtension = "";
-        if (fileName != null && fileName.contains(".")) {
-            fileExtension = fileName.substring(fileName.lastIndexOf("."));
-        }
-        String storedName = System.currentTimeMillis() + "_" + System.nanoTime() + fileExtension;
-        Path targetFile = Paths.get(uploadDir, storedName);
-
         try {
-            try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(targetFile.toFile()))) {
-                for (int i = 0; i < totalChunks; i++) {
-                    Path chunk = chunkDirPath.resolve(i + ".part");
-                    if (!Files.exists(chunk)) {
-                        log.error("Missing chunk {}/{} for uploadId={}", i, totalChunks, uploadId);
-                        Files.deleteIfExists(targetFile);
-                        response.put("success", false);
-                        response.put("message", "Missing chunk " + i);
-                        return ResponseEntity.status(400).body(response);
-                    }
-                    Files.copy(chunk, bos);
-                }
+            // Validate file type
+            if (!isAllowedFileType(fileName)) {
+                response.put("success", false);
+                response.put("message", "File type not allowed");
+                return ResponseEntity.status(400).body(response);
             }
 
-            deleteDirectory(chunkDirPath);
+            // Target file was already assembled by individual chunk uploads
+            String fileExtension = "";
+            if (fileName != null && fileName.contains(".")) {
+                fileExtension = fileName.substring(fileName.lastIndexOf("."));
+            }
+            String storedName = uploadId + fileExtension;
+            Path targetFile = Paths.get(UPLOAD_DIR, storedName);
+
+            if (!Files.exists(targetFile)) {
+                response.put("success", false);
+                response.put("message", "Uploaded file not found");
+                return ResponseEntity.status(400).body(response);
+            }
 
             long fileSize = Files.size(targetFile);
-            log.info("Merged file saved: {} ({} bytes)", storedName, fileSize);
+            long expectedSize = (totalChunks - 1L) * chunkSize + (fileSize - (totalChunks - 1L) * chunkSize);
+            log.info("File assembled: {} ({} bytes, {} chunks)", storedName, fileSize, totalChunks);
 
+            // Compute server-side SHA-256
+            String serverHash = calculateSha256(targetFile);
+
+            // Verify hash (if client provided one)
+            if (!"skipped".equalsIgnoreCase(fileHash)) {
+                if (!serverHash.equalsIgnoreCase(fileHash)) {
+                    Files.deleteIfExists(targetFile);
+                    log.error("SHA-256 mismatch for uploadId={}, expected={}, actual={}", uploadId, fileHash, serverHash);
+                    response.put("success", false);
+                    response.put("message", "File integrity check failed (SHA-256 mismatch)");
+                    return ResponseEntity.status(400).body(response);
+                }
+            } else {
+                log.info("Client skipped hash, server SHA-256={} for uploadId={}", serverHash, uploadId);
+            }
+
+            // Determine file type
             String fileType = "document";
             String lowerName = fileName != null ? fileName.toLowerCase() : "";
             if (lowerName.endsWith(".pdf")) fileType = "pdf";
             else if (lowerName.endsWith(".doc") || lowerName.endsWith(".docx")) fileType = "word";
-            else if (lowerName.endsWith(".mp4") || lowerName.endsWith(".mov") || lowerName.endsWith(".avi")) fileType = "video";
-            else if (lowerName.endsWith(".mp3") || lowerName.endsWith(".wav") || lowerName.endsWith(".m4a")) fileType = "audio";
-            else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png")) fileType = "image";
+            else if (lowerName.endsWith(".mp4") || lowerName.endsWith(".mov") || lowerName.endsWith(".avi") || lowerName.endsWith(".mkv")) fileType = "video";
+            else if (lowerName.endsWith(".mp3") || lowerName.endsWith(".wav") || lowerName.endsWith(".m4a") || lowerName.endsWith(".flac")) fileType = "audio";
+            else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png") || lowerName.endsWith(".gif") || lowerName.endsWith(".bmp") || lowerName.endsWith(".webp")) fileType = "image";
 
+            // Save to database
             Attachment attachment = new Attachment();
             attachment.setStoredName(storedName);
             attachment.setDisplayName(fileName);
@@ -232,17 +248,8 @@ public class AttachmentController {
             attachment.setFileType(fileType);
             attachment.setFileSize(fileSize);
             attachment.setCreatedAt(LocalDateTime.now());
-            attachment.setResourceId(null);
-
-            try {
-                attachmentRepository.save(attachment);
-            } catch (Exception e) {
-                Files.deleteIfExists(targetFile);
-                log.error("Database save failed, merged file cleaned up: {}", targetFile, e);
-                response.put("success", false);
-                response.put("message", "Database save failed");
-                return ResponseEntity.status(500).body(response);
-            }
+            attachment.setResourceId(null); // 暂设为 null，对接组员4后改为真实 resource_id
+            attachmentRepository.save(attachment);
 
             response.put("success", true);
             response.put("attachmentId", attachment.getId());
@@ -255,44 +262,50 @@ public class AttachmentController {
             response.put("message", "Upload success");
             return ResponseEntity.ok(response);
         } catch (IOException e) {
-            try { Files.deleteIfExists(targetFile); } catch (IOException ignored) {}
-            log.error("Merge failed: {}", e.getMessage(), e);
+            log.error("Finalize failed: {}", e.getMessage(), e);
             response.put("success", false);
-            response.put("message", "Merge failed: " + e.getMessage());
+            response.put("message", "Finalize failed: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        } catch (NoSuchAlgorithmException e) {
+            log.error("Hash failed: {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Hash failed: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }
 
+    // ----- Delete endpoint (unchanged) -----
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, Object>> deleteFile(@PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();
-
+        
         try {
+            // Find file record in database
             Attachment attachment = attachmentRepository.findById(id).orElse(null);
             if (attachment == null) {
                 response.put("success", false);
                 response.put("message", "File not found");
                 return ResponseEntity.status(404).body(response);
             }
-
+            
+            // Delete physical file from server
             Path actualPath = resolveStoredFilePath(attachment);
-            try {
-                Files.delete(actualPath);
-                log.info("Deleted physical file: {}", actualPath);
-            } catch (IOException e) {
-                log.error("Failed to delete physical file: {}", actualPath, e);
-                response.put("success", false);
-                response.put("message", "Failed to delete physical file: " + e.getMessage());
-                return ResponseEntity.status(500).body(response);
+            File file = actualPath.toFile();
+            if (file.exists()) {
+                boolean deleted = file.delete();
+                log.info("Deleted physical file: {}, result: {}", actualPath, deleted);
+            } else {
+                log.warn("File does not exist, skipping physical deletion: {}", actualPath);
             }
-
+            
+            // Delete database record
             attachmentRepository.deleteById(id);
             log.info("Deleted database record, ID: {}", id);
-
+            
             response.put("success", true);
             response.put("message", "File deleted successfully");
             return ResponseEntity.ok(response);
-
+            
         } catch (Exception e) {
             log.error("Delete failed: {}", e.getMessage(), e);
             e.printStackTrace();
@@ -356,6 +369,21 @@ public class AttachmentController {
         }
     }
 
+    private boolean isAllowedFileType(String fileName) {
+        if (fileName == null || !fileName.contains(".")) return false;
+        String ext = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
+        return ALLOWED_EXTENSIONS.contains(ext);
+    }
+
+    private void checkDiskSpace(long additionalBytes) throws IOException {
+        FileStore store = Files.getFileStore(Paths.get(UPLOAD_DIR));
+        long available = store.getUsableSpace();
+        long minFree = 500L * 1024 * 1024;
+        if (available - additionalBytes < minFree) {
+            throw new IOException("Insufficient disk space on server");
+        }
+    }
+
     private void deleteDirectory(Path dir) throws IOException {
         if (Files.exists(dir)) {
             try (Stream<Path> files = Files.walk(dir)) {
@@ -369,7 +397,28 @@ public class AttachmentController {
     }
 
     private Path resolveStoredFilePath(Attachment attachment) {
-        return Paths.get(uploadDir, attachment.getStoredName()).normalize();
+        Path resolved = Paths.get(UPLOAD_DIR, attachment.getStoredName()).normalize();
+        if (!resolved.startsWith(Paths.get(UPLOAD_DIR).normalize())) {
+            throw new SecurityException("Path traversal detected");
+        }
+        return resolved;
+    }
+
+    private String calculateSha256(Path filePath) throws IOException, NoSuchAlgorithmException {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        try (InputStream inputStream = Files.newInputStream(filePath)) {
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = inputStream.read(buffer)) != -1) {
+                digest.update(buffer, 0, read);
+            }
+        }
+        byte[] hashBytes = digest.digest();
+        StringBuilder sb = new StringBuilder(hashBytes.length * 2);
+        for (byte b : hashBytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 
     private MediaType detectMediaType(Path filePath) {
