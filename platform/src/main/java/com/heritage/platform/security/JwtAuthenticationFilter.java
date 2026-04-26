@@ -17,11 +17,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import com.heritage.platform.repository.UserSessionRepository;
+
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired private UserSessionRepository sessionRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -34,6 +37,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String token = header.substring(7);
 
             if (jwtUtil.validateToken(token)) {
+                String jti = jwtUtil.extractJti(token);
+
+                //session是否有效
+                if (!sessionRepository.findByTokenJti(jti).isPresent()) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("Session has been terminated");
+                    return; 
+                }
+
                 String username = jwtUtil.extractUsername(token);
                 Set<String> roles = jwtUtil.extractRoles(token);
 

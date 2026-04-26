@@ -15,11 +15,17 @@ import com.heritage.platform.security.JwtUtil;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import com.heritage.platform.model.UserSession;
+import com.heritage.platform.repository.UserSessionRepository;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 
 
@@ -30,6 +36,7 @@ public class AuthService {
     @Autowired private RateLimitService rateLimitService;
     @Autowired private JwtUtil jwtUtil;
     @Autowired private EmailService emailService;
+    @Autowired private UserSessionRepository sessionRepository;
 
 
 
@@ -54,7 +61,7 @@ public class AuthService {
 
 
     //pbi2
-    public String login(LoginRequest req, String clientIp) {
+    public String login(LoginRequest req, String clientIp, String userAgent) {
         if (!rateLimitService.isAllowed(clientIp)) {
             throw new RuntimeException("Too many attempts. Please wait for a while.");
         }
@@ -87,19 +94,55 @@ public class AuthService {
         user.setLockTime(null);
         userRepository.save(user);
 
-        return jwtUtil.generateToken(user.getUsername(), user.getRoles());
+        String jti = UUID.randomUUID().toString();      ////pbi5
+        String token = jwtUtil.generateToken(user.getUsername(), user.getRoles(), jti);
+
+        UserSession session = new UserSession();
+        session.setUserId(user.getId());
+        session.setTokenJti(jti);
+        session.setIpAddress(clientIp);
+        session.setDeviceInfo(parseDeviceInfo(userAgent));
+        session.setLoginTime(LocalDateTime.now());
+        sessionRepository.save(session);
+
+        return token;
     }
 
-    public Map<String, Object> loginWithDetails(LoginRequest req, String clientIp) {
-        String token = login(req, clientIp);
-        HeritageUser user = userRepository.findByUsername(req.getUsername()).orElse(null);
+    public Map<String, Object> loginWithDetails(LoginRequest req, String clientIp, String userAgent) {
+        String token = login(req, clientIp, userAgent);
+        HeritageUser user = userRepository.findByUsername(req.getUsername()).get();
         
         Map<String, Object> result = new HashMap<>();
         result.put("token", token);
         result.put("username", user.getUsername());
         result.put("roles", user.getRoles());
-        
         return result;
+    }
+    //pbi5  获取所有会话
+    public List<SessionResponse> getActiveSessions(String username, String currentJti) {
+        HeritageUser user = userRepository.findByUsername(username).orElseThrow();
+        return sessionRepository.findByUserId(user.getId()).stream()
+                .map(s -> new SessionResponse(
+                    s.getTokenJti(), 
+                    s.getIpAddress(), 
+                    s.getDeviceInfo(), 
+                    s.getLoginTime(),
+                    s.getTokenJti().equals(currentJti)
+                )).collect(Collectors.toList());
+    }
+
+    // 【新增】远程注销特定设备
+    public void logoutSession(String jti) {
+        sessionRepository.deleteByTokenJti(jti);
+    }
+
+    // 【新增】简单解析 User-Agent
+    private String parseDeviceInfo(String ua) {
+        if (ua == null) return "Unknown Device";
+        if (ua.contains("Mobi")) return "Mobile Device";
+        if (ua.contains("Chrome")) return "Chrome Browser";
+        if (ua.contains("Firefox")) return "Firefox Browser";
+        return "Desktop Browser";
     }
 
 

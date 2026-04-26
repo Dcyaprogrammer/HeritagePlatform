@@ -38,6 +38,8 @@ public class SecurityConfig {
                  "/api/auth/forgot-password", 
                  "/api/auth/reset-password").permitAll()
                 .requestMatchers("/api/review/**").hasRole("ADMIN")
+                 //.requestMatchers("/api/sessions/**").hasAnyRole("VIEWER", "ADMIN")
+                 .requestMatchers("/api/sessions/**").permitAll()
 
 
                 .anyRequest().authenticated()

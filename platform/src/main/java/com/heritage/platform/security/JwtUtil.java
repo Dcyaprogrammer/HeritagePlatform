@@ -24,7 +24,7 @@ public class JwtUtil {
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
-    public String generateToken(String username, Set<String> roles) {
+    public String generateToken(String username, Set<String> roles, String jti) {        //jti
         Map<String, Object> claims = new HashMap<>();
         String rolesString = roles.stream().collect(Collectors.joining(","));
         claims.put("roles", rolesString);
@@ -32,10 +32,16 @@ public class JwtUtil {
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(username)
+                .setId(jti)       //JWTID
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    //多会化为管理
+    public String extractJti(String token) {
+        return extractAllClaims(token).getId();
     }
 
     public boolean validateToken(String token) {

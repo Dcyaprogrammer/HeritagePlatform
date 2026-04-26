@@ -38,7 +38,8 @@ public class AuthController {
     public ApiResponse<Map<String, Object>> login(@RequestBody LoginRequest req,
                                     jakarta.servlet.http.HttpServletRequest request) {
         String clientIp = request.getRemoteAddr();
-        Map<String, Object> result = authService.loginWithDetails(req, clientIp);
+        String userAgent = request.getHeader("User-Agent");
+        Map<String, Object> result = authService.loginWithDetails(req, clientIp, userAgent);
         return ApiResponse.success("Login successful", result);
     }
 
