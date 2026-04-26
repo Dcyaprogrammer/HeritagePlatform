@@ -3,9 +3,14 @@
     <!-- Drop zone -->
     <div
       class="drop-zone"
+      role="button"
+      tabindex="0"
+      aria-label="Click or press Enter to choose files, or drag files here"
       @dragover.prevent
       @drop.prevent="handleDrop"
       @click="triggerFileInput"
+      @keydown.enter.prevent="triggerFileInput"
+      @keydown.space.prevent="triggerFileInput"
     >
       <input
         type="file"
@@ -25,64 +30,64 @@
     <div class="file-list" v-if="uploadedFiles.length > 0">
       <h4>Uploaded Files:</h4>
       <div
-        v-for="(file, index) in uploadedFiles"
-        :key="index"
-        class="file-item"
-        @click="openPreview(file)"
+        v-for="file in uploadedFiles"
+        :key="file.id"
+        class="file-item-wrapper"
       >
-        <!-- image preview -->
-        <div v-if="file.isImage" class="image-preview-container">
-          <img :src="file.preview" class="file-preview" />
-          <div class="image-hover">
-            <img :src="file.preview" class="hover-image" />
+        <div class="file-item" @click="openPreview(file)">
+          <!-- image preview -->
+          <div v-if="file.isImage" class="image-preview-container">
+            <img :src="file.preview" class="file-preview" />
+            <div class="image-hover">
+              <img :src="file.preview" class="hover-image" />
+            </div>
           </div>
+          <!-- Document icon -->
+          <div v-else class="file-icon">
+            <i
+              v-if="file.name.toLowerCase().endsWith('.pdf')"
+              class="fas fa-file-pdf"
+              style="color: #e74c3c; font-size: 24px"
+            ></i>
+            <i
+              v-else-if="file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')"
+              class="fas fa-file-word"
+              style="color: #2b579a; font-size: 24px"
+            ></i>
+            <i
+              v-else-if="file.name.toLowerCase().endsWith('.mp4') || file.name.toLowerCase().endsWith('.mov') || file.name.toLowerCase().endsWith('.avi') || file.name.toLowerCase().endsWith('.mkv')"
+              class="fas fa-file-video"
+              style="color: #9b59b6; font-size: 24px"
+            ></i>
+            <i
+              v-else-if="file.name.toLowerCase().endsWith('.mp3') || file.name.toLowerCase().endsWith('.wav') || file.name.toLowerCase().endsWith('.m4a') || file.name.toLowerCase().endsWith('.flac')"
+              class="fas fa-file-audio"
+              style="color: #f39c12; font-size: 24px"
+            ></i>
+            <i
+              v-else-if="file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg') || file.name.toLowerCase().endsWith('.png') || file.name.toLowerCase().endsWith('.gif') || file.name.toLowerCase().endsWith('.bmp') || file.name.toLowerCase().endsWith('.webp')"
+              class="fas fa-file-image"
+              style="color: #27ae60; font-size: 24px"
+            ></i>
+            <i
+              v-else
+              class="fas fa-file"
+              style="color: #7f8c8d; font-size: 24px"
+            ></i>
+          </div>
+          <span class="file-name">{{ file.displayName || file.name }}</span>
+          <span v-if="file.uploaded" class="success-check">
+            <i class="fas fa-check-circle"></i>
+          </span>
+          <span class="file-size">{{ formatFileSize(file.size) }}</span>
+          <button @click.stop="removeFile(file)" class="delete-btn">×</button>
         </div>
-        <!-- Document icon -->
-        <div v-else class="file-icon">
-          <i
-            v-if="file.name.toLowerCase().endsWith('.pdf')"
-            class="fas fa-file-pdf"
-            style="color: #e74c3c; font-size: 24px"
-          ></i>
-          <i
-            v-else-if="file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')"
-            class="fas fa-file-word"
-            style="color: #2b579a; font-size: 24px"
-          ></i>
-          <i
-            v-else-if="file.name.toLowerCase().endsWith('.mp4') || file.name.toLowerCase().endsWith('.mov') || file.name.toLowerCase().endsWith('.avi') || file.name.toLowerCase().endsWith('.mkv')"
-            class="fas fa-file-video"
-            style="color: #9b59b6; font-size: 24px"
-          ></i>
-          <i
-            v-else-if="file.name.toLowerCase().endsWith('.mp3') || file.name.toLowerCase().endsWith('.wav') || file.name.toLowerCase().endsWith('.m4a') || file.name.toLowerCase().endsWith('.flac')"
-            class="fas fa-file-audio"
-            style="color: #f39c12; font-size: 24px"
-          ></i>
-          <i
-            v-else-if="file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg') || file.name.toLowerCase().endsWith('.png') || file.name.toLowerCase().endsWith('.gif') || file.name.toLowerCase().endsWith('.bmp') || file.name.toLowerCase().endsWith('.webp')"
-            class="fas fa-file-image"
-            style="color: #27ae60; font-size: 24px"
-          ></i>
-          <i
-            v-else
-            class="fas fa-file"
-            style="color: #7f8c8d; font-size: 24px"
-          ></i>
+        <!-- Per-file upload progress -->
+        <div v-if="file.uploading" class="progress-bar">
+          <div class="progress-fill" :style="{ width: file.uploadProgress + '%' }"></div>
+          <span>{{ file.mergingPhase ? 'Verifying...' : file.uploadProgress + '%' }}</span>
         </div>
-        <span class="file-name">{{ file.displayName || file.name }}</span>
-        <span v-if="file.uploaded" class="success-check">
-          <i class="fas fa-check-circle"></i>
-        </span>
-        <span class="file-size">{{ formatFileSize(file.size) }}</span>
-        <button @click.stop="removeFile(index)" class="delete-btn">×</button>
       </div>
-    </div>
-
-    <!-- Upload progress -->
-    <div v-if="uploading" class="progress-bar">
-      <div class="progress-fill" :style="{ width: uploadProgress + '%' }"></div>
-      <span>{{ mergingPhase ? 'Verifying...' : uploadProgress + '%' }}</span>
     </div>
 
     <!-- Error message -->
@@ -113,7 +118,7 @@
 
       <!-- PDF preview (embedded) -->
       <div
-        v-else-if="previewFile.name && previewFile.name.endsWith('.pdf')"
+        v-else-if="previewFile.name && previewFile.name.toLowerCase().endsWith('.pdf')"
         class="modal-pdf"
       >
         <iframe
@@ -132,8 +137,8 @@
       <div
         v-else-if="
           previewFile.name &&
-          (previewFile.name.endsWith('.doc') ||
-            previewFile.name.endsWith('.docx'))
+          (previewFile.name.toLowerCase().endsWith('.doc') ||
+            previewFile.name.toLowerCase().endsWith('.docx'))
         "
         class="modal-doc"
       >
@@ -168,15 +173,15 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, reactive } from "vue";
 import axios from "axios";
 
 const uploadedFiles = ref([]);
-const uploading = ref(false);
-const uploadProgress = ref(0);
-const mergingPhase = ref(false);
 const errorMessage = ref("");
 const fileInput = ref(null);
+
+// Stable per-item id for v-for keys (independent of array position)
+let nextFileId = 0;
 
 // Trigger hidden file input dialog
 const triggerFileInput = () => {
@@ -214,19 +219,34 @@ const addFiles = (files) => {
       if (!ok) return;
     }
 
-    // Create preview
-    const fileItem = {
+    // Wrap with reactive() so the SAME reference we hand to uploadFile is the proxy
+    // observed by the template. Plain objects pushed into a ref([]) get auto-proxied,
+    // but the outer reference would still point to the raw object — writes to it
+    // wouldn't trigger re-renders. reactive() keeps both views in sync.
+    const fileItem = reactive({
+      id: ++nextFileId,
       name: file.name,
       size: file.size,
       isImage: file.type.startsWith("image/"),
       isVideo: file.type.startsWith("video/"),
       preview: URL.createObjectURL(file),
       rawFile: file,
-    };
+      // Per-file upload state (so concurrent uploads don't clobber each other)
+      uploading: false,
+      uploadProgress: 0,
+      mergingPhase: false,
+      uploaded: false,
+      uploadError: false,
+      // Server-assigned id and abort plumbing for in-flight uploads
+      attachmentId: null,
+      uploadController: null,
+      uploadPromise: null,
+      _removed: false,
+    });
     uploadedFiles.value.push(fileItem);
 
-    // Upload to backend
-    uploadFile(file, fileItem);
+    // Upload to backend; track promise so removeFile can await settlement.
+    fileItem.uploadPromise = uploadFile(file, fileItem).catch(() => {});
   });
 };
 
@@ -256,20 +276,24 @@ const calculateFileHash = async (file) => {
 
 // Upload entry: small files → single upload, large files → chunked upload
 const uploadFile = async (file, fileItem) => {
-  uploading.value = true;
-  uploadProgress.value = 0;
-  mergingPhase.value = false;
+  fileItem.uploading = true;
+  fileItem.uploadProgress = 0;
+  fileItem.mergingPhase = false;
+  fileItem.uploadController = new AbortController();
   errorMessage.value = "";
 
-  // Files > 50MB use chunked upload, no upper limit
-  if (file.size > 50 * 1024 * 1024) {
-    await uploadByChunks(file, fileItem);
-  } else {
-    await uploadSingle(file, fileItem);
+  try {
+    // Files > 50MB use chunked upload, no upper limit
+    if (file.size > 50 * 1024 * 1024) {
+      await uploadByChunks(file, fileItem);
+    } else {
+      await uploadSingle(file, fileItem);
+    }
+  } finally {
+    fileItem.uploading = false;
+    fileItem.mergingPhase = false;
+    setTimeout(() => { fileItem.uploadProgress = 0; }, 1000);
   }
-
-  uploading.value = false;
-  setTimeout(() => { uploadProgress.value = 0; }, 1000);
 };
 
 // ----- Standard single upload (files ≤ 50MB) -----
@@ -281,9 +305,10 @@ const uploadSingle = async (file, fileItem) => {
     const response = await axios.post("/api/attachments/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
       timeout: 180000,
+      signal: fileItem.uploadController?.signal,
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total && progressEvent.total > 0) {
-          uploadProgress.value = Math.round(
+          fileItem.uploadProgress = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total,
           );
         }
@@ -323,9 +348,10 @@ const uploadByChunks = async (file, fileItem) => {
 
     await axios.post("/api/attachments/upload/chunk", formData, {
       timeout: 60000,
+      signal: fileItem.uploadController?.signal,
     });
     completedBytes += blob.size;
-    uploadProgress.value = Math.round((completedBytes * 100) / file.size);
+    fileItem.uploadProgress = Math.round((completedBytes * 100) / file.size);
   };
 
   const uploadWithRetry = async (chunkIndex, retries = 3) => {
@@ -351,42 +377,51 @@ const uploadByChunks = async (file, fileItem) => {
     }
 
     // All chunks done — trigger merge
-    mergingPhase.value = true;
-    uploadProgress.value = 100;
+    fileItem.mergingPhase = true;
+    fileItem.uploadProgress = 100;
     const verifyTimeout = Math.max(60000, Math.ceil(file.size / (1024 * 1024)) * 30);
     const mergeResp = await axios.post("/api/attachments/upload/merge", null, {
       params: { uploadId, fileName: file.name, totalChunks, chunkSize: CHUNK_SIZE, fileHash },
       timeout: verifyTimeout,
+      signal: fileItem.uploadController?.signal,
     });
-    mergingPhase.value = false;
+    fileItem.mergingPhase = false;
     handleUploadSuccess(mergeResp.data, fileItem, file);
   } catch (error) {
-    mergingPhase.value = false;
+    fileItem.mergingPhase = false;
     handleUploadError(error, fileItem);
   }
 };
 
 // ----- Shared helpers -----
 const handleUploadSuccess = (data, fileItem, file) => {
-  if (data.success) {
-    fileItem.id = data.attachmentId;
-    fileItem.displayName = data.displayName;
+  if (!data.success) return;
+  // attachmentId is the server-side row id; always set so removeFile can clean up,
+  // even if the user removed the row mid-flight.
+  fileItem.attachmentId = data.attachmentId;
+  fileItem.displayName = data.displayName;
+  fileItem.serverPath = data.filePath;
+  fileItem.previewUrl =
+    data.previewUrl ||
+    (data.attachmentId ? `/api/attachments/${data.attachmentId}/preview` : "");
+  fileItem.downloadUrl =
+    data.downloadUrl ||
+    (data.attachmentId ? `/api/attachments/${data.attachmentId}/download` : "");
+  // Don't mark uploaded if the row was already removed — removeFile will handle server cleanup.
+  if (!fileItem._removed) {
     fileItem.uploaded = true;
-    fileItem.serverPath = data.filePath;
-    fileItem.previewUrl =
-      data.previewUrl ||
-      (data.attachmentId ? `/api/attachments/${data.attachmentId}/preview` : "");
-    fileItem.downloadUrl =
-      data.downloadUrl ||
-      (data.attachmentId ? `/api/attachments/${data.attachmentId}/download` : "");
   }
 };
 
 const handleUploadError = (error, fileItem) => {
+  // Aborts triggered by removeFile aren't real errors — ignore silently.
+  if (axios.isCancel?.(error) || error?.code === "ERR_CANCELED" || error?.name === "CanceledError") {
+    return;
+  }
   let userMessage = "";
   if (error.code === "ERR_NETWORK") {
     userMessage = "Network error: Cannot connect to server.";
-  } else if (error.code === "ECONNABORTED" || error.message.includes("timeout")) {
+  } else if (error.code === "ECONNABORTED" || (error.message && error.message.includes("timeout"))) {
     userMessage = "Upload timeout.";
   } else if (error.response) {
     const s = error.response.status;
@@ -403,20 +438,33 @@ const handleUploadError = (error, fileItem) => {
 };
 
 // Delete file from list and server
-const removeFile = async (index) => {
-  const file = uploadedFiles.value[index];
+const removeFile = async (file) => {
+  // Mark first so a late-arriving handleUploadSuccess won't flip uploaded=true on a removed row.
+  file._removed = true;
 
-  // Call backend delete API if file was already uploaded
-  if (file.id) {
+  // Abort any in-flight upload for this row.
+  if (file.uploadController) {
+    try { file.uploadController.abort(); } catch (_) { /* noop */ }
+  }
+
+  // Wait for the upload promise to settle — even after abort, axios may have already received
+  // a successful response and called handleUploadSuccess (which sets attachmentId).
+  if (file.uploadPromise) {
+    try { await file.uploadPromise; } catch (_) { /* swallowed by uploadFile already */ }
+  }
+
+  // If the upload completed before/despite the abort, clean up the server-side record.
+  if (file.attachmentId) {
     try {
-      await axios.delete(`/api/attachments/${file.id}`);
-      console.log("File deleted from server");
+      await axios.delete(`/api/attachments/${file.attachmentId}`);
     } catch (error) {
       console.error("Delete failed", error);
-      alert(
-        "Delete failed：" + (error.response?.data?.message || error.message),
-      );
-      return; // Don't remove from list if deletion fails
+      // If the row is still in the list, surface the error and keep the row so user can retry.
+      if (uploadedFiles.value.includes(file)) {
+        file._removed = false;
+        alert("Delete failed：" + (error.response?.data?.message || error.message));
+        return;
+      }
     }
   }
 
@@ -425,9 +473,9 @@ const removeFile = async (index) => {
     URL.revokeObjectURL(file.preview);
   }
 
-  // Remove from list
-  uploadedFiles.value.splice(index, 1);
-  console.log("It has been removed from list.");
+  // Remove by identity (not index) so concurrent removals stay correct.
+  const idx = uploadedFiles.value.indexOf(file);
+  if (idx >= 0) uploadedFiles.value.splice(idx, 1);
 };
 
 // Preview modal
@@ -442,14 +490,14 @@ const closePreview = () => {
 };
 
 const downloadFile = async (file) => {
-  if (!file?.id) {
+  if (!file?.attachmentId) {
     errorMessage.value = "File not uploaded yet, cannot download";
     return;
   }
 
   try {
     const response = await axios.get(
-      file.downloadUrl || `/api/attachments/${file.id}/download`,
+      file.downloadUrl || `/api/attachments/${file.attachmentId}/download`,
       {
         responseType: "blob",
       },
@@ -496,6 +544,10 @@ const formatFileSize = (bytes) => {
 .drop-zone:hover {
   border-color: #409eff;
   background: #f5f7fa;
+}
+.drop-zone:focus-visible {
+  outline: 2px solid #409eff;
+  outline-offset: 2px;
 }
 .file-list {
   margin-top: 20px;

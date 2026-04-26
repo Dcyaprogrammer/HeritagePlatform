@@ -13,26 +13,23 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
 import java.io.File;
 import java.io.InputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileStore;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.security.DigestOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Stream;
+import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/attachments")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
 public class AttachmentController {
     private static final Logger log = LoggerFactory.getLogger(AttachmentController.class);
 
@@ -40,7 +37,6 @@ public class AttachmentController {
     private AttachmentRepository attachmentRepository;
 
     private final String UPLOAD_DIR = System.getProperty("user.dir") + "/uploads/";
-    private final String CHUNK_DIR = System.getProperty("user.dir") + "/uploads/chunks/";
 
     // Allowed file extensions for heritage platform (images, documents, video, audio)
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
@@ -49,6 +45,13 @@ public class AttachmentController {
         ".mp4", ".mov", ".avi", ".mkv",
         ".mp3", ".wav", ".m4a", ".flac"
     );
+
+    // uploadId must be alphanumeric/underscore/hyphen only — prevents path traversal
+    private static final Pattern UPLOAD_ID_PATTERN = Pattern.compile("^[A-Za-z0-9_-]{8,128}$");
+
+    // Hard cap on a single chunk's declared size to bound seek offset and write size
+    private static final long MAX_CHUNK_SIZE = 64L * 1024 * 1024; // 64 MB
+    private static final int MAX_TOTAL_CHUNKS = 100_000;
 
     // ----- Standard single upload -----
     @PostMapping("/upload")
@@ -130,8 +133,7 @@ public class AttachmentController {
             return ResponseEntity.ok(response);
             
         } catch (IOException e) {
-            log.error("Upload failed: {}", e.getMessage());
-            e.printStackTrace();
+            log.error("Upload failed: {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "Upload failed: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
@@ -149,29 +151,44 @@ public class AttachmentController {
             @RequestParam("chunkSize") long chunkSize) {
         Map<String, Object> response = new HashMap<>();
         try {
+            String validation = validateChunkParams(uploadId, fileName, chunkIndex, totalChunks, chunkSize);
+            if (validation != null) {
+                response.put("success", false);
+                response.put("message", validation);
+                return ResponseEntity.status(400).body(response);
+            }
+
+            // Reject chunks larger than declared chunkSize (last chunk may be smaller)
+            if (file.getSize() > chunkSize) {
+                response.put("success", false);
+                response.put("message", "Chunk payload exceeds declared chunkSize");
+                return ResponseEntity.status(400).body(response);
+            }
+
             File uploadDir = new File(UPLOAD_DIR);
             if (!uploadDir.exists()) {
                 uploadDir.mkdirs();
             }
 
-            // Generate target filename (same as merge would produce)
-            String fileExtension = "";
-            if (fileName != null && fileName.contains(".")) {
-                fileExtension = fileName.substring(fileName.lastIndexOf("."));
-            }
+            String fileExtension = extractExtension(fileName);
             String storedName = uploadId + fileExtension;
-            Path targetFile = Paths.get(UPLOAD_DIR, storedName);
+            Path targetFile = resolveUnderUploadDir(storedName);
 
             // Write chunk directly at its final position in the target file
             byte[] data = file.getBytes();
             try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(targetFile.toFile(), "rw")) {
-                raf.seek(chunkIndex * chunkSize);
+                raf.seek((long) chunkIndex * chunkSize);
                 raf.write(data);
             }
 
             log.info("Chunk {}/{} written to target file for uploadId={}", chunkIndex + 1, totalChunks, uploadId);
             response.put("success", true);
             return ResponseEntity.ok(response);
+        } catch (SecurityException e) {
+            log.warn("Rejected chunk upload: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(400).body(response);
         } catch (IOException e) {
             log.error("Chunk upload failed: {}", e.getMessage(), e);
             response.put("success", false);
@@ -190,20 +207,21 @@ public class AttachmentController {
             @RequestParam("fileHash") String fileHash) {
         Map<String, Object> response = new HashMap<>();
         try {
-            // Validate file type
+            String validation = validateChunkParams(uploadId, fileName, 0, totalChunks, chunkSize);
+            if (validation != null) {
+                response.put("success", false);
+                response.put("message", validation);
+                return ResponseEntity.status(400).body(response);
+            }
             if (!isAllowedFileType(fileName)) {
                 response.put("success", false);
                 response.put("message", "File type not allowed");
                 return ResponseEntity.status(400).body(response);
             }
 
-            // Target file was already assembled by individual chunk uploads
-            String fileExtension = "";
-            if (fileName != null && fileName.contains(".")) {
-                fileExtension = fileName.substring(fileName.lastIndexOf("."));
-            }
+            String fileExtension = extractExtension(fileName);
             String storedName = uploadId + fileExtension;
-            Path targetFile = Paths.get(UPLOAD_DIR, storedName);
+            Path targetFile = resolveUnderUploadDir(storedName);
 
             if (!Files.exists(targetFile)) {
                 response.put("success", false);
@@ -212,14 +230,14 @@ public class AttachmentController {
             }
 
             long fileSize = Files.size(targetFile);
-            long expectedSize = (totalChunks - 1L) * chunkSize + (fileSize - (totalChunks - 1L) * chunkSize);
             log.info("File assembled: {} ({} bytes, {} chunks)", storedName, fileSize, totalChunks);
 
-            // Compute server-side SHA-256
-            String serverHash = calculateSha256(targetFile);
-
-            // Verify hash (if client provided one)
-            if (!"skipped".equalsIgnoreCase(fileHash)) {
+            // Verify hash only if client supplied one — skip the expensive SHA-256 pass when "skipped"
+            boolean skipHash = "skipped".equalsIgnoreCase(fileHash);
+            if (skipHash) {
+                log.info("Client skipped hash for uploadId={}, server-side hashing deferred", uploadId);
+            } else {
+                String serverHash = calculateSha256(targetFile);
                 if (!serverHash.equalsIgnoreCase(fileHash)) {
                     Files.deleteIfExists(targetFile);
                     log.error("SHA-256 mismatch for uploadId={}, expected={}, actual={}", uploadId, fileHash, serverHash);
@@ -227,8 +245,6 @@ public class AttachmentController {
                     response.put("message", "File integrity check failed (SHA-256 mismatch)");
                     return ResponseEntity.status(400).body(response);
                 }
-            } else {
-                log.info("Client skipped hash, server SHA-256={} for uploadId={}", serverHash, uploadId);
             }
 
             // Determine file type
@@ -261,15 +277,15 @@ public class AttachmentController {
             response.put("fileSize", fileSize);
             response.put("message", "Upload success");
             return ResponseEntity.ok(response);
-        } catch (IOException e) {
+        } catch (SecurityException e) {
+            log.warn("Rejected merge: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(400).body(response);
+        } catch (IOException | NoSuchAlgorithmException e) {
             log.error("Finalize failed: {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "Finalize failed: " + e.getMessage());
-            return ResponseEntity.status(500).body(response);
-        } catch (NoSuchAlgorithmException e) {
-            log.error("Hash failed: {}", e.getMessage(), e);
-            response.put("success", false);
-            response.put("message", "Hash failed: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
         }
     }
@@ -308,7 +324,6 @@ public class AttachmentController {
             
         } catch (Exception e) {
             log.error("Delete failed: {}", e.getMessage(), e);
-            e.printStackTrace();
             response.put("success", false);
             response.put("message", "Delete failed: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
@@ -384,24 +399,51 @@ public class AttachmentController {
         }
     }
 
-    private void deleteDirectory(Path dir) throws IOException {
-        if (Files.exists(dir)) {
-            try (Stream<Path> files = Files.walk(dir)) {
-                files.sorted(Comparator.reverseOrder())
-                        .forEach(path -> {
-                            try { Files.deleteIfExists(path); }
-                            catch (IOException e) { log.warn("Failed to delete: {}", path); }
-                        });
-            }
-        }
+    private Path resolveStoredFilePath(Attachment attachment) {
+        return resolveUnderUploadDir(attachment.getStoredName());
     }
 
-    private Path resolveStoredFilePath(Attachment attachment) {
-        Path resolved = Paths.get(UPLOAD_DIR, attachment.getStoredName()).normalize();
-        if (!resolved.startsWith(Paths.get(UPLOAD_DIR).normalize())) {
+    /**
+     * Resolves a relative name under UPLOAD_DIR and asserts the result stays inside it,
+     * blocking path-traversal sequences ("..", absolute paths, symlinks) in user-supplied input.
+     */
+    private Path resolveUnderUploadDir(String relativeName) {
+        Path base = Paths.get(UPLOAD_DIR).toAbsolutePath().normalize();
+        Path resolved = base.resolve(relativeName).toAbsolutePath().normalize();
+        if (!resolved.startsWith(base)) {
             throw new SecurityException("Path traversal detected");
         }
         return resolved;
+    }
+
+    private String extractExtension(String fileName) {
+        if (fileName == null) return "";
+        int dot = fileName.lastIndexOf('.');
+        return dot >= 0 ? fileName.substring(dot) : "";
+    }
+
+    /**
+     * Returns null when params look sane; otherwise a user-facing rejection reason.
+     * Validates uploadId shape (no traversal), bounds chunkIndex/totalChunks/chunkSize.
+     */
+    private String validateChunkParams(String uploadId, String fileName, int chunkIndex,
+                                       int totalChunks, long chunkSize) {
+        if (uploadId == null || !UPLOAD_ID_PATTERN.matcher(uploadId).matches()) {
+            return "Invalid uploadId";
+        }
+        if (totalChunks <= 0 || totalChunks > MAX_TOTAL_CHUNKS) {
+            return "Invalid totalChunks";
+        }
+        if (chunkIndex < 0 || chunkIndex >= totalChunks) {
+            return "Invalid chunkIndex";
+        }
+        if (chunkSize <= 0 || chunkSize > MAX_CHUNK_SIZE) {
+            return "Invalid chunkSize";
+        }
+        if (!isAllowedFileType(fileName)) {
+            return "File type not allowed";
+        }
+        return null;
     }
 
     private String calculateSha256(Path filePath) throws IOException, NoSuchAlgorithmException {
