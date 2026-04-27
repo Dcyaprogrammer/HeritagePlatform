@@ -1,6 +1,14 @@
 .vscode/
 .DS_Store
 
+# 组员2添加：不要提交的文件夹
+platform.backup/
+frontend/npm
+
+# 依赖（已经在frontend里，根目录的不需要）
+/node_modules
+
+
 ### IntelliJ IDEA ###
 .idea
 **/.idea

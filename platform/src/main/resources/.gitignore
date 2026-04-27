@@ -1,0 +1,3 @@
+application.properties
+application-local.properties
+*.backup

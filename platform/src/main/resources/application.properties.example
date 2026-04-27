@@ -1,0 +1,21 @@
+spring.datasource.url=jdbc:mysql://localhost:3306/heritage_platform?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+spring.datasource.username=root
+spring.datasource.password=
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+
+jwt.secret=local_dev_secret_at_least_32_chars_for_heritage_platform
+jwt.expiration=86400000
+
+server.port=8080
+
+spring.sql.init.mode=always
+
+# Mock Email Configuration to satisfy JavaMailSender bean
+spring.mail.host=localhost
+spring.mail.port=2525
+spring.mail.username=mock
+spring.mail.password=mock
