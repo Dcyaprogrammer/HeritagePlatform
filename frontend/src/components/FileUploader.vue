@@ -98,7 +98,9 @@
   <!-- Preview Modal -->
   <div v-if="previewFile" class="modal" @click="closePreview">
     <div class="modal-content" @click.stop>
-      <span class="modal-close" @click="closePreview">&times;</span>
+      <!-- Sits in the top padding band, above the video — outside any
+           <video>/<iframe> shadow DOM that would otherwise eat the click. -->
+      <span class="modal-close" @click.stop="closePreview">&times;</span>
 
       <!-- Image preview -->
       <img
@@ -688,14 +690,21 @@ const formatFileSize = (bytes) => {
   max-height: 90%;
   background: white;
   border-radius: 8px;
-  padding: 20px;
+  padding: 36px 20px 20px;
 }
 .modal-close {
   position: absolute;
-  top: 10px;
-  right: 20px;
-  font-size: 28px;
+  top: 6px;
+  right: 14px;
+  font-size: 26px;
+  line-height: 1;
+  color: #888;
   cursor: pointer;
+  user-select: none;
+  z-index: 10;
+}
+.modal-close:hover {
+  color: #333;
 }
 .modal-image,
 .modal-video {
