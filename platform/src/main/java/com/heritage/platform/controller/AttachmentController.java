@@ -61,6 +61,36 @@ public class AttachmentController {
     private final java.util.concurrent.ConcurrentHashMap<String, java.util.BitSet> receivedChunks =
             new java.util.concurrent.ConcurrentHashMap<>();
 
+    // Pinned per-uploadId metadata. The first chunk's (fileName, totalChunks, chunkSize) is
+    // recorded here; every subsequent chunk and the final merge must match. Without this,
+    // a misbehaving client could send chunks for the same uploadId with different filenames,
+    // making each chunk land in a different file while the bitmap still shows "complete".
+    private final java.util.concurrent.ConcurrentHashMap<String, UploadDescriptor> uploadDescriptors =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static final class UploadDescriptor {
+        final String fileName;
+        final int totalChunks;
+        final long chunkSize;
+        final String storedName;
+        UploadDescriptor(String fileName, int totalChunks, long chunkSize, String storedName) {
+            this.fileName = fileName;
+            this.totalChunks = totalChunks;
+            this.chunkSize = chunkSize;
+            this.storedName = storedName;
+        }
+        boolean matches(String fileName, int totalChunks, long chunkSize) {
+            return this.totalChunks == totalChunks
+                    && this.chunkSize == chunkSize
+                    && Objects.equals(this.fileName, fileName);
+        }
+    }
+
+    private void clearUploadState(String uploadId) {
+        receivedChunks.remove(uploadId);
+        uploadDescriptors.remove(uploadId);
+    }
+
     // ----- Standard single upload -----
     @PostMapping("/upload")
     public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file) {
@@ -179,7 +209,23 @@ public class AttachmentController {
             }
 
             String fileExtension = extractExtension(fileName);
-            String storedName = uploadId + fileExtension;
+            String candidateStoredName = uploadId + fileExtension;
+
+            // Pin (fileName, totalChunks, chunkSize, storedName) on the first chunk, and require
+            // every subsequent chunk to match. Atomic via computeIfAbsent so concurrent first-chunk
+            // requests can't race in two different descriptors.
+            UploadDescriptor descriptor = uploadDescriptors.computeIfAbsent(uploadId,
+                    k -> new UploadDescriptor(fileName, totalChunks, chunkSize, candidateStoredName));
+            if (!descriptor.matches(fileName, totalChunks, chunkSize)) {
+                log.warn("Rejected mismatched chunk for uploadId={}: pinned=({}, {}, {}), got=({}, {}, {})",
+                        uploadId, descriptor.fileName, descriptor.totalChunks, descriptor.chunkSize,
+                        fileName, totalChunks, chunkSize);
+                response.put("success", false);
+                response.put("message", "Chunk metadata does not match this uploadId (fileName/totalChunks/chunkSize mismatch)");
+                return ResponseEntity.status(400).body(response);
+            }
+
+            String storedName = descriptor.storedName;
             Path targetFile = resolveUnderUploadDir(storedName);
 
             long chunkLen = file.getSize();
@@ -254,18 +300,38 @@ public class AttachmentController {
                 response.put("message", validation);
                 return ResponseEntity.status(400).body(response);
             }
-            if (!isAllowedFileType(fileName)) {
+            // Reject merge if there's no pinned descriptor (no chunks were ever accepted, or it was
+            // already merged/cleaned up). This also defangs any attempt to "guess" an uploadId and
+            // call /merge directly without going through /chunk first.
+            UploadDescriptor descriptor = uploadDescriptors.get(uploadId);
+            if (descriptor == null) {
+                response.put("success", false);
+                response.put("message", "No active upload for this uploadId");
+                return ResponseEntity.status(400).body(response);
+            }
+            if (!descriptor.matches(fileName, totalChunks, chunkSize)) {
+                log.warn("Rejected merge mismatch for uploadId={}: pinned=({}, {}, {}), got=({}, {}, {})",
+                        uploadId, descriptor.fileName, descriptor.totalChunks, descriptor.chunkSize,
+                        fileName, totalChunks, chunkSize);
+                response.put("success", false);
+                response.put("message", "Merge metadata does not match the pinned upload");
+                return ResponseEntity.status(400).body(response);
+            }
+
+            // From here on, derive everything we need from the pinned descriptor — never the request
+            // body — so a malicious client can't swap fileName/extension at merge time.
+            String pinnedFileName = descriptor.fileName;
+            String storedName = descriptor.storedName;
+            if (!isAllowedFileType(pinnedFileName)) {
+                clearUploadState(uploadId);
                 response.put("success", false);
                 response.put("message", "File type not allowed");
                 return ResponseEntity.status(400).body(response);
             }
-
-            String fileExtension = extractExtension(fileName);
-            String storedName = uploadId + fileExtension;
             Path targetFile = resolveUnderUploadDir(storedName);
 
             if (!Files.exists(targetFile)) {
-                receivedChunks.remove(uploadId);
+                clearUploadState(uploadId);
                 response.put("success", false);
                 response.put("message", "Uploaded file not found");
                 return ResponseEntity.status(400).body(response);
@@ -289,7 +355,7 @@ public class AttachmentController {
             }
             if (receivedCount != totalChunks) {
                 Files.deleteIfExists(targetFile);
-                receivedChunks.remove(uploadId);
+                clearUploadState(uploadId);
                 log.warn("Incomplete upload uploadId={}: received {}/{} chunks", uploadId, receivedCount, totalChunks);
                 response.put("success", false);
                 response.put("message", "Incomplete upload: missing chunks");
@@ -301,7 +367,7 @@ public class AttachmentController {
             long maxSize = (long) totalChunks * chunkSize;
             if (fileSize < minSize || fileSize > maxSize) {
                 Files.deleteIfExists(targetFile);
-                receivedChunks.remove(uploadId);
+                clearUploadState(uploadId);
                 log.warn("Size out of range uploadId={}: size={}, expected [{}, {}]",
                         uploadId, fileSize, minSize, maxSize);
                 response.put("success", false);
@@ -318,7 +384,7 @@ public class AttachmentController {
                 String serverHash = calculateSha256(targetFile);
                 if (!serverHash.equalsIgnoreCase(fileHash)) {
                     Files.deleteIfExists(targetFile);
-                    receivedChunks.remove(uploadId);
+                    clearUploadState(uploadId);
                     log.error("SHA-256 mismatch for uploadId={}, expected={}, actual={}", uploadId, fileHash, serverHash);
                     response.put("success", false);
                     response.put("message", "File integrity check failed (SHA-256 mismatch)");
@@ -326,21 +392,20 @@ public class AttachmentController {
                 }
             }
 
-            receivedChunks.remove(uploadId);
+            clearUploadState(uploadId);
 
-            // Determine file type
+            // Determine file type from the pinned filename, not the request body.
             String fileType = "document";
-            String lowerName = fileName != null ? fileName.toLowerCase() : "";
+            String lowerName = pinnedFileName != null ? pinnedFileName.toLowerCase() : "";
             if (lowerName.endsWith(".pdf")) fileType = "pdf";
             else if (lowerName.endsWith(".doc") || lowerName.endsWith(".docx")) fileType = "word";
             else if (lowerName.endsWith(".mp4") || lowerName.endsWith(".mov") || lowerName.endsWith(".avi") || lowerName.endsWith(".mkv")) fileType = "video";
             else if (lowerName.endsWith(".mp3") || lowerName.endsWith(".wav") || lowerName.endsWith(".m4a") || lowerName.endsWith(".flac")) fileType = "audio";
             else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".png") || lowerName.endsWith(".gif") || lowerName.endsWith(".bmp") || lowerName.endsWith(".webp")) fileType = "image";
 
-            // Save to database
             Attachment attachment = new Attachment();
             attachment.setStoredName(storedName);
-            attachment.setDisplayName(fileName);
+            attachment.setDisplayName(pinnedFileName);
             attachment.setFilePath("/uploads/" + storedName);
             attachment.setFileType(fileType);
             attachment.setFileSize(fileSize);
@@ -350,7 +415,7 @@ public class AttachmentController {
 
             response.put("success", true);
             response.put("attachmentId", attachment.getId());
-            response.put("displayName", fileName);
+            response.put("displayName", pinnedFileName);
             response.put("storedName", storedName);
             response.put("filePath", "/uploads/" + storedName);
             response.put("previewUrl", "/api/attachments/" + attachment.getId() + "/preview");
@@ -359,13 +424,13 @@ public class AttachmentController {
             response.put("message", "Upload success");
             return ResponseEntity.ok(response);
         } catch (SecurityException e) {
-            receivedChunks.remove(uploadId);
+            clearUploadState(uploadId);
             log.warn("Rejected merge: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
             return ResponseEntity.status(400).body(response);
         } catch (IOException | NoSuchAlgorithmException e) {
-            receivedChunks.remove(uploadId);
+            clearUploadState(uploadId);
             log.error("Finalize failed: {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "Finalize failed: " + e.getMessage());
