@@ -11,8 +11,9 @@ public class Attachment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(name = "resource_id")
-    private Long resourceId;  // associated resource ID (unused for now, FK will be enabled after integration with team member 4)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resource_id")
+    private HeritageResource resource;
 
     @Column(name = "stored_name")
     private String storedName;   
@@ -39,8 +40,8 @@ public class Attachment {
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     
-    public Long getResourceId() { return resourceId; }
-    public void setResourceId(Long resourceId) { this.resourceId = resourceId; }
+    public HeritageResource getResource() { return resource; }
+    public void setResource(HeritageResource resource) { this.resource = resource; }
     
     public String getStoredName() { return storedName; }
     public void setStoredName(String storedName) { this.storedName = storedName; }
