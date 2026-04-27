@@ -323,7 +323,10 @@ const uploadSingle = async (file, fileItem) => {
 // ----- Chunked upload (files > 50MB) -----
 const uploadByChunks = async (file, fileItem) => {
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-  const uploadId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  // 122 bits of entropy from crypto.randomUUID() — collision-resistant across concurrent uploads
+  // and removes the guessable-id surface on the unauthenticated /upload/merge endpoint.
+  // Result still matches the backend regex ^[A-Za-z0-9_-]{8,128}$.
+  const uploadId = `${Date.now()}_${crypto.randomUUID().replace(/-/g, "")}`;
 
   // Skip client-side hash for files > 100MB to avoid loading entire file into memory.
   // Server-side SHA-256 check still runs during merge.
@@ -354,13 +357,26 @@ const uploadByChunks = async (file, fileItem) => {
     fileItem.uploadProgress = Math.round((completedBytes * 100) / file.size);
   };
 
+  // Abort/cancel must short-circuit retries so removeFile (which awaits uploadPromise)
+  // resolves promptly instead of stalling through the 2s/4s/6s backoff.
+  const isCancelError = (err) =>
+    axios.isCancel?.(err) ||
+    err?.code === "ERR_CANCELED" ||
+    err?.name === "CanceledError" ||
+    err?.name === "AbortError";
+
   const uploadWithRetry = async (chunkIndex, retries = 3) => {
     for (let attempt = 1; attempt <= retries; attempt++) {
+      if (fileItem.uploadController?.signal.aborted) {
+        const e = new Error("Upload aborted");
+        e.name = "AbortError";
+        throw e;
+      }
       try {
         await uploadOneChunk(chunkIndex);
         return;
       } catch (err) {
-        if (attempt === retries) throw err;
+        if (isCancelError(err) || attempt === retries) throw err;
         await new Promise((r) => setTimeout(r, 2000 * attempt));
       }
     }
@@ -489,34 +505,23 @@ const closePreview = () => {
   previewFile.value = null;
 };
 
-const downloadFile = async (file) => {
+const downloadFile = (file) => {
   if (!file?.attachmentId) {
     errorMessage.value = "File not uploaded yet, cannot download";
     return;
   }
 
-  try {
-    const response = await axios.get(
-      file.downloadUrl || `/api/attachments/${file.attachmentId}/download`,
-      {
-        responseType: "blob",
-      },
-    );
-    const blobUrl = URL.createObjectURL(response.data);
-    const link = document.createElement("a");
-    link.href = blobUrl;
-    link.download = file.displayName || file.name || "downloaded-file";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(blobUrl);
-  } catch (error) {
-    console.error("Download failed:", error);
-    errorMessage.value = "Download failed, please try again";
-    setTimeout(() => {
-      errorMessage.value = "";
-    }, 5000);
-  }
+  // Use a plain anchor click so the browser streams the response straight to disk.
+  // Buffering multi-GB downloads as a Blob via axios crashes the tab; the backend already
+  // sets Content-Disposition: attachment, and the endpoint is unauthenticated so no headers
+  // need to be attached. (If auth headers become required later, switch to fetch + streamsaver.)
+  const link = document.createElement("a");
+  link.href = file.downloadUrl || `/api/attachments/${file.attachmentId}/download`;
+  link.download = file.displayName || file.name || "";
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 // Format file size in bytes to human-readable string

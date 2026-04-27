@@ -52,6 +52,14 @@ public class AttachmentController {
     // Hard cap on a single chunk's declared size to bound seek offset and write size
     private static final long MAX_CHUNK_SIZE = 64L * 1024 * 1024; // 64 MB
     private static final int MAX_TOTAL_CHUNKS = 100_000;
+    // Hard cap on a single assembled file (per uploadId). 10 GiB feels sane for a heritage archive;
+    // adjust via configuration later if needed.
+    private static final long MAX_FILE_SIZE = 10L * 1024 * 1024 * 1024; // 10 GiB
+
+    // Per-uploadId received-chunk bitmap. Keys live only while an upload is in progress —
+    // populated on first chunk, cleared on successful merge or rejection.
+    private final java.util.concurrent.ConcurrentHashMap<String, java.util.BitSet> receivedChunks =
+            new java.util.concurrent.ConcurrentHashMap<>();
 
     // ----- Standard single upload -----
     @PostMapping("/upload")
@@ -174,11 +182,44 @@ public class AttachmentController {
             String storedName = uploadId + fileExtension;
             Path targetFile = resolveUnderUploadDir(storedName);
 
-            // Write chunk directly at its final position in the target file
-            byte[] data = file.getBytes();
-            try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(targetFile.toFile(), "rw")) {
+            long chunkLen = file.getSize();
+
+            // Per-uploadId quota: don't let any single upload exceed MAX_FILE_SIZE, and reject early
+            // if the declared totalChunks * chunkSize would already blow past the cap.
+            long declaredMax = (long) totalChunks * chunkSize;
+            if (declaredMax > MAX_FILE_SIZE) {
+                response.put("success", false);
+                response.put("message", "Declared upload size exceeds server limit");
+                return ResponseEntity.status(400).body(response);
+            }
+            long currentSize = Files.exists(targetFile) ? Files.size(targetFile) : 0L;
+            if (currentSize + chunkLen > MAX_FILE_SIZE) {
+                response.put("success", false);
+                response.put("message", "Upload exceeds server file-size limit");
+                return ResponseEntity.status(413).body(response);
+            }
+
+            // Disk-space pre-check (same guard as single-file upload).
+            checkDiskSpace(chunkLen);
+
+            // Stream chunk directly to its final offset — no full-chunk byte[] allocation on heap.
+            try (java.io.InputStream in = file.getInputStream();
+                 java.io.RandomAccessFile raf = new java.io.RandomAccessFile(targetFile.toFile(), "rw")) {
                 raf.seek((long) chunkIndex * chunkSize);
-                raf.write(data);
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = in.read(buffer)) != -1) {
+                    raf.write(buffer, 0, read);
+                }
+            }
+
+            // Track received chunks so mergeChunks can verify completeness even when client
+            // skipped SHA-256 (raf.seek + write past EOF leaves sparse zeros that a size check alone
+            // would not catch). BitSet itself isn't thread-safe — synchronize for concurrent chunks.
+            java.util.BitSet bitmap = receivedChunks.computeIfAbsent(uploadId,
+                    k -> new java.util.BitSet(totalChunks));
+            synchronized (bitmap) {
+                bitmap.set(chunkIndex);
             }
 
             log.info("Chunk {}/{} written to target file for uploadId={}", chunkIndex + 1, totalChunks, uploadId);
@@ -224,6 +265,7 @@ public class AttachmentController {
             Path targetFile = resolveUnderUploadDir(storedName);
 
             if (!Files.exists(targetFile)) {
+                receivedChunks.remove(uploadId);
                 response.put("success", false);
                 response.put("message", "Uploaded file not found");
                 return ResponseEntity.status(400).body(response);
@@ -232,20 +274,59 @@ public class AttachmentController {
             long fileSize = Files.size(targetFile);
             log.info("File assembled: {} ({} bytes, {} chunks)", storedName, fileSize, totalChunks);
 
-            // Verify hash only if client supplied one — skip the expensive SHA-256 pass when "skipped"
+            // Completeness check (covers both skip-hash and hash-verify paths). Because chunks are
+            // written via raf.seek + write, a missing middle chunk leaves a sparse hole that
+            // size-only checks miss. The bitmap is authoritative. Synchronize the read because
+            // concurrent uploadChunk calls write to the same BitSet.
+            java.util.BitSet received = receivedChunks.get(uploadId);
+            int receivedCount;
+            if (received == null) {
+                receivedCount = 0;
+            } else {
+                synchronized (received) {
+                    receivedCount = received.cardinality();
+                }
+            }
+            if (receivedCount != totalChunks) {
+                Files.deleteIfExists(targetFile);
+                receivedChunks.remove(uploadId);
+                log.warn("Incomplete upload uploadId={}: received {}/{} chunks", uploadId, receivedCount, totalChunks);
+                response.put("success", false);
+                response.put("message", "Incomplete upload: missing chunks");
+                return ResponseEntity.status(400).body(response);
+            }
+
+            // Sanity bound on assembled size: last chunk must be in (0, chunkSize], all others == chunkSize.
+            long minSize = (long) (totalChunks - 1) * chunkSize + 1;
+            long maxSize = (long) totalChunks * chunkSize;
+            if (fileSize < minSize || fileSize > maxSize) {
+                Files.deleteIfExists(targetFile);
+                receivedChunks.remove(uploadId);
+                log.warn("Size out of range uploadId={}: size={}, expected [{}, {}]",
+                        uploadId, fileSize, minSize, maxSize);
+                response.put("success", false);
+                response.put("message", "Assembled size out of expected range");
+                return ResponseEntity.status(400).body(response);
+            }
+
+            // Verify hash only if client supplied one — skip the expensive SHA-256 pass when "skipped".
+            // Bitmap+size already guarantee structural completeness; SHA-256 is end-to-end integrity.
             boolean skipHash = "skipped".equalsIgnoreCase(fileHash);
             if (skipHash) {
-                log.info("Client skipped hash for uploadId={}, server-side hashing deferred", uploadId);
+                log.info("Client skipped hash for uploadId={}, relying on bitmap+size validation", uploadId);
             } else {
                 String serverHash = calculateSha256(targetFile);
                 if (!serverHash.equalsIgnoreCase(fileHash)) {
                     Files.deleteIfExists(targetFile);
+                    receivedChunks.remove(uploadId);
                     log.error("SHA-256 mismatch for uploadId={}, expected={}, actual={}", uploadId, fileHash, serverHash);
                     response.put("success", false);
                     response.put("message", "File integrity check failed (SHA-256 mismatch)");
                     return ResponseEntity.status(400).body(response);
                 }
             }
+
+            receivedChunks.remove(uploadId);
 
             // Determine file type
             String fileType = "document";
@@ -278,11 +359,13 @@ public class AttachmentController {
             response.put("message", "Upload success");
             return ResponseEntity.ok(response);
         } catch (SecurityException e) {
+            receivedChunks.remove(uploadId);
             log.warn("Rejected merge: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
             return ResponseEntity.status(400).body(response);
         } catch (IOException | NoSuchAlgorithmException e) {
+            receivedChunks.remove(uploadId);
             log.error("Finalize failed: {}", e.getMessage(), e);
             response.put("success", false);
             response.put("message", "Finalize failed: " + e.getMessage());
