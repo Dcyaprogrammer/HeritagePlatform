@@ -10,6 +10,7 @@ import Register from '../views/auth/Register.vue'
 import ResourceDetailView from '../views/ResourceDetailView.vue'
 import SubmissionsView from '../views/SubmissionsView.vue'
 import FeedbackView from '../views/FeedbackView.vue'
+import CreateResource from '../views/CreateResource.vue'
 import { getStoredRoles, getToken } from '../api/auth.js'
 
 // Route configuration
@@ -52,6 +53,18 @@ const routes = [
     component: ResourceDetailView,
     meta: { title: 'Resource Detail' }
   },
+
+  {
+    path: '/resources/create',
+    name: 'CreateResource',
+    component: CreateResource,
+    meta: {
+      title: 'Create Resource',
+      requiresAuth: true,
+      roles: ['CONTRIBUTOR', 'ADMIN']
+    }
+  },
+
   {
     path: '/resources/submissions',
     name: 'Submissions',
@@ -145,7 +158,6 @@ const routes = [
   }
 ]
 
-// Create router instance
 const router = createRouter({
   history: createWebHistory(),
   routes,

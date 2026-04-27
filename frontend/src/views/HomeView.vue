@@ -56,15 +56,21 @@ const filteredResources = computed(() => {
 
 const isLoggedIn = ref(!!getToken())
 const isAdmin = ref(localStorage.getItem('role') === 'ADMIN')
+const isContributor = ref(localStorage.getItem('role') === 'CONTRIBUTOR' || localStorage.getItem('role') === 'ADMIN')
 
 // Update on route change or when storage changes
 onMounted(() => {
   isLoggedIn.value = !!getToken()
   isAdmin.value = localStorage.getItem('role') === 'ADMIN'
+  isContributor.value = localStorage.getItem('role') === 'CONTRIBUTOR' || localStorage.getItem('role') === 'ADMIN'
 })
 
 const goToAdmin = () => {
   router.push('/admin/users')
+}
+
+const goToCreateResource = () => {
+  router.push('/resources/create')
 }
 
 const goToProfile = () => {
@@ -248,6 +254,9 @@ onMounted(() => {
       <h1>Heritage Resource Hall</h1>
       <div class="header-actions">
         <template v-if="isLoggedIn">
+          <button v-if="isContributor" type="button" class="btn" @click="goToCreateResource">
+            + Create Draft
+          </button>
           <button v-if="isAdmin" type="button" class="btn primary" @click="goToAdmin">Admin Panel</button>
           <button type="button" class="btn" @click="goToProfile">Profile</button>
           <button type="button" class="btn" @click="handleLogout">Logout</button>
