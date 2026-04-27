@@ -80,8 +80,8 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { createDraft, getCategories, getTags, getHeritageTypeGroups } from '@/api/resource.js';
-import FileUploader from '@/components/FileUploader.vue';
+import { createDraft, getCategories, getTags, getHeritageTypeGroups } from '../api/resource.js';
+import FileUploader from '../components/FileUploader.vue';
 
 const router = useRouter();
 

@@ -21,7 +21,7 @@ A web-based community heritage resource sharing and curation platform. Contribut
 
 ### Part 2: Resource Production & Workflow (Core Engine)
 * **👉 Member 4 (Current User - Resource Drafting Engine):** Handles the core `resources` table creation and updates. Responsible for complex forms, metadata validation (Title, Location, Category), tagging (linking `resources` with `tags`), and saving entries as `DRAFT`.
-* **Member 5 (Media Assets Handling):** Manages `attachments` table. Handles multipart file uploads (images/documents) and binds URLs to specific `resource_id`.
+* **✅ Member 5 (Media Assets Handling) [Implemented]:** Manages `attachments` table. Handles multipart file uploads (images/documents/video chunked upload), file metadata management, and binds URLs to specific `resource_id` (`AttachmentController`).
 * **Member 6 (Review State Machine):** Manages the `status` field of `resources` (`DRAFT` -> `PENDING` -> `APPROVED`/`REJECTED`). Ensures concurrent state safety.
 * **Member 7 (Feedback & Revision):** Manages `review_logs` table. Handles rejection comments and the logic for Contributors to resubmit rejected drafts.
 
@@ -36,9 +36,9 @@ The AI must reference these tables when generating JPA Entities, MyBatis Mappers
 * `heritage_user_roles`: `user_id`, `role`
 * `categories`: `id`, `name`, `description`, `created_at`
 * `tags`: `id`, `name`, `created_at`
-* `resources` (Core Entity): `id`, `title`, `description`, `location_name`, `copyright_declaration`, `status`, `contributor_id` (FK), `category_id` (FK), `created_at`, `updated_at`.
+* `resources` (Core Entity): `id`, `title`, `description`, `location_name`, `heritage_type_code`, `category` (VARCHAR), `copyright_declaration`, `status`, `contributor_id`/`submitter_id` (FK), `category_id` (FK), `submitted_at`, `version`, `rejection_reason`, `created_at`, `updated_at`.
 * `resource_tags` (Join Table): `resource_id`, `tag_id`.
-* `attachments`: `id`, `resource_id` (FK), `file_path`, `file_type`, `created_at`.
+* `attachments`: `id`, `resource_id` (FK), `stored_name`, `display_name`, `file_path`, `file_type`, `file_size`, `created_at`.
 * `review_logs`: `id`, `resource_id` (FK), `reviewer_id` (FK), `action`, `feedback_comment`, `created_at`.
 * `comments`: `id`, `resource_id` (FK), `user_id` (FK), `content`, `created_at`, `updated_at`.
 

@@ -51,7 +51,7 @@ public class UserController {
 	 * Security: Only the user themselves or ADMIN can view user details
 	 */
 	@GetMapping("/user/{username}")
-	@PreAuthorize("#username == authentication.name or hasRole('ADMIN')")
+	@PreAuthorize("#username == authentication.name or hasRole('ADMIN') or hasRole('VIEWER')")
 	public ResponseEntity<ApiResponse<UserDTO>> getUserByUsername(@PathVariable String username) {
 		Optional<HeritageUser> userOptional = userRepository.findByUsername(username);
 

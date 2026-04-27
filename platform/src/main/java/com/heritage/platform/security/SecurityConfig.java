@@ -19,8 +19,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 
 
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -36,7 +39,8 @@ public class SecurityConfig {
                  "/api/auth/register", 
                  "/api/auth/login", 
                  "/api/auth/forgot-password", 
-                 "/api/auth/reset-password").permitAll()
+                 "/api/auth/reset-password",
+                 "/api/public/**").permitAll()
                 .requestMatchers("/api/review/**").hasRole("ADMIN")
                  //.requestMatchers("/api/sessions/**").hasAnyRole("VIEWER", "ADMIN")
                  .requestMatchers("/api/sessions/**").permitAll()
@@ -45,6 +49,12 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("Unauthorized: Please log in");
+                })
+            )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
