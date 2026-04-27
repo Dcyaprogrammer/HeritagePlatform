@@ -29,7 +29,6 @@ public class Tag {
     @ManyToMany(mappedBy = "tags")
     private Set<HeritageResource> resources = new HashSet<>();
 
-    // Getters and Setters
     public Long getId() {
         return id;
     }

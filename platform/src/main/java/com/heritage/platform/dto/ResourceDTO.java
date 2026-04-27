@@ -1,6 +1,6 @@
 package com.heritage.platform.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -19,11 +19,11 @@ public class ResourceDTO {
     private Long submitterId;
     private String submitterName;
     
-    private LocalDateTime submittedAt;
+    private Instant submittedAt;
     private String rejectionReason;
     private Long version;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 
     // We can return a simple list of Map or a dedicated TagDTO/AttachmentDTO
     private List<Map<String, Object>> tags;
@@ -63,8 +63,8 @@ public class ResourceDTO {
     public String getSubmitterName() { return submitterName; }
     public void setSubmitterName(String submitterName) { this.submitterName = submitterName; }
 
-    public LocalDateTime getSubmittedAt() { return submittedAt; }
-    public void setSubmittedAt(LocalDateTime submittedAt) { this.submittedAt = submittedAt; }
+    public Instant getSubmittedAt() { return submittedAt; }
+    public void setSubmittedAt(Instant submittedAt) { this.submittedAt = submittedAt; }
 
     public String getRejectionReason() { return rejectionReason; }
     public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
@@ -72,11 +72,11 @@ public class ResourceDTO {
     public Long getVersion() { return version; }
     public void setVersion(Long version) { this.version = version; }
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 
     public List<Map<String, Object>> getTags() { return tags; }
     public void setTags(List<Map<String, Object>> tags) { this.tags = tags; }
