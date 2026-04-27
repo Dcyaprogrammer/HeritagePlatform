@@ -219,9 +219,12 @@ CREATE TABLE IF NOT EXISTS resource_tags (
 
 CREATE TABLE IF NOT EXISTS attachments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    resource_id BIGINT NOT NULL,
+    resource_id BIGINT COMMENT 'references resources(id); FK + NOT NULL will be enabled after integration with team member 4',
+    stored_name VARCHAR(255) NOT NULL,
+    display_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
-    file_type VARCHAR(50) NOT NULL COMMENT 'IMAGE, DOCUMENT, VIDEO, AUDIO, LINK',
+    file_type VARCHAR(50) NOT NULL COMMENT 'image, pdf, word, video, audio, document',
+    file_size BIGINT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

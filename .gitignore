@@ -15,3 +15,16 @@ frontend/npm
 *.iws
 *.iml
 *.ipr
+
+### Build outputs ###
+target/
+node_modules/
+dist/
+
+### Uploaded files ###
+/uploads/
+
+### Environment ###
+.env
+.env.local
+*.local

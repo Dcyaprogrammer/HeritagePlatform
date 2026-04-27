@@ -38,7 +38,7 @@ public class ResourceController {
 		List<Map<String, Object>> data = new ArrayList<>();
 
 		for (HeritageResource resource : resources) {
-			boolean rejected = resource.getStatus() == ResourceStatus.Rejected;
+			boolean rejected = resource.getStatus() == ResourceStatus.REJECTED;
 			data.add(Map.of(
 					"id", resource.getId(),
 					"title", resource.getTitle(),
@@ -75,7 +75,7 @@ public class ResourceController {
 		HeritageResource resource = requireOwnedResource(id, authentication);
 		String username = requireUsername(authentication);
 
-		if (resource.getStatus() != ResourceStatus.Rejected) {
+		if (resource.getStatus() != ResourceStatus.REJECTED) {
 			throw new RuntimeException("Only rejected resources can be resubmitted");
 		}
 
@@ -83,8 +83,8 @@ public class ResourceController {
 		int updated = heritageResourceRepository.resubmitRejectedResource(
 				resource.getId(),
 				username,
-				ResourceStatus.Rejected,
-				ResourceStatus.Pending,
+				ResourceStatus.REJECTED,
+				ResourceStatus.PENDING_REVIEW,
 				submittedAt);
 
 		if (updated == 0) {
@@ -92,7 +92,7 @@ public class ResourceController {
 		}
 
 		return ApiResponse.success(Map.of(
-				"newStatus", ResourceStatus.Pending.toString(),
+				"newStatus", ResourceStatus.PENDING_REVIEW.toString(),
 				"submittedAt", submittedAt.toString()));
 	}
 
