@@ -40,7 +40,7 @@ async function submit() {
   if (!text) return
   submitting.value = true
   try {
-    const next = await postComment(props.resourceId, props.currentUserId, text)
+    const next = await postComment(props.resourceId, props.currentUserId, text, props.currentUserName)
     comments.value = [next, ...comments.value]
     draft.value = ''
   } finally {

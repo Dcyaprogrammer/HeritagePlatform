@@ -4,11 +4,14 @@ import { RouterLink, useRoute } from 'vue-router'
 import ResourceImageCarousel from '../components/ResourceImageCarousel.vue'
 import CommentSection from '../components/CommentSection.vue'
 import { getComments, getResourceById } from '../api/mockData.js'
+import { getToken } from '../api/auth.js'
 
 const route = useRoute()
 const loading = ref(true)
 const resource = ref(null)
 const comments = ref([])
+const isLoggedIn = ref(false)
+const currentUserName = ref('')
 
 const id = computed(() => Number(route.params.id))
 
@@ -29,7 +32,11 @@ async function load() {
   }
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+  isLoggedIn.value = !!getToken()
+  currentUserName.value = localStorage.getItem('username') || 'Guest'
+})
 watch(id, load)
 
 function formatDate(iso) {
@@ -96,9 +103,9 @@ function formatDate(iso) {
     <CommentSection
       :resource-id="resource.id"
       :initial-comments="comments"
-      :is-logged-in="true"
+      :is-logged-in="isLoggedIn"
       :current-user-id="999"
-      current-user-name="Test User"
+      :current-user-name="currentUserName"
     />
   </div>
 
