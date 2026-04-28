@@ -53,10 +53,10 @@ async function handleResubmit(row) {
   actionLoadingId.value = row.id
   try {
     const res = await resubmitResource(row.id)
-    ElMessage.success(res.data.message || 'Resubmitted successfully')
+    ElMessage.success(res.data?.message || 'Resubmitted successfully')
     await loadSubmissions()
   } catch (error) {
-    console.error('Failed to resubmit resource:', error)
+    console.error('Failed to resubmit:', error)
     ElMessage.error(error.response?.data?.message || 'Failed to resubmit resource')
   } finally {
     actionLoadingId.value = null

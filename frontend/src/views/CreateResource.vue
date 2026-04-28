@@ -139,7 +139,7 @@ const handleSaveDraft = async () => {
 
     const response = await createDraft(form);
     
-    if (response.data.success) {
+    if (response.data.success || response.data.code === 200) {
       successMsg.value = 'Draft saved successfully!';
       setTimeout(() => {
         router.push('/resources/submissions');

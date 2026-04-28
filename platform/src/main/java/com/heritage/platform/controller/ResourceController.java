@@ -77,10 +77,10 @@ public class ResourceController {
 			boolean rejected = resource.getStatus() == ResourceStatus.REJECTED;
 			data.add(Map.of(
 					"id", resource.getId(),
-					"title", resource.getTitle(),
-					"category", resource.getCategory(),
-					"status", resource.getStatus().toString(),
-					"submittedAt", resource.getSubmittedAt().toString(),
+					"title", resource.getTitle() == null ? "" : resource.getTitle(),
+					"category", resource.getCategory() == null ? "" : resource.getCategory(),
+					"status", resource.getStatus() == null ? "" : resource.getStatus().toString(),
+					"submittedAt", resource.getSubmittedAt() == null ? "" : resource.getSubmittedAt().toString(),
 					"canViewFeedback", rejected,
 					"canResubmit", rejected));
 		}

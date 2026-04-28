@@ -67,6 +67,10 @@ const goToCreateResource = () => {
   router.push('/resources/create')
 }
 
+const goToSubmissions = () => {
+  router.push('/resources/submissions')
+}
+
 const goToProfile = () => {
   router.push('/profile')
 }
@@ -279,6 +283,9 @@ onMounted(() => {
         <template v-if="isLoggedIn">
           <button v-if="isContributor" type="button" class="btn" @click="goToCreateResource">
             + Create Draft
+          </button>
+          <button v-if="isContributor" type="button" class="btn" @click="goToSubmissions">
+            My Submissions
           </button>
           <button v-if="isAdmin" type="button" class="btn primary" @click="goToAdmin">Admin Panel</button>
           <button type="button" class="btn" @click="goToProfile">Profile</button>
