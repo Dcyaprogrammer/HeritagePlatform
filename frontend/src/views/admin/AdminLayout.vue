@@ -26,6 +26,12 @@
             </el-icon>
             <span>Resource Review</span>
           </el-menu-item>
+          <el-menu-item index="/admin/resources">
+            <el-icon>
+              <DocumentChecked />
+            </el-icon>
+            <span>All Resources</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 

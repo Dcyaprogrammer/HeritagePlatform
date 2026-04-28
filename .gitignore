@@ -29,3 +29,6 @@ dist/
 .env
 .env.local
 *.local
+
+# Local Spring Boot overrides (secrets)
+application-local.properties
