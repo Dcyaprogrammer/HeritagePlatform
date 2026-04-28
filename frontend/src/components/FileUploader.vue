@@ -304,8 +304,15 @@ const uploadSingle = async (file, fileItem) => {
   formData.append("file", file);
 
   try {
+    // Add token header
+    const token = localStorage.getItem('token');
+    const headers = { "Content-Type": "multipart/form-data" };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await axios.post("/api/attachments/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers,
       timeout: 180000,
       signal: fileItem.uploadController?.signal,
       onUploadProgress: (progressEvent) => {
@@ -351,7 +358,14 @@ const uploadByChunks = async (file, fileItem) => {
     formData.append("fileName", file.name);
     formData.append("chunkSize", CHUNK_SIZE);
 
+    const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     await axios.post("/api/attachments/upload/chunk", formData, {
+      headers,
       timeout: 60000,
       signal: fileItem.uploadController?.signal,
     });
@@ -398,8 +412,15 @@ const uploadByChunks = async (file, fileItem) => {
     fileItem.mergingPhase = true;
     fileItem.uploadProgress = 100;
     const verifyTimeout = Math.max(60000, Math.ceil(file.size / (1024 * 1024)) * 30);
+    const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const mergeResp = await axios.post("/api/attachments/upload/merge", null, {
       params: { uploadId, fileName: file.name, totalChunks, chunkSize: CHUNK_SIZE, fileHash },
+      headers,
       timeout: verifyTimeout,
       signal: fileItem.uploadController?.signal,
     });
@@ -474,7 +495,12 @@ const removeFile = async (file) => {
   // If the upload completed before/despite the abort, clean up the server-side record.
   if (file.attachmentId) {
     try {
-      await axios.delete(`/api/attachments/${file.attachmentId}`);
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      await axios.delete(`/api/attachments/${file.attachmentId}`, { headers });
     } catch (error) {
       console.error("Delete failed", error);
       // If the row is still in the list, surface the error and keep the row so user can retry.
