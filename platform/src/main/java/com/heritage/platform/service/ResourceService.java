@@ -5,8 +5,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -67,6 +68,24 @@ public class ResourceService {
         }
 
         return convertToDTO(resource);
+    }
+
+    @Transactional
+    public void deleteOwnedResource(Long id, String username) {
+        HeritageResource resource = resourceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Resource not found"));
+
+        if (!resource.getSubmitter().getUsername().equals(username)) {
+            throw new RuntimeException("Unauthorized: You can only delete your own resources");
+        }
+
+        if (resource.getStatus() == ResourceStatus.APPROVED
+                || resource.getStatus() == ResourceStatus.PENDING_REVIEW) {
+            throw new RuntimeException("Approved or pending-review resources cannot be deleted");
+        }
+
+        deleteAttachmentFiles(resource);
+        resourceRepository.delete(resource);
     }
 
 
@@ -142,6 +161,22 @@ public class ResourceService {
             for (Attachment attachment : attachments) {
                 attachment.setResource(resource);
                 resource.getAttachments().add(attachment);
+            }
+        }
+    }
+
+    private void deleteAttachmentFiles(HeritageResource resource) {
+        for (Attachment attachment : resource.getAttachments()) {
+            String storedName = attachment.getStoredName();
+            if (storedName == null || storedName.isBlank()) {
+                continue;
+            }
+
+            Path filePath = Paths.get(System.getProperty("user.dir"), "uploads", storedName);
+            try {
+                Files.deleteIfExists(filePath);
+            } catch (Exception ignored) {
+                // Do not block resource deletion because of leftover files on disk.
             }
         }
     }

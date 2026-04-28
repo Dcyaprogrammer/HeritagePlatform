@@ -14,6 +14,8 @@ export const createDraft = (data) => api.post('/resources', data)
 
 export const updateDraft = (id, data) => api.put(`/resources/${id}`, data)
 
+export const deleteResource = (id) => api.delete(`/resources/${id}`)
+
 export const submitForReview = (id) => api.post(`/resources/${id}/submit`)
 
 export const getCategories = () => api.get('/public/categories')

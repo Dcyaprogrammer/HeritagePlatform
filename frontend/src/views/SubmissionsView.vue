@@ -3,8 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
+  deleteResource,
   getMySubmissions,
-  resubmitResource,
   submitForReview,
 } from '../api/resource.js'
 
@@ -47,8 +47,20 @@ function isDraft(row) {
   return row.status === 'DRAFT'
 }
 
+function isRejected(row) {
+  return row.status === 'REJECTED'
+}
+
+function canEdit(row) {
+  return isDraft(row) || isRejected(row)
+}
+
+function canDelete(row) {
+  return row.status !== 'APPROVED' && row.status !== 'PENDING_REVIEW'
+}
+
 function handleEdit(row) {
-  if (!isDraft(row)) {
+  if (!canEdit(row)) {
     return
   }
   router.push(`/resources/${row.id}/edit`)
@@ -86,16 +98,20 @@ async function handleSubmit(row) {
   }
 }
 
-async function handleResubmit(row) {
+async function handleDelete(row) {
+  if (!canDelete(row)) {
+    return
+  }
+
   try {
     await ElMessageBox.confirm(
-      'This will resubmit the rejected resource for review. Continue?',
-      'Resubmit Resource',
+      'This will permanently delete the resource and its attachments. Continue?',
+      'Delete Resource',
       {
-        confirmButtonText: 'Resubmit',
+        confirmButtonText: 'Delete',
         cancelButtonText: 'Cancel',
-        type: 'warning'
-      }
+        type: 'warning',
+      },
     )
   } catch {
     return
@@ -103,12 +119,12 @@ async function handleResubmit(row) {
 
   actionLoadingId.value = row.id
   try {
-    const res = await resubmitResource(row.id)
-    ElMessage.success(res.data?.message || 'Resubmitted successfully')
+    const res = await deleteResource(row.id)
+    ElMessage.success(res.data?.message || 'Deleted successfully')
     await loadSubmissions()
   } catch (error) {
-    console.error('Failed to resubmit:', error)
-    ElMessage.error(error.response?.data?.message || 'Failed to resubmit resource')
+    console.error('Failed to delete resource:', error)
+    ElMessage.error(error.response?.data?.message || 'Failed to delete resource')
   } finally {
     actionLoadingId.value = null
   }
@@ -156,7 +172,7 @@ onMounted(() => {
           <template #default="{ row }">
             <div class="actions">
               <button
-                v-if="isDraft(row)"
+                v-if="canEdit(row)"
                 class="link-button"
                 @click="handleEdit(row)"
               >
@@ -178,15 +194,15 @@ onMounted(() => {
                 View Feedback
               </button>
               <button
-                v-if="row.canResubmit"
-                class="link-button"
+                v-if="canDelete(row)"
+                class="link-button danger-link"
                 :disabled="actionLoadingId === row.id"
-                @click="handleResubmit(row)"
+                @click="handleDelete(row)"
               >
-                {{ actionLoadingId === row.id ? 'Resubmitting...' : 'Resubmit' }}
+                {{ actionLoadingId === row.id ? 'Deleting...' : 'Delete' }}
               </button>
               <span
-                v-if="!isDraft(row) && !row.canViewFeedback && !row.canResubmit"
+                v-if="!canEdit(row) && !row.canViewFeedback && !canDelete(row)"
                 class="muted-action"
               >
                 No action available
@@ -258,6 +274,10 @@ onMounted(() => {
 .link-button:disabled {
   color: #94a3b8;
   cursor: not-allowed;
+}
+
+.danger-link {
+  color: #dc2626;
 }
 
 .muted-action {
