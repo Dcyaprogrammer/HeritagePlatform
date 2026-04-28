@@ -150,5 +150,14 @@ export const approveResource = (id, version) =>
 export const rejectResource = (id, version, rejectionReason) =>
   api.post(`/review/resources/${id}/reject`, { version, rejectionReason })
 
+// ============================================
+// Admin Resources (Archive/Restore)
+// ============================================
+export const getAdminResources = (params) => api.get('/admin/resources', { params })
+export const archiveResource = (id, version) =>
+  api.post(`/admin/resources/${id}/archive`, { version })
+export const restoreResource = (id, version) =>
+  api.post(`/admin/resources/${id}/restore`, { version })
+
 
 export default api
