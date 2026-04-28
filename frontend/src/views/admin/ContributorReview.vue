@@ -229,7 +229,7 @@ import {
   View
 } from '@element-plus/icons-vue'
 import {
-  getPendingApplications,
+  getAllUsers,
   approveContributor,
   rejectContributor
 } from '../../api/user.js'
@@ -272,17 +272,13 @@ const filteredApplications = computed(() => {
 const fetchApplications = async () => {
   loading.value = true
   try {
-    const res = await getPendingApplications()
-
-    // For now, we get pending from API and mock others
-    // In production, should have separate APIs or a unified one
-    const pendingApps = res.data.data || []
-
-    // Combine with any already loaded approved/rejected
-    const existingApproved = applications.value.filter(a => a.contributorStatus === 'APPROVED')
-    const existingRejected = applications.value.filter(a => a.contributorStatus === 'REJECTED')
-
-    applications.value = [...pendingApps, ...existingApproved, ...existingRejected]
+    const res = await getAllUsers()
+    const allUsers = res.data.data || []
+    
+    // Filter users who have applied (status is not null and not NONE)
+    applications.value = allUsers.filter(
+      user => user.contributorStatus && user.contributorStatus !== 'NONE'
+    )
 
     updateStats()
   } catch (error) {

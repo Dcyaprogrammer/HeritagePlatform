@@ -171,6 +171,7 @@ public class ContributorController {
 		dto.setBio(user.getBio());
 		dto.setRoles(new java.util.HashSet<>(user.getRoles()));
 		dto.setContributorStatus(user.getContributorStatus());
+		dto.setContributorReason(user.getContributorReason());
 		dto.setCreatedAt(user.getCreatedAt());
 		return dto;
 	}
