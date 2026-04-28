@@ -68,7 +68,7 @@ onMounted(() => {
 })
 
 const goToAdmin = () => {
-  router.push('/admin/resources')
+  router.push('/admin/resource-review')
 }
 
 const goToCreateResource = () => {

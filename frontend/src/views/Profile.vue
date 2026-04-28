@@ -2,6 +2,9 @@
   <div class="profile-page">
     <div class="header-actions">
       <el-button @click="goBack" class="back-btn">← Back</el-button>
+      <el-button type="primary" plain class="home-btn" @click="router.push('/')">
+        <el-icon><House /></el-icon>
+      </el-button>
     </div>
     <el-card class="profile-card">
       <template #header>

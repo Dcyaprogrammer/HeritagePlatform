@@ -34,6 +34,9 @@
         <!-- Top Header -->
         <el-header class="top-header">
           <div class="header-right">
+            <el-button type="primary" plain class="home-btn" @click="router.push('/')">
+              <el-icon><House /></el-icon>
+            </el-button>
             <el-dropdown @command="handleCommand">
               <span class="user-info">
                 <el-avatar :size="32" :src="defaultAvatar" />
@@ -62,7 +65,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { UserFilled, DocumentChecked, ArrowDown } from '@element-plus/icons-vue'
+import { UserFilled, DocumentChecked, ArrowDown, House } from '@element-plus/icons-vue'
 import { logout } from '../../api/auth.js'
 
 const router = useRouter()
@@ -126,6 +129,12 @@ const handleCommand = (command) => {
 .header-right {
   display: flex;
   align-items: center;
+  gap: 16px;
+}
+
+.home-btn {
+  border-radius: 50%;
+  padding: 8px;
 }
 
 .user-info {
