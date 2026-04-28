@@ -34,8 +34,8 @@
         <label for="heritageType">Heritage Type</label>
         <select v-model="form.heritageTypeCode" id="heritageType">
           <option value="">Select a Heritage Type</option>
-          <optgroup v-for="group in heritageTypeGroups" :key="group.code" :label="group.name">
-            <option v-for="type in group.children" :key="type.code" :value="type.code">
+          <optgroup v-for="group in heritageTypeGroups" :key="group.groupCode" :label="group.groupName">
+            <option v-for="type in group.types" :key="type.code" :value="type.code">
               {{ type.name }}
             </option>
           </optgroup>
@@ -113,9 +113,9 @@ onMounted(async () => {
       getHeritageTypeGroups()
     ]);
     
-    if (catRes.data.success) categories.value = catRes.data.data;
-    if (tagsRes.data.success) availableTags.value = tagsRes.data.data;
-    if (typeRes.data.success) heritageTypeGroups.value = typeRes.data.data;
+    if (catRes.data.code === 200) categories.value = catRes.data.data;
+    if (tagsRes.data.code === 200) availableTags.value = tagsRes.data.data;
+    if (typeRes.data.code === 200) heritageTypeGroups.value = typeRes.data.data;
   } catch (err) {
     console.error("Failed to load form options", err);
   }
