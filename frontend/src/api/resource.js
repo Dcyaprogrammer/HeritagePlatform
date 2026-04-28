@@ -2,6 +2,8 @@ import api from './auth.js'
 
 export const getMySubmissions = () => api.get('/resources/submissions')
 
+export const getOwnedResource = (id) => api.get(`/resources/${id}`)
+
 export const getFeedback = (id) => api.get(`/resources/${id}/feedback`)
 
 export const getReviewHistory = (id) => api.get(`/resources/${id}/history`)

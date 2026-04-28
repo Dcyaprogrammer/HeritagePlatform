@@ -50,6 +50,14 @@ public class ResourceController {
 		return ApiResponse.success(dto);
 	}
 
+	@GetMapping("/{id}")
+	@PreAuthorize("hasRole('CONTRIBUTOR') or hasRole('ADMIN')")
+	public ApiResponse<ResourceDTO> getOwnedResource(@PathVariable Long id, Authentication authentication) {
+		String username = authentication.getName();
+		ResourceDTO dto = resourceService.getOwnedResource(id, username);
+		return ApiResponse.success(dto);
+	}
+
 	@PutMapping("/{id}")
 	@PreAuthorize("hasRole('CONTRIBUTOR') or hasRole('ADMIN')")
 	public ApiResponse<ResourceDTO> updateDraft(@PathVariable Long id, @RequestBody ResourceDraftRequest request, Authentication authentication) {

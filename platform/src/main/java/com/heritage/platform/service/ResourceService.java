@@ -57,6 +57,18 @@ public class ResourceService {
         return convertToDTO(savedResource);
     }
 
+    @Transactional(readOnly = true)
+    public ResourceDTO getOwnedResource(Long id, String username) {
+        HeritageResource resource = resourceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Resource not found"));
+
+        if (!resource.getSubmitter().getUsername().equals(username)) {
+            throw new RuntimeException("Unauthorized: You can only view your own resources");
+        }
+
+        return convertToDTO(resource);
+    }
+
 
     @Transactional
     public ResourceDTO updateDraft(Long id, ResourceDraftRequest request, String username) {

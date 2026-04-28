@@ -66,6 +66,16 @@ const routes = [
       roles: ['CONTRIBUTOR', 'ADMIN']
     }
   },
+  {
+    path: '/resources/:id/edit',
+    name: 'EditResource',
+    component: CreateResource,
+    meta: {
+      title: 'Edit Resource',
+      requiresAuth: true,
+      roles: ['CONTRIBUTOR', 'ADMIN']
+    }
+  },
 
   {
     path: '/resources/submissions',

@@ -175,8 +175,15 @@
 </template>
 
 <script setup>
-import { ref, reactive } from "vue";
+import { reactive, ref, watch } from "vue";
 import axios from "axios";
+
+const props = defineProps({
+  initialFiles: {
+    type: Array,
+    default: () => [],
+  },
+});
 
 const uploadedFiles = ref([]);
 const errorMessage = ref("");
@@ -184,6 +191,36 @@ const fileInput = ref(null);
 
 // Stable per-item id for v-for keys (independent of array position)
 let nextFileId = 0;
+
+const createExistingFileItem = (file) => reactive({
+  id: ++nextFileId,
+  name: file.displayName || file.name || "Attachment",
+  displayName: file.displayName || file.name || "Attachment",
+  size: file.fileSize || file.size || 0,
+  isImage: typeof file.fileType === "string" && file.fileType === "image",
+  isVideo: typeof file.fileType === "string" && file.fileType === "video",
+  preview: file.filePath || file.preview || "",
+  rawFile: null,
+  uploading: false,
+  uploadProgress: 0,
+  mergingPhase: false,
+  uploaded: true,
+  uploadError: false,
+  attachmentId: file.id ?? null,
+  uploadController: null,
+  uploadPromise: null,
+  previewUrl: file.previewUrl || (file.id ? `/api/attachments/${file.id}/preview` : ""),
+  downloadUrl: file.downloadUrl || (file.id ? `/api/attachments/${file.id}/download` : ""),
+  _removed: false,
+});
+
+watch(
+  () => props.initialFiles,
+  (files) => {
+    uploadedFiles.value = (files || []).map(createExistingFileItem);
+  },
+  { immediate: true },
+);
 
 // Trigger hidden file input dialog
 const triggerFileInput = () => {
@@ -558,6 +595,10 @@ const formatFileSize = (bytes) => {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 };
+
+defineExpose({
+  uploadedFiles,
+});
 </script>
 
 <style scoped>

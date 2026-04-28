@@ -1,13 +1,21 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getMySubmissions, resubmitResource } from '../api/resource.js'
+import {
+  getMySubmissions,
+  resubmitResource,
+  submitForReview,
+} from '../api/resource.js'
 
 const router = useRouter()
 const loading = ref(false)
 const actionLoadingId = ref(null)
 const submissions = ref([])
+
+const draftCount = computed(() =>
+  submissions.value.filter((item) => item.status === 'DRAFT').length,
+)
 
 const statusLabelMap = {
   APPROVED: 'Approved',
@@ -33,6 +41,49 @@ async function loadSubmissions() {
 
 function openFeedback(id) {
   router.push(`/resources/${id}/feedback`)
+}
+
+function isDraft(row) {
+  return row.status === 'DRAFT'
+}
+
+function handleEdit(row) {
+  if (!isDraft(row)) {
+    return
+  }
+  router.push(`/resources/${row.id}/edit`)
+}
+
+async function handleSubmit(row) {
+  if (!isDraft(row)) {
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      'This will submit the draft for admin review. Continue?',
+      'Submit Draft',
+      {
+        confirmButtonText: 'Submit',
+        cancelButtonText: 'Cancel',
+        type: 'warning',
+      },
+    )
+  } catch {
+    return
+  }
+
+  actionLoadingId.value = row.id
+  try {
+    const res = await submitForReview(row.id)
+    ElMessage.success(res.data?.message || 'Submitted successfully')
+    await loadSubmissions()
+  } catch (error) {
+    console.error('Failed to submit draft:', error)
+    ElMessage.error(error.response?.data?.message || 'Failed to submit draft')
+  } finally {
+    actionLoadingId.value = null
+  }
 }
 
 async function handleResubmit(row) {
@@ -80,6 +131,8 @@ onMounted(() => {
     <el-card shadow="never" class="card">
       <div class="summary">
         <span>Total submissions: {{ submissions.length }}</span>
+        <span class="summary-divider">|</span>
+        <span>Drafts awaiting action: {{ draftCount }}</span>
       </div>
 
       <el-table
@@ -103,6 +156,21 @@ onMounted(() => {
           <template #default="{ row }">
             <div class="actions">
               <button
+                v-if="isDraft(row)"
+                class="link-button"
+                @click="handleEdit(row)"
+              >
+                Edit
+              </button>
+              <button
+                v-if="isDraft(row)"
+                class="link-button"
+                :disabled="actionLoadingId === row.id"
+                @click="handleSubmit(row)"
+              >
+                {{ actionLoadingId === row.id ? 'Submitting...' : 'Submit' }}
+              </button>
+              <button
                 v-if="row.canViewFeedback"
                 class="link-button"
                 @click="openFeedback(row.id)"
@@ -118,7 +186,7 @@ onMounted(() => {
                 {{ actionLoadingId === row.id ? 'Resubmitting...' : 'Resubmit' }}
               </button>
               <span
-                v-if="!row.canViewFeedback && !row.canResubmit"
+                v-if="!isDraft(row) && !row.canViewFeedback && !row.canResubmit"
                 class="muted-action"
               >
                 No action available
@@ -160,6 +228,11 @@ onMounted(() => {
   margin-bottom: 16px;
   font-size: 14px;
   color: #475569;
+}
+
+.summary-divider {
+  margin: 0 8px;
+  color: #cbd5e1;
 }
 
 .status-text {
