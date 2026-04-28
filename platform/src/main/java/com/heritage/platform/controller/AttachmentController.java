@@ -152,7 +152,7 @@ public class AttachmentController {
             attachment.setFileType(fileType);
             attachment.setFileSize(file.getSize());
             attachment.setCreatedAt(LocalDateTime.now());
-            attachment.setResourceId(null); // 暂设为 null，对接组员4后改为真实 resource_id
+            attachment.setResource(null); // 暂设为 null，对接组员4后改为真实 resource_id
             attachmentRepository.save(attachment);
             
             log.info("Database saved successfully, ID: {}", attachment.getId());
@@ -410,7 +410,7 @@ public class AttachmentController {
             attachment.setFileType(fileType);
             attachment.setFileSize(fileSize);
             attachment.setCreatedAt(LocalDateTime.now());
-            attachment.setResourceId(null); // 暂设为 null，对接组员4后改为真实 resource_id
+            attachment.setResource(null); // 暂设为 null，对接组员4后改为真实 resource_id
             attachmentRepository.save(attachment);
 
             response.put("success", true);

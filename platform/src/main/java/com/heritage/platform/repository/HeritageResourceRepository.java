@@ -20,6 +20,8 @@ public interface HeritageResourceRepository extends JpaRepository<HeritageResour
 
     Optional<HeritageResource> findByIdAndSubmitterUsername(Long id, String username);
 
+    List<HeritageResource> findByStatusOrderBySubmittedAtDesc(ResourceStatus status);
+
     @Modifying
     @Query("UPDATE HeritageResource r SET r.status = :newStatus, r.submittedAt = :submittedAt " +
            "WHERE r.id = :id AND r.submitter.username = :username AND r.status = :oldStatus")
