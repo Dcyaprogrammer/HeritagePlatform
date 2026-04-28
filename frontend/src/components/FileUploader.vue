@@ -192,27 +192,36 @@ const fileInput = ref(null);
 // Stable per-item id for v-for keys (independent of array position)
 let nextFileId = 0;
 
-const createExistingFileItem = (file) => reactive({
-  id: ++nextFileId,
-  name: file.displayName || file.name || "Attachment",
-  displayName: file.displayName || file.name || "Attachment",
-  size: file.fileSize || file.size || 0,
-  isImage: typeof file.fileType === "string" && file.fileType === "image",
-  isVideo: typeof file.fileType === "string" && file.fileType === "video",
-  preview: file.filePath || file.preview || "",
-  rawFile: null,
-  uploading: false,
-  uploadProgress: 0,
-  mergingPhase: false,
-  uploaded: true,
-  uploadError: false,
-  attachmentId: file.id ?? null,
-  uploadController: null,
-  uploadPromise: null,
-  previewUrl: file.previewUrl || (file.id ? `/api/attachments/${file.id}/preview` : ""),
-  downloadUrl: file.downloadUrl || (file.id ? `/api/attachments/${file.id}/download` : ""),
-  _removed: false,
-});
+const createExistingFileItem = (file) => {
+  const previewUrl =
+    file.previewUrl || (file.id ? `/api/attachments/${file.id}/preview` : "");
+  const downloadUrl =
+    file.downloadUrl || (file.id ? `/api/attachments/${file.id}/download` : "");
+
+  return reactive({
+    id: ++nextFileId,
+    name: file.displayName || file.name || "Attachment",
+    displayName: file.displayName || file.name || "Attachment",
+    size: file.fileSize || file.size || 0,
+    isImage: typeof file.fileType === "string" && file.fileType === "image",
+    isVideo: typeof file.fileType === "string" && file.fileType === "video",
+    // Existing files must use the backend preview endpoint. The raw /uploads/... path
+    // is not proxied by Vite during local dev, so edit-mode previews would 404.
+    preview: previewUrl || file.filePath || file.preview || "",
+    rawFile: null,
+    uploading: false,
+    uploadProgress: 0,
+    mergingPhase: false,
+    uploaded: true,
+    uploadError: false,
+    attachmentId: file.id ?? null,
+    uploadController: null,
+    uploadPromise: null,
+    previewUrl,
+    downloadUrl,
+    _removed: false,
+  });
+};
 
 watch(
   () => props.initialFiles,

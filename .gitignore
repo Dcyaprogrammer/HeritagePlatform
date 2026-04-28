@@ -23,6 +23,7 @@ dist/
 
 ### Uploaded files ###
 /uploads/
+/platform/uploads/
 
 ### Environment ###
 .env
