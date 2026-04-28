@@ -31,11 +31,11 @@ INSERT IGNORE INTO tags (id, name, created_at) VALUES
 (5, 'proverbs', NOW());
 
 -- 6. 插入资源 (Resources) - 包含不同状态供不同组员测试
-INSERT IGNORE INTO resources (id, title, description, location_name, copyright_declaration, status, contributor_id, category_id, created_at, updated_at) VALUES
-(1, 'Oral history excerpt: Pingjiang Road historic district', 'Local chronicles from the Han dynasty, detailing the water town lifestyle.', 'Suzhou, China', 'CC BY-NC-SA 4.0', 'APPROVED', 3, 3, NOW(), NOW()),
-(2, 'Traditional indigo resist-dyed cloth (lan yin hua bu)', 'Tongxiang blue calico uses plant indigo. This resource details the traditional dyeing patterns.', 'Tongxiang, Jiaxing', 'Educational use only', 'PENDING_REVIEW', 3, 2, NOW(), NOW()),
-(3, 'Coastal tide and weather proverbs', 'A community-compiled set of more than fifty proverbs about the tides and weather near the coast.', 'Haining, Zhejiang', 'Community share-alike', 'REJECTED', 3, 1, NOW(), NOW()),
-(4, 'Draft: Old city wall restoration', 'Initial notes on the old city wall structure before the 2020 restoration project.', 'Nanjing, Jiangsu', 'None', 'DRAFT', 3, 3, NOW(), NOW());
+INSERT IGNORE INTO resources (id, title, description, location_name, copyright_declaration, status, contributor_id, category_id, created_at, updated_at, submitted_at) VALUES
+(1, 'Oral history excerpt: Pingjiang Road historic district', 'Local chronicles from the Han dynasty, detailing the water town lifestyle.', 'Suzhou, China', 'CC BY-NC-SA 4.0', 'APPROVED', 3, 3, NOW(), NOW(), NOW()),
+(2, 'Traditional indigo resist-dyed cloth (lan yin hua bu)', 'Tongxiang blue calico uses plant indigo. This resource details the traditional dyeing patterns.', 'Tongxiang, Jiaxing', 'Educational use only', 'PENDING_REVIEW', 3, 2, NOW(), NOW(), NOW()),
+(3, 'Coastal tide and weather proverbs', 'A community-compiled set of more than fifty proverbs about the tides and weather near the coast.', 'Haining, Zhejiang', 'Community share-alike', 'REJECTED', 3, 1, NOW(), NOW(), NOW()),
+(4, 'Draft: Old city wall restoration', 'Initial notes on the old city wall structure before the 2020 restoration project.', 'Nanjing, Jiangsu', 'None', 'DRAFT', 3, 3, NOW(), NOW(), NULL);
 
 -- 7. 绑定资源标签 (Resource Tags)
 INSERT IGNORE INTO resource_tags (resource_id, tag_id) VALUES 

@@ -16,7 +16,7 @@ import com.heritage.platform.repository.HeritageUserRepository;
 import com.heritage.platform.web.ResourceDetail;
 import com.heritage.platform.web.ReviewController.PendingItem;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ReviewService {
@@ -28,6 +28,7 @@ public class ReviewService {
         this.users = users;
     }
 
+    @Transactional(readOnly = true)
     public List<PendingItem> listPending() {
         Instant staleThreshold = Instant.now().minus(3, ChronoUnit.DAYS);
 
@@ -37,7 +38,7 @@ public class ReviewService {
         List<HeritageResource> pending = resources.findByStatusOrderBySubmittedAtDesc(ResourceStatus.PENDING_REVIEW);
 
         for(HeritageResource r : pending){
-            boolean isStale = r.getSubmittedAt().isBefore(staleThreshold);
+            boolean isStale = r.getSubmittedAt() != null && r.getSubmittedAt().isBefore(staleThreshold);
             PendingItem p = toPendingItem(r, isStale);
             if(isStale){
                 stale.add(p);
@@ -67,6 +68,7 @@ public class ReviewService {
         return p;
     }
 
+    @Transactional(readOnly = true)
     public ResourceDetail getDetail(Long id) {
         HeritageResource r = resources.findById(id).orElse(null);
         if(r == null){

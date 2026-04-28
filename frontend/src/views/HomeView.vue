@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { getToken, logout } from '../api/auth.js'
+import { getToken, logout, getStoredRoles } from '../api/auth.js'
 import ResourceCard from '../components/ResourceCard.vue'
 import { getApprovedResources } from '../api/mockData.js'
 
@@ -55,18 +55,20 @@ const filteredResources = computed(() => {
 })
 
 const isLoggedIn = ref(!!getToken())
-const isAdmin = ref(localStorage.getItem('role') === 'ADMIN')
-const isContributor = ref(localStorage.getItem('role') === 'CONTRIBUTOR' || localStorage.getItem('role') === 'ADMIN')
+const initialRoles = getStoredRoles()
+const isAdmin = ref(initialRoles.includes('ADMIN'))
+const isContributor = ref(initialRoles.includes('CONTRIBUTOR') || initialRoles.includes('ADMIN'))
 
 // Update on route change or when storage changes
 onMounted(() => {
   isLoggedIn.value = !!getToken()
-  isAdmin.value = localStorage.getItem('role') === 'ADMIN'
-  isContributor.value = localStorage.getItem('role') === 'CONTRIBUTOR' || localStorage.getItem('role') === 'ADMIN'
+  const r = getStoredRoles()
+  isAdmin.value = r.includes('ADMIN')
+  isContributor.value = r.includes('CONTRIBUTOR') || r.includes('ADMIN')
 })
 
 const goToAdmin = () => {
-  router.push('/admin/users')
+  router.push('/admin/resources')
 }
 
 const goToCreateResource = () => {
