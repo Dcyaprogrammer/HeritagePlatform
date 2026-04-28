@@ -42,7 +42,7 @@ The AI must reference these tables when generating JPA Entities, MyBatis Mappers
 * `review_logs`: `id`, `resource_id` (FK), `reviewer_id` (FK), `action`, `feedback_comment`, `created_at`.
 * `comments`: `id`, `resource_id` (FK), `user_id` (FK), `content`, `created_at`, `updated_at`.
 
-## 5. Development Directives for AI Assistant
+## 5. Development Directives
 1.  **API First:** When requested to create a new feature, ALWAYS start by defining the RESTful API endpoints and JSON request/response payloads before writing implementation code.
 2.  **Strict Scope:** The current user (dopamine) is responsible for **Module 4**. Focus on `resources` (Insert/Update) and `resource_tags` relations. Do not write file upload logic (Member 5) or approval state changes (Member 6) unless simulating mocks for integration.
 3.  **Standardization:** Assume the project uses a global exception handler and a standard JSON wrapper (e.g., `{ "code": 200, "message": "success", "data": {...} }`) for all API responses.
