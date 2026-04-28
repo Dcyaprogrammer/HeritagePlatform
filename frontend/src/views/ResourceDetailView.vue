@@ -3,7 +3,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import ResourceImageCarousel from '../components/ResourceImageCarousel.vue'
 import CommentSection from '../components/CommentSection.vue'
-import { getComments, getResourceById } from '../api/mockData.js'
+import { getResourceById } from '../api/mockData.js'
+import { getComments } from '../api/resource.js'
 import { getToken } from '../api/auth.js'
 
 const route = useRoute()
@@ -20,10 +21,14 @@ async function load() {
   if (Number.isNaN(n)) return
   loading.value = true
   try {
-    // 模拟网络请求延迟
-    await new Promise(resolve => setTimeout(resolve, 300))
     resource.value = getResourceById(n)
-    comments.value = getComments(n)
+    try {
+      const commentsRes = await getComments(n)
+      comments.value = commentsRes.data.data || []
+    } catch (e) {
+      console.error('Failed to load comments:', e)
+      comments.value = []
+    }
   } catch {
     resource.value = null
     comments.value = []

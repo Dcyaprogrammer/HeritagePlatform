@@ -217,6 +217,19 @@ CREATE TABLE IF NOT EXISTS resource_tags (
     FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 4. Interaction Module (Comments)
+CREATE TABLE IF NOT EXISTS comments (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    resource_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES heritage_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 5. Attachments
 CREATE TABLE IF NOT EXISTS attachments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     resource_id BIGINT COMMENT 'references resources(id); FK + NOT NULL will be enabled after integration with team member 4',
@@ -238,7 +251,7 @@ CREATE TABLE IF NOT EXISTS review_logs (
     feedback_comment TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
-    FOREIGN KEY (reviewer_id) REFERENCES heritage_users(id)
+    FOREIGN KEY (reviewer_id) REFERENCES heritage_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS comments (

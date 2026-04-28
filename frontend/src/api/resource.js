@@ -19,3 +19,7 @@ export const getCategories = () => api.get('/public/categories')
 export const getTags = () => api.get('/public/tags')
 
 export const getHeritageTypeGroups = () => api.get('/public/heritage-type-groups')
+
+export const getComments = (resourceId) => api.get(`/public/resources/${resourceId}/comments`)
+
+export const addComment = (resourceId, content) => api.post(`/resources/${resourceId}/comments`, { content })

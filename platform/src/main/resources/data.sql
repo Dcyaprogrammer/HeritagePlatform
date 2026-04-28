@@ -48,3 +48,8 @@ INSERT IGNORE INTO resource_tags (resource_id, tag_id) VALUES
 INSERT IGNORE INTO review_logs (id, resource_id, reviewer_id, action, feedback_comment, created_at) VALUES
 (1, 1, 2, 'APPROVE', 'Looks great, the information is accurate. Approved for publishing.', NOW()),
 (2, 3, 2, 'REJECT', 'Please provide more reliable sources and references for these proverbs before resubmitting.', NOW());
+
+-- 9. 插入测试评论 (Comments) - 供评论系统测试
+INSERT IGNORE INTO comments (id, resource_id, user_id, content, created_at, updated_at) VALUES
+(1, 1, 3, 'The stone-lane photos feel very atmospheric. Thanks for compiling this.', NOW(), NOW()),
+(2, 3, 2, 'Pairing the proverbs with disaster-prep talks would work really well.', NOW(), NOW());
