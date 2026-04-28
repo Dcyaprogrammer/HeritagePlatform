@@ -21,7 +21,7 @@ const detailHref = computed(() => `/resources/${props.item.id}`)
         <h2 class="title">{{ item.title }}</h2>
       </RouterLink>
       <p v-if="item.locationName" class="location">{{ item.locationName }}</p>
-      <ul v-if="item.tags.length" class="tags" aria-label="Tags">
+      <ul v-if="item.tags && item.tags.length" class="tags" aria-label="Tags">
         <li v-for="t in item.tags" :key="t.id" class="tag">{{ t.name }}</li>
       </ul>
       <RouterLink :to="detailHref" class="cta">View details</RouterLink>

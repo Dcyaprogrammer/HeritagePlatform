@@ -249,8 +249,8 @@ async function search() {
 
     const res = await getPublicResources(params)
     if (res.data.code === 200) {
-      list.value = res.data.data.content || []
-      total.value = res.data.data.totalElements || 0
+      list.value = res.data.data.items || []
+      total.value = res.data.data.total || 0
     }
   } catch (e) {
     err.value = e.message || 'Failed to load resources'
