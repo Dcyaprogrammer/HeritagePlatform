@@ -16,11 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.heritage.platform.dto.ResourceDTO;
 import com.heritage.platform.dto.ResourceDraftRequest;
 import com.heritage.platform.model.Attachment;
+import com.heritage.platform.model.Category;
 import com.heritage.platform.model.HeritageResource;
 import com.heritage.platform.model.HeritageUser;
 import com.heritage.platform.model.ResourceStatus;
 import com.heritage.platform.model.Tag;
 import com.heritage.platform.repository.AttachmentRepository;
+import com.heritage.platform.repository.CategoryRepository;
 import com.heritage.platform.repository.HeritageResourceRepository;
 import com.heritage.platform.repository.HeritageUserRepository;
 import com.heritage.platform.repository.TagRepository;
@@ -39,6 +41,9 @@ public class ResourceService {
 
     @Autowired
     private AttachmentRepository attachmentRepository;
+
+    @Autowired
+    private CategoryRepository categoryRepository;
 
     @Transactional
     public ResourceDTO createDraft(ResourceDraftRequest request, String username) {
@@ -141,15 +146,26 @@ public class ResourceService {
         resource.setDescription(request.getDescription());
         resource.setLocationName(request.getLocationName());
         resource.setHeritageTypeCode(request.getHeritageTypeCode());
-        resource.setCategory(request.getCategory());
-        resource.setCategoryId(request.getCategoryId());
+        Integer categoryId = request.getCategoryId();
+        if (categoryId == null) {
+            throw new RuntimeException("categoryId is required");
+        }
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new RuntimeException("Invalid categoryId"));
+        resource.setCategoryId(category.getId());
+        // keep legacy category string field for existing DTO/review list compatibility
+        resource.setCategory(category.getName());
         resource.setCopyrightDeclaration(request.getCopyrightDeclaration());
     }
 
     private void handleTagsAndAttachments(ResourceDraftRequest request, HeritageResource resource) {
         resource.getTags().clear();
         if (request.getTagIds() != null && !request.getTagIds().isEmpty()) {
-            List<Tag> tags = tagRepository.findAllById(request.getTagIds());
+            List<Long> tagIds = request.getTagIds().stream().distinct().toList();
+            List<Tag> tags = tagRepository.findAllById(tagIds);
+            if (tags.size() != tagIds.size()) {
+                throw new RuntimeException("Invalid tagIds");
+            }
             for (Tag tag : tags) {
                 resource.addTag(tag);
             }
@@ -175,7 +191,7 @@ public class ResourceService {
             Path filePath = Paths.get(System.getProperty("user.dir"), "uploads", storedName);
             try {
                 Files.deleteIfExists(filePath);
-            } catch (Exception ignored) {
+            } catch (java.io.IOException ignored) {
                 // Do not block resource deletion because of leftover files on disk.
             }
         }

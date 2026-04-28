@@ -159,5 +159,18 @@ export const archiveResource = (id, version) =>
 export const restoreResource = (id, version) =>
   api.post(`/admin/resources/${id}/restore`, { version })
 
+// ============================================
+// Admin Master Data (Categories / Tags)
+// ============================================
+export const getCategoriesAdmin = () => api.get('/admin/master-data/categories')
+export const createCategory = (payload) => api.post('/admin/master-data/categories', payload)
+export const updateCategory = (id, payload) => api.put(`/admin/master-data/categories/${id}`, payload)
+export const deleteCategory = (id) => api.delete(`/admin/master-data/categories/${id}`)
+
+export const getTagsAdmin = () => api.get('/admin/master-data/tags')
+export const createTag = (payload) => api.post('/admin/master-data/tags', payload)
+export const updateTag = (id, payload) => api.put(`/admin/master-data/tags/${id}`, payload)
+export const deleteTag = (id) => api.delete(`/admin/master-data/tags/${id}`)
+
 
 export default api
