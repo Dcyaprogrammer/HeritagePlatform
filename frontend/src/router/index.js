@@ -6,6 +6,7 @@ import ContributorReview from '../views/admin/ContributorReview.vue'
 import ResourceReviewCenter from '../views/admin/ResourceReviewCenter.vue'
 import ResourceReviewDetail from '../views/admin/ResourceReviewDetail.vue'
 import AdminResourceList from '../views/admin/AdminResourceList.vue'
+import MasterDataManagement from '../views/admin/MasterDataManagement.vue'
 import HomeView from '../views/HomeView.vue'
 import Login from '../views/auth/Login.vue'
 import Profile from '../views/Profile.vue'
@@ -163,6 +164,16 @@ const routes = [
         component: AdminResourceList,
         meta: {
           title: 'All Resources',
+          requiresAuth: true,
+          roles: ['ADMIN']
+        }
+      },
+      {
+        path: 'master-data',
+        name: 'MasterDataManagement',
+        component: MasterDataManagement,
+        meta: {
+          title: 'Master Data Management',
           requiresAuth: true,
           roles: ['ADMIN']
         }
