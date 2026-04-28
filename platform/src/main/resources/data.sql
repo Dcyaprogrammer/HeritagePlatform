@@ -14,7 +14,8 @@ INSERT IGNORE INTO heritage_users (id, username, password_hash, email, display_n
 INSERT IGNORE INTO heritage_user_roles (user_id, role) VALUES 
 (1, 'ADMIN'),
 (2, 'ADMIN'),
-(3, 'CONTRIBUTOR');
+(3, 'CONTRIBUTOR'),
+(3, 'VIEWER');
 
 -- 4. 插入分类 (Categories)
 INSERT IGNORE INTO categories (id, name, description, created_at) VALUES
