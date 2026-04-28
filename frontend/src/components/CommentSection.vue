@@ -94,6 +94,7 @@ async function submit() {
 .comments {
   margin-top: 2.5rem;
   padding-top: 2rem;
+  padding-bottom: 4rem; /* 添加底部留白 */
   border-top: 1px solid var(--border);
 }
 .heading {
