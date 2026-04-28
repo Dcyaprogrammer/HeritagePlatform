@@ -25,6 +25,15 @@ public class PublicResourceSummary {
 	private String provinceName;
 	private String heritageTypeCode;
 	private String heritageTypeLabel;
+	private String coverUrl;
+
+	public String getCoverUrl() {
+		return coverUrl;
+	}
+
+	public void setCoverUrl(String coverUrl) {
+		this.coverUrl = coverUrl;
+	}
 
 	public Long getId() {
 		return id;

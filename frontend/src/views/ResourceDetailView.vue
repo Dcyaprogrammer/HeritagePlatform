@@ -3,8 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import ResourceImageCarousel from '../components/ResourceImageCarousel.vue'
 import CommentSection from '../components/CommentSection.vue'
-import { getResourceById } from '../api/mockData.js'
-import { getComments } from '../api/resource.js'
+import { getPublicResourceDetail, getComments } from '../api/resource.js'
 import { getToken } from '../api/auth.js'
 
 const route = useRoute()
@@ -21,7 +20,13 @@ async function load() {
   if (Number.isNaN(n)) return
   loading.value = true
   try {
-    resource.value = getResourceById(n)
+    const detailRes = await getPublicResourceDetail(n)
+    if (detailRes.data.code === 200 && detailRes.data.data) {
+      resource.value = detailRes.data.data
+    } else {
+      resource.value = null
+    }
+    
     try {
       const commentsRes = await getComments(n)
       comments.value = commentsRes.data.data || []
@@ -74,8 +79,8 @@ function formatDate(iso) {
       <header class="head">
         <h1 class="title">{{ resource.title }}</h1>
         <div class="meta">
-          <span v-if="resource.category" class="pill">{{ resource.category.name }}</span>
-          <span v-if="resource.location_name" class="loc">{{ resource.location_name }}</span>
+          <span v-if="resource.categoryName" class="pill">{{ resource.categoryName }}</span>
+          <span v-if="resource.locationName" class="loc">{{ resource.locationName }}</span>
         </div>
         <ul v-if="resource.tags && resource.tags.length" class="tags" aria-label="Tags">
           <li v-for="t in resource.tags" :key="t.id" class="tag">{{ t.name }}</li>
@@ -84,9 +89,9 @@ function formatDate(iso) {
 
       <div class="prose">
         <p class="desc">{{ resource.description }}</p>
-        <p v-if="resource.copyright_declaration" class="legal">
+        <p v-if="resource.copyrightDeclaration" class="legal">
           <strong>Copyright &amp; usage</strong><br />
-          {{ resource.copyright_declaration }}
+          {{ resource.copyrightDeclaration }}
         </p>
         <dl class="facts">
           <div v-if="resource.contributorName" class="fact">
@@ -95,11 +100,11 @@ function formatDate(iso) {
           </div>
           <div class="fact">
             <dt>Published</dt>
-            <dd>{{ formatDate(resource.created_at) }}</dd>
+            <dd>{{ formatDate(resource.createdAt) }}</dd>
           </div>
           <div class="fact">
             <dt>Last updated</dt>
-            <dd>{{ formatDate(resource.updated_at) }}</dd>
+            <dd>{{ formatDate(resource.updatedAt) }}</dd>
           </div>
         </dl>
       </div>

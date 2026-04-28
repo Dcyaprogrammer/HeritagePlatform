@@ -232,7 +232,7 @@ CREATE TABLE IF NOT EXISTS comments (
 -- 5. Attachments
 CREATE TABLE IF NOT EXISTS attachments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    resource_id BIGINT COMMENT 'references resources(id); FK + NOT NULL will be enabled after integration with team member 4',
+    resource_id BIGINT NOT NULL,
     stored_name VARCHAR(255) NOT NULL,
     display_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,

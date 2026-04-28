@@ -154,7 +154,8 @@ public class PublicDiscoveryService {
 		String listSql = """
 				SELECT r.id, r.title, r.description, r.location_name, r.category_id, c.name AS category_name,
 				       r.heritage_type_code,
-				       r.created_at, r.updated_at
+				       r.created_at, r.updated_at,
+				       (SELECT a.file_path FROM attachments a WHERE a.resource_id = r.id AND a.file_type = 'image' ORDER BY a.created_at ASC LIMIT 1) AS cover_url
 				""" + BASE_FROM + extra + """
 				ORDER BY r.updated_at DESC
 				LIMIT :limit OFFSET :offset
@@ -174,10 +175,14 @@ public class PublicDiscoveryService {
 		String sql = """
 				SELECT r.id, r.title, r.description, r.location_name, r.category_id, c.name AS category_name,
 				       r.heritage_type_code,
+				       r.copyright_declaration,
+				       u.display_name AS contributor_name,
 				       r.created_at, r.updated_at
 				FROM resources r
 				INNER JOIN categories c ON c.id = r.category_id
+				LEFT JOIN heritage_users u ON r.submitter_id = u.id OR r.contributor_id = u.id
 				WHERE r.status = 'APPROVED' AND r.id = :id
+				LIMIT 1
 				""";
 		List<PublicResourceDetail> rows = jdbc.query(sql, Map.of("id", id), (rs, rowNum) -> mapDetail(rs));
 		if (rows.isEmpty()) {
@@ -195,6 +200,25 @@ public class PublicDiscoveryService {
 		List<NamedRow> tags = jdbc.query(tagSql, Map.of("resourceId", detail.getId()),
 				(rs, row) -> new NamedRow(rs.getLong("id"), rs.getString("name")));
 		detail.setTags(tags);
+
+		String attachmentSql = """
+				SELECT id, stored_name, display_name, file_path, file_type, file_size
+				FROM attachments
+				WHERE resource_id = :resourceId
+				ORDER BY created_at ASC
+				""";
+		List<Map<String, Object>> attachments = jdbc.query(attachmentSql, Map.of("resourceId", detail.getId()), (rs, rowNum) -> {
+			Map<String, Object> map = new java.util.HashMap<>();
+			map.put("id", rs.getLong("id"));
+			map.put("storedName", rs.getString("stored_name"));
+			map.put("displayName", rs.getString("display_name"));
+			map.put("file_path", rs.getString("file_path"));
+			map.put("file_type", rs.getString("file_type"));
+			map.put("fileSize", rs.getLong("file_size"));
+			return map;
+		});
+		detail.setAttachments(attachments);
+
 		return Optional.of(detail);
 	}
 
@@ -206,6 +230,8 @@ public class PublicDiscoveryService {
 		d.setLocationName(rs.getString("location_name"));
 		d.setCategoryId(rs.getObject("category_id") != null ? rs.getInt("category_id") : null);
 		d.setCategoryName(rs.getString("category_name"));
+		d.setCopyrightDeclaration(rs.getString("copyright_declaration"));
+		d.setContributorName(rs.getString("contributor_name"));
 		d.setCreatedAt(toLocal(rs, "created_at"));
 		d.setUpdatedAt(toLocal(rs, "updated_at"));
 		enrichDerived(d, rs);
@@ -274,6 +300,11 @@ public class PublicDiscoveryService {
 			s.setCategoryName(rs.getString("category_name"));
 			s.setCreatedAt(toLocal(rs, "created_at"));
 			s.setUpdatedAt(toLocal(rs, "updated_at"));
+			try {
+				s.setCoverUrl(rs.getString("cover_url"));
+			} catch (SQLException ignored) {
+				// cover_url is not selected in some queries
+			}
 			enrichDerived(s, rs);
 			return s;
 		}
