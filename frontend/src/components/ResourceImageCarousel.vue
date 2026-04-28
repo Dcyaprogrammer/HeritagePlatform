@@ -3,8 +3,17 @@ import { computed, ref, watch } from 'vue'
 
 const props = defineProps({ attachments: Array })
 
+function isImageAttachment(attachment) {
+  const fileType = attachment?.file_type || attachment?.fileType || ''
+  return fileType === 'image' || fileType.startsWith('image/')
+}
+
+function attachmentSrc(attachment) {
+  return attachment?.file_path || attachment?.filePath || ''
+}
+
 const imageAttachments = computed(() =>
-  (props.attachments || []).filter((a) => a && a.file_type && a.file_type.startsWith('image/')),
+  (props.attachments || []).filter((attachment) => isImageAttachment(attachment)),
 )
 
 const index = ref(0)
@@ -41,7 +50,7 @@ function go(i) {
   <div class="carousel" role="region" aria-roledescription="carousel" aria-label="Resource images">
     <template v-if="current">
       <div class="stage">
-        <img :src="current.file_path" :alt="`Image ${index + 1} of ${imageAttachments.length}`" class="main-img" />
+        <img :src="attachmentSrc(current)" :alt="`Image ${index + 1} of ${imageAttachments.length}`" class="main-img" />
         <template v-if="hasMany">
           <button type="button" class="nav prev" aria-label="Previous image" @click="prev">Previous</button>
           <button type="button" class="nav next" aria-label="Next image" @click="next">Next</button>
@@ -63,7 +72,7 @@ function go(i) {
       <ul class="thumbs" aria-label="Thumbnails">
         <li v-for="(img, i) in imageAttachments" :key="img.id">
           <button type="button" class="thumb" :class="{ active: i === index }" @click="go(i)">
-            <img :src="img.file_path" alt="" loading="lazy" />
+            <img :src="attachmentSrc(img)" alt="" loading="lazy" />
           </button>
         </li>
       </ul>

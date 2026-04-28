@@ -3,7 +3,9 @@ package com.heritage.platform.service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Service;
@@ -79,10 +81,45 @@ public class ReviewService {
         d.id = r.getId();
         d.title = r.getTitle();
         d.category = r.getCategory();
+        d.locationName = r.getLocationName();
+        d.description = r.getDescription();
+        d.copyrightDeclaration = r.getCopyrightDeclaration();
         d.submittedAt = r.getSubmittedAt();
         d.version = r.getVersion();
         d.status = r.getStatus().name();
         d.rejectionReason = r.getRejectionReason();
+        if (r.getSubmitter() != null) {
+            d.submitterName = r.getSubmitter().getDisplayName() != null
+                    ? r.getSubmitter().getDisplayName()
+                    : r.getSubmitter().getUsername();
+        }
+
+        List<Map<String, Object>> tags = new ArrayList<>();
+        r.getTags().forEach(tag -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", tag.getId());
+            item.put("name", tag.getName());
+            tags.add(item);
+        });
+        d.tags = tags;
+
+        List<Map<String, Object>> attachments = new ArrayList<>();
+        r.getAttachments().forEach(attachment -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", attachment.getId());
+            item.put("display_name", attachment.getDisplayName());
+            item.put("stored_name", attachment.getStoredName());
+            item.put("file_path", attachment.getFilePath());
+            item.put("file_type", attachment.getFileType());
+            item.put("file_size", attachment.getFileSize());
+            item.put("displayName", attachment.getDisplayName());
+            item.put("storedName", attachment.getStoredName());
+            item.put("filePath", attachment.getFilePath());
+            item.put("fileType", attachment.getFileType());
+            item.put("fileSize", attachment.getFileSize());
+            attachments.add(item);
+        });
+        d.attachments = attachments;
 
 
         return d;

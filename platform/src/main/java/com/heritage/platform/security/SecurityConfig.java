@@ -42,6 +42,7 @@ public class SecurityConfig {
                  "/api/auth/reset-password",
                  "/api/attachments/*/preview",
                  "/api/attachments/*/download",
+                 "/uploads/**",
                  "/api/public/**").permitAll()
                 .requestMatchers("/api/review/**").hasRole("ADMIN")
                  //.requestMatchers("/api/sessions/**").hasAnyRole("VIEWER", "ADMIN")

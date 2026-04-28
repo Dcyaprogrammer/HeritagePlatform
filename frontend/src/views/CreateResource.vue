@@ -68,19 +68,21 @@
       <div class="form-group">
         <label>Media Attachments (Images, Videos, Documents)</label>
         <FileUploader ref="uploaderRef" :initial-files="initialUploaderFiles" />
-        <p class="help-text">Please upload your files before saving the draft.</p>
+        <p class="help-text">
+          Please wait for each file upload to finish before saving or submitting.
+        </p>
       </div>
 
       <div class="actions">
         <button type="button" class="btn btn-secondary" @click="goBack">Cancel</button>
-        <button type="submit" class="btn btn-primary" :disabled="loading || submitting">
+        <button type="submit" class="btn btn-primary" :disabled="loading || submitting || hasPendingUploads">
           <span v-if="loading">{{ isEditMode ? 'Updating...' : 'Saving...' }}</span>
           <span v-else>{{ isEditMode ? 'Update Draft' : 'Save as Draft' }}</span>
         </button>
         <button
           type="button"
           class="btn btn-submit"
-          :disabled="loading || submitting"
+          :disabled="loading || submitting || hasPendingUploads"
           @click="handleSubmitForReview"
         >
           <span v-if="submitting">Submitting...</span>
@@ -143,6 +145,11 @@ const resourceId = computed(() => {
 })
 
 const isEditMode = computed(() => Number.isFinite(resourceId.value))
+
+const hasPendingUploads = computed(() => {
+  const files = uploaderRef.value?.uploadedFiles || []
+  return files.some((file) => !file._removed && (file.uploading || (file.rawFile && !file.attachmentId && !file.uploadError)))
+})
 
 function resetMessages() {
   errorMsg.value = ''
@@ -230,6 +237,28 @@ function syncAttachmentIdsFromUploader() {
     .filter((id) => id != null)
 }
 
+async function ensureUploadsReady() {
+  const currentFiles = uploaderRef.value?.uploadedFiles || []
+  const pendingUploads = currentFiles
+    .filter((file) => !file._removed && file.uploadPromise && (file.uploading || (file.rawFile && !file.attachmentId && !file.uploadError)))
+    .map((file) => file.uploadPromise)
+
+  if (pendingUploads.length > 0) {
+    await Promise.allSettled(pendingUploads)
+  }
+
+  const files = uploaderRef.value?.uploadedFiles || []
+  const failedUploads = files.filter((file) => !file._removed && file.uploadError)
+  if (failedUploads.length > 0) {
+    throw new Error('One or more attachments failed to upload. Remove or re-upload them before continuing.')
+  }
+
+  const unfinishedUploads = files.filter((file) => !file._removed && file.rawFile && !file.attachmentId)
+  if (unfinishedUploads.length > 0) {
+    throw new Error('Please wait for all attachments to finish uploading before saving or submitting.')
+  }
+}
+
 function syncCategoryName() {
   if (!form.categoryId) {
     form.category = ''
@@ -241,6 +270,7 @@ function syncCategoryName() {
 }
 
 async function saveDraft() {
+  await ensureUploadsReady()
   syncAttachmentIdsFromUploader()
   syncCategoryName()
 
