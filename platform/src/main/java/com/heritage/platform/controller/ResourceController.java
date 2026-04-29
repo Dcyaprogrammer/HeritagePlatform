@@ -108,18 +108,17 @@ public class ResourceController {
 	@GetMapping("/{id}/feedback")
 	public ApiResponse<Map<String, String>> getFeedback(@PathVariable Long id, Authentication authentication) {
 		HeritageResource resource = requireOwnedResource(id, authentication);
-		Optional<ReviewLog> log = reviewLogRepository.findFirstByResourceIdAndActionOrderByOperatedAtDesc(
-				resource.getId(),
-				ReviewAction.REJECTED);
+		ReviewLog reviewLog = findLatestRejectedLog(resource.getId()).orElse(null);
+		String reason = reviewLog != null ? reviewLog.getReason() : resource.getRejectionReason();
+		Instant operatedAt = reviewLog != null ? reviewLog.getOperatedAt() : resource.getReviewedAt();
 
-		if (log.isEmpty()) {
-			throw new RuntimeException("No rejection feedback found");
+		if ((reason == null || reason.isBlank()) && operatedAt == null) {
+			return ApiResponse.success(null);
 		}
 
-		ReviewLog reviewLog = log.get();
 		return ApiResponse.success(Map.of(
-				"reason", reviewLog.getReason() == null ? "" : reviewLog.getReason(),
-				"operatedAt", reviewLog.getOperatedAt().toString()));
+				"reason", reason == null ? "" : reason,
+				"operatedAt", operatedAt == null ? "" : operatedAt.toString()));
 	}
 
 	@PostMapping("/{id}/resubmit")
@@ -157,12 +156,25 @@ public class ResourceController {
 
 		for (ReviewLog log : logs) {
 			data.add(Map.of(
-					"action", log.getAction().toString(),
+					"action", log.getAction().toDisplayValue(),
 					"reason", log.getReason() == null ? "" : log.getReason(),
 					"operatedAt", log.getOperatedAt().toString()));
 		}
 
+		if (data.isEmpty() && (resource.getReviewedAt() != null || resource.getRejectionReason() != null)) {
+			data.add(Map.of(
+					"action", resource.getStatus() == ResourceStatus.APPROVED ? "APPROVED" : "REJECTED",
+					"reason", resource.getRejectionReason() == null ? "" : resource.getRejectionReason(),
+					"operatedAt", resource.getReviewedAt() == null ? "" : resource.getReviewedAt().toString()));
+		}
+
 		return ApiResponse.success(data);
+	}
+
+	private Optional<ReviewLog> findLatestRejectedLog(Long resourceId) {
+		return reviewLogRepository.findByResourceIdOrderByOperatedAtDesc(resourceId).stream()
+				.filter(log -> log.getAction() != null && log.getAction().isRejected())
+				.findFirst();
 	}
 
 	private HeritageResource requireOwnedResource(Long id, Authentication authentication) {

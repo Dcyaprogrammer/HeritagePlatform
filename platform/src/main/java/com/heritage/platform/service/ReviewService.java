@@ -12,9 +12,12 @@ import org.springframework.stereotype.Service;
 
 import com.heritage.platform.model.HeritageUser;
 import com.heritage.platform.model.HeritageResource;
+import com.heritage.platform.model.ReviewAction;
+import com.heritage.platform.model.ReviewLog;
 import com.heritage.platform.model.ResourceStatus;
 import com.heritage.platform.repository.HeritageResourceRepository;
 import com.heritage.platform.repository.HeritageUserRepository;
+import com.heritage.platform.repository.ReviewLogRepository;
 import com.heritage.platform.web.ResourceDetail;
 import com.heritage.platform.web.ReviewController.PendingItem;
 
@@ -24,10 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReviewService {
     private final HeritageResourceRepository resources;
     private final HeritageUserRepository users;
+    private final ReviewLogRepository reviewLogs;
 
-    public ReviewService(HeritageResourceRepository resources, HeritageUserRepository users) {
+    public ReviewService(HeritageResourceRepository resources, HeritageUserRepository users, ReviewLogRepository reviewLogs) {
         this.resources = resources;
         this.users = users;
+        this.reviewLogs = reviewLogs;
     }
 
     @Transactional(readOnly = true)
@@ -148,6 +153,7 @@ public class ReviewService {
         r.setRejectionReason(null);
 
         resources.save(r);
+        writeReviewLog(r, reviewer, ReviewAction.APPROVED, null);
     }
 
     @Transactional
@@ -174,5 +180,20 @@ public class ReviewService {
         r.setRejectionReason(reason.trim());
 
         resources.save(r);
+        writeReviewLog(r, reviewer, ReviewAction.REJECTED, reason.trim());
+    }
+
+    private void writeReviewLog(HeritageResource resource, HeritageUser reviewer, ReviewAction action, String reason) {
+        if (reviewer == null) {
+            return;
+        }
+
+        ReviewLog log = new ReviewLog();
+        log.setResource(resource);
+        log.setReviewer(reviewer);
+        log.setAction(action);
+        log.setReason(reason);
+        log.setOperatedAt(resource.getReviewedAt() == null ? Instant.now() : resource.getReviewedAt());
+        reviewLogs.save(log);
     }
 }

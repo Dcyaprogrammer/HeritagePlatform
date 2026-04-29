@@ -35,10 +35,10 @@ public class ReviewLog {
 	@Column(nullable = false, length = 16)
 	private ReviewAction action;
 
-	@Column(length = 4000)
+	@Column(name = "feedback_comment", length = 4000)
 	private String reason;
 
-	@Column(nullable = false)
+	@Column(name = "created_at", nullable = false)
 	private Instant operatedAt;
 
 	public Long getId() {
