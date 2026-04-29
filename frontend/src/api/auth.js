@@ -77,4 +77,31 @@ export const setUserInfo = (username, roles) => {
   localStorage.setItem('role', normalizedRoles[0] || '')
 }
 
+
+
+//reset，forgot
+export const forgotPassword = (email) => {
+  return api.post('/auth/forgot-password', { email })
+}
+
+export const resetPassword = (data) => {
+  return api.post('/auth/reset-password', {
+    token: data.token,
+    newPassword: data.newPassword
+  })
+}
+
+
+
+
+
+//多会话
+export const getActiveSessions = () => {
+  return api.get('/sessions')
+}
+
+export const logoutSession = (jti) => {
+  return api.delete(`/sessions/${jti}`)
+}
+
 export default api
