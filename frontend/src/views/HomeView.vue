@@ -85,6 +85,11 @@ const goToRegister = () => {
   router.push('/register')
 }
 
+//多会话入口
+const goToSessions = () => {
+  router.push('/sessions')
+}
+
 const handleLogout = () => {
   logout()
   isLoggedIn.value = false
@@ -259,6 +264,7 @@ onMounted(() => {
           </button>
           <button v-if="isAdmin" type="button" class="btn primary" @click="goToAdmin">Admin Panel</button>
           <button type="button" class="btn" @click="goToProfile">Profile</button>
+          <button type="button" class="btn" @click="goToSessions">Sessions</button>
           <button type="button" class="btn" @click="handleLogout">Logout</button>
         </template>
         <template v-else>
