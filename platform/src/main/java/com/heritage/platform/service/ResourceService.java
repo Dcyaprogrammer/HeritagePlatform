@@ -216,6 +216,12 @@ public class ResourceService {
             if (owner != null && owner.getId() != null && !owner.getId().equals(resource.getId())) {
                 throw new RuntimeException("Attachment does not belong to this resource");
             }
+            HeritageUser uploader = attachment.getUploader();
+            if (uploader == null
+                    || resource.getSubmitter() == null
+                    || !Objects.equals(uploader.getId(), resource.getSubmitter().getId())) {
+                throw new RuntimeException("Attachment was uploaded by another user");
+            }
 
             attachment.setResource(resource);
             resource.getAttachments().add(attachment);
