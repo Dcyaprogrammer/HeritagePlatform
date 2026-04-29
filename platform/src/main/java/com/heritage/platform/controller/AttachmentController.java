@@ -639,6 +639,8 @@ public class AttachmentController {
 
     private boolean canReadAttachment(Attachment attachment, Authentication authentication) {
         HeritageResource resource = attachment.getResource();
+        
+        // 已审核通过的资源，任何人都可以查看
         if (resource != null && resource.getStatus() == ResourceStatus.APPROVED) {
             return true;
         }
@@ -647,6 +649,7 @@ public class AttachmentController {
             return false;
         }
 
+        // 管理员和审核员可以查看所有附件（包括待审核的）
         if (hasRole(authentication, "ADMIN") || hasRole(authentication, "REVIEWER")) {
             return true;
         }
@@ -657,6 +660,7 @@ public class AttachmentController {
             return true;
         }
 
+        // 资源提交者可以查看自己提交的资源附件
         return resource != null
                 && resource.getSubmitter() != null
                 && username.equals(resource.getSubmitter().getUsername());
