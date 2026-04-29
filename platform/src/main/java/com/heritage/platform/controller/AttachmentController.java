@@ -15,6 +15,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import java.io.File;
@@ -131,6 +132,12 @@ public class AttachmentController {
                 return ResponseEntity.status(400).body(response);
             }
 
+            if (file.isEmpty() || file.getSize() == 0) {
+                response.put("success", false);
+                response.put("message", "Empty file refused");
+                return ResponseEntity.status(400).body(response);
+            }
+
             String fileExtension = "";
             if (originalName != null && originalName.contains(".")) {
                 fileExtension = originalName.substring(originalName.lastIndexOf("."));
@@ -143,7 +150,14 @@ public class AttachmentController {
             checkDiskSpace(file.getSize());
             Path filePath = Paths.get(UPLOAD_DIR + storedName);
             Files.copy(file.getInputStream(), filePath);
-            log.info("File saved successfully, path: {}", filePath.toString());
+            long savedSize = Files.size(filePath);
+            if (savedSize == 0) {
+                Files.deleteIfExists(filePath);
+                response.put("success", false);
+                response.put("message", "Saved file was empty — check multipart upload (multipart boundary must not be stripped)");
+                return ResponseEntity.status(400).body(response);
+            }
+            log.info("File saved successfully, path: {}, {} bytes", filePath.toString(), savedSize);
             
             // Determine file type
             String fileType = "document";
@@ -166,7 +180,7 @@ public class AttachmentController {
             attachment.setDisplayName(originalName);
             attachment.setFilePath("/uploads/" + storedName);
             attachment.setFileType(fileType);
-            attachment.setFileSize(file.getSize());
+            attachment.setFileSize(savedSize);
             attachment.setCreatedAt(LocalDateTime.now());
             attachment.setUploader(uploader);
             attachment.setResource(null); // 暂设为 null，对接组员4后改为真实 resource_id
@@ -182,7 +196,7 @@ public class AttachmentController {
             response.put("filePath", "/uploads/" + storedName);
             response.put("previewUrl", "/api/attachments/" + attachment.getId() + "/preview");
             response.put("downloadUrl", "/api/attachments/" + attachment.getId() + "/download");
-            response.put("fileSize", file.getSize());
+            response.put("fileSize", savedSize);
             response.put("message", "Upload success");
             
             return ResponseEntity.ok(response);
@@ -253,6 +267,11 @@ public class AttachmentController {
             Path targetFile = resolveUnderUploadDir(storedName);
 
             long chunkLen = file.getSize();
+            if (chunkLen == 0) {
+                response.put("success", false);
+                response.put("message", "Empty chunk refused");
+                return ResponseEntity.status(400).body(response);
+            }
 
             // Per-uploadId quota: don't let any single upload exceed MAX_FILE_SIZE, and reject early
             // if the declared totalChunks * chunkSize would already blow past the cap.
@@ -481,25 +500,38 @@ public class AttachmentController {
                 return ResponseEntity.status(404).body(response);
             }
 
+            if (authentication == null
+                    || !authentication.isAuthenticated()
+                    || authentication instanceof AnonymousAuthenticationToken) {
+                response.put("success", false);
+                response.put("message", "Authentication required");
+                return ResponseEntity.status(401).body(response);
+            }
             if (!canDeleteAttachment(attachment, authentication)) {
                 response.put("success", false);
                 response.put("message", "You do not have permission to delete this file");
                 return ResponseEntity.status(403).body(response);
             }
-            
-            // Delete physical file from server
-            Path actualPath = resolveStoredFilePath(attachment);
+
+            // DB row first — if the transaction rolls back we never unlink the physical file prematurely.
+            String storedName = attachment.getStoredName();
+            attachmentRepository.deleteById(id);
+            log.info("Deleted database record, ID: {}", id);
+
+            if (storedName == null || storedName.isBlank()) {
+                response.put("success", true);
+                response.put("message", "File deleted successfully");
+                return ResponseEntity.ok(response);
+            }
+
+            Path actualPath = resolveUnderUploadDir(storedName);
             File file = actualPath.toFile();
             if (file.exists()) {
                 boolean deleted = file.delete();
-                log.info("Deleted physical file: {}, result: {}", actualPath, deleted);
+                log.info("Deleted physical file after DB delete: {}, result: {}", actualPath, deleted);
             } else {
                 log.warn("File does not exist, skipping physical deletion: {}", actualPath);
             }
-            
-            // Delete database record
-            attachmentRepository.deleteById(id);
-            log.info("Deleted database record, ID: {}", id);
             
             response.put("success", true);
             response.put("message", "File deleted successfully");
@@ -589,7 +621,11 @@ public class AttachmentController {
         if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
             throw new SecurityException("Authentication required");
         }
-        return authentication.getName();
+        String name = authentication.getName();
+        if (name == null || name.isBlank()) {
+            throw new SecurityException("Authentication required");
+        }
+        return name;
     }
 
     private ResponseEntity<Resource> denyIfNotAllowed(Attachment attachment, Authentication authentication) {
@@ -627,15 +663,23 @@ public class AttachmentController {
     }
 
     private boolean canDeleteAttachment(Attachment attachment, Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
+        if (authentication == null
+                || authentication instanceof AnonymousAuthenticationToken
+                || !authentication.isAuthenticated()
+                || authentication.getName() == null) {
             return false;
         }
         if (hasRole(authentication, "ADMIN")) {
             return true;
         }
 
-        String username = authentication.getName();
         HeritageResource resource = attachment.getResource();
+        if (hasRole(authentication, "REVIEWER") && resource != null
+                && resource.getStatus() == ResourceStatus.PENDING_REVIEW) {
+            return true;
+        }
+
+        String username = authentication.getName();
         if (resource != null
                 && resource.getStatus() != ResourceStatus.DRAFT
                 && resource.getStatus() != ResourceStatus.REJECTED) {
