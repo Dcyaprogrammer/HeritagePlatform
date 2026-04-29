@@ -271,9 +271,27 @@ CREATE TABLE IF NOT EXISTS review_logs (
     action VARCHAR(20) NOT NULL COMMENT 'APPROVE, REJECT',
     feedback_comment TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    operated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
     FOREIGN KEY (reviewer_id) REFERENCES heritage_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Add operated_at column if it doesn't exist (for existing databases)
+SET @col_exists := (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'review_logs'
+      AND COLUMN_NAME = 'operated_at'
+);
+SET @ddl := IF(
+    @col_exists = 0,
+    'ALTER TABLE review_logs ADD COLUMN operated_at DATETIME DEFAULT CURRENT_TIMESTAMP',
+    'SELECT 1'
+);
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS comments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,

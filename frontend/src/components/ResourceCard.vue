@@ -4,6 +4,8 @@ import { RouterLink } from 'vue-router'
 
 const props = defineProps({ item: Object })
 const detailHref = computed(() => `/resources/${props.item.id}`)
+
+const hasVideo = computed(() => props.item?.hasVideo || false)
 </script>
 
 <template>
@@ -14,6 +16,11 @@ const detailHref = computed(() => `/resources/${props.item.id}`)
         <div v-else class="placeholder" role="img" aria-label="No cover image">
           <span>No image</span>
         </div>
+        <!-- Video indicator badge on card -->
+        <span v-if="hasVideo" class="video-badge" aria-label="Contains video">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          Video
+        </span>
       </div>
     </RouterLink>
     <div class="body">
@@ -57,12 +64,28 @@ const detailHref = computed(() => `/resources/${props.item.id}`)
   aspect-ratio: 4 / 3;
   background: #e7e5e4;
   overflow: hidden;
+  position: relative;
 }
 .media img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+}
+.video-badge {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(220, 38, 38, 0.88);
+  color: #fff;
+  backdrop-filter: blur(2px);
 }
 .placeholder {
   width: 100%;

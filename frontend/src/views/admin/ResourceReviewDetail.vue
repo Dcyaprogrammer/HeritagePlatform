@@ -12,6 +12,38 @@
 
     <ResourceImageCarousel :attachments="detail.attachments || []" />
 
+    <!-- Audio player section -->
+    <section v-if="audioAttachments.length" class="media-section audio-section" aria-label="Audio">
+      <h3 class="media-heading">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+        Audio
+      </h3>
+      <ul class="audio-list">
+        <li v-for="audio in audioAttachments" :key="audio.id" class="audio-item">
+          <span class="audio-name">{{ audio.display_name || audio.displayName || 'Audio file' }}</span>
+          <CustomAudioPlayer :src="getAttachmentSrc(audio)" :name="audio.display_name || audio.displayName || 'Audio file'" />
+        </li>
+      </ul>
+    </section>
+
+    <!-- File download section -->
+    <section v-if="fileAttachments.length" class="media-section files-section" aria-label="Files">
+      <h3 class="media-heading">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13zM8 12h8v2H8v-2zm0 4h8v2H8v-2z"/></svg>
+        Documents &amp; Files
+      </h3>
+      <ul class="file-list">
+        <li v-for="file in fileAttachments" :key="file.id" class="file-item">
+          <span class="file-type-badge" :style="{ color: file.meta.color, background: file.meta.bg }">
+            {{ file.meta.label }}
+          </span>
+          <a :href="getAttachmentSrc(file)" :download="file.display_name || file.displayName" class="file-name" target="_blank" rel="noopener">
+            {{ file.display_name || file.displayName || 'Download file' }}
+          </a>
+        </li>
+      </ul>
+    </section>
+
     <article class="article">
       <header class="head">
         <h1 class="title">{{ detail.title }}</h1>
@@ -103,6 +135,8 @@ import { ElMessage } from 'element-plus'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { approveResource, getResourceForReview, rejectResource } from '../../api/user.js'
 import ResourceImageCarousel from '../../components/ResourceImageCarousel.vue'
+import { getAttachmentType, getAttachmentSrc, filterByType, getTypeMeta } from '../../utils/attachmentUtils.js'
+import CustomAudioPlayer from '../../components/CustomAudioPlayer.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -115,6 +149,13 @@ const rejectDialogVisible = ref(false)
 const rejectionReason = ref('')
 
 const canReview = computed(() => !!detail.value && detail.value.status === 'PENDING_REVIEW')
+
+const audioAttachments = computed(() => filterByType(detail.value?.attachments, 'audio'))
+const fileAttachments = computed(() =>
+  (detail.value?.attachments || [])
+    .filter(a => !['image', 'video', 'audio'].includes(getAttachmentType(a)))
+    .map(a => ({ ...a, meta: getTypeMeta(getAttachmentType(a)) }))
+)
 
 const fetchDetail = async () => {
   loading.value = true
@@ -316,5 +357,80 @@ onMounted(fetchDetail)
   color: #909399;
   font-size: 13px;
 }
+
+/* Media sections */
+.media-section {
+  margin-top: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+}
+.media-heading {
+  margin: 0 0 0.85rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--ink);
+}
+
+/* Audio */
+.audio-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.audio-item {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+.audio-name {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 2px;
+}
+
+/* Files */
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.file-type-badge {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  letter-spacing: 0.02em;
+}
+.file-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-name:hover { text-decoration: underline; }
 </style>
 
