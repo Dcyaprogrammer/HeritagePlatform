@@ -45,9 +45,9 @@ INSERT IGNORE INTO resource_tags (resource_id, tag_id) VALUES
 (3, 4), (3, 5);
 
 -- 8. 插入审核日志 (Review Logs) - 供组员6/7测试查看历史记录
-INSERT IGNORE INTO review_logs (id, resource_id, reviewer_id, action, feedback_comment, created_at) VALUES
-(1, 1, 2, 'APPROVE', 'Looks great, the information is accurate. Approved for publishing.', NOW()),
-(2, 3, 2, 'REJECT', 'Please provide more reliable sources and references for these proverbs before resubmitting.', NOW());
+INSERT IGNORE INTO review_logs (id, resource_id, reviewer_id, action, reason, operated_at) VALUES
+(1, 1, 2, 'APPROVED', 'Looks great, the information is accurate. Approved for publishing.', NOW()),
+(2, 3, 2, 'REJECTED', 'Please provide more reliable sources and references for these proverbs before resubmitting.', NOW());
 
 -- 9. 插入测试评论 (Comments) - 供评论系统测试
 INSERT IGNORE INTO comments (id, resource_id, user_id, content, created_at, updated_at) VALUES
