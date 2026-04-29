@@ -7,12 +7,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class AttachmentCleanupJob {
@@ -30,28 +33,37 @@ public class AttachmentCleanupJob {
     public void deleteExpiredOrphanAttachments() {
         LocalDateTime cutoff = LocalDateTime.now().minusHours(ORPHAN_TTL_HOURS);
         List<Attachment> expiredAttachments = attachmentRepository.findByResourceIsNullAndCreatedAtBefore(cutoff);
-
-        for (Attachment attachment : expiredAttachments) {
-            deletePhysicalFile(attachment);
-            attachmentRepository.delete(attachment);
-        }
-
-        if (!expiredAttachments.isEmpty()) {
-            log.info("Deleted {} orphan attachment(s)", expiredAttachments.size());
-        }
-    }
-
-    private void deletePhysicalFile(Attachment attachment) {
-        String storedName = attachment.getStoredName();
-        if (storedName == null || storedName.isBlank()) {
+        if (expiredAttachments.isEmpty()) {
             return;
         }
 
+        List<String> storedNamesToDeleteAfterCommit = new ArrayList<>();
+        for (Attachment attachment : expiredAttachments) {
+            String storedName = attachment.getStoredName();
+            attachmentRepository.delete(attachment);
+            if (storedName != null && !storedName.isBlank()) {
+                storedNamesToDeleteAfterCommit.add(storedName);
+            }
+        }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                for (String storedName : storedNamesToDeleteAfterCommit) {
+                    deletePhysicalFile(storedName);
+                }
+            }
+        });
+
+        log.info("Removed {} orphan attachment row(s); filesystem cleanup runs after commit", expiredAttachments.size());
+    }
+
+    private void deletePhysicalFile(String storedName) {
         Path filePath = Paths.get(System.getProperty("user.dir"), "uploads", storedName);
         try {
             Files.deleteIfExists(filePath);
         } catch (IOException e) {
-            log.warn("Failed to delete orphan attachment file: {}", filePath, e);
+            log.warn("Failed to delete orphan attachment file after commit: {}", filePath, e);
         }
     }
 }
