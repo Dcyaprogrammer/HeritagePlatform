@@ -2,12 +2,17 @@ package com.heritage.platform.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -171,13 +176,49 @@ public class ResourceService {
             }
         }
 
-        resource.getAttachments().clear();
-        if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
-            List<Attachment> attachments = attachmentRepository.findAllById(request.getAttachmentIds());
-            for (Attachment attachment : attachments) {
-                attachment.setResource(resource);
-                resource.getAttachments().add(attachment);
+        List<Long> attachmentIds = request.getAttachmentIds() == null
+                ? List.of()
+                : request.getAttachmentIds().stream()
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+
+        Map<Long, Attachment> requestedAttachments = attachmentIds.isEmpty()
+                ? Map.of()
+                : attachmentRepository.findAllById(attachmentIds).stream()
+                        .collect(Collectors.toMap(Attachment::getId, Function.identity()));
+
+        if (requestedAttachments.size() != attachmentIds.size()) {
+            throw new RuntimeException("Invalid attachmentIds");
+        }
+
+        resource.getAttachments().removeIf(existing -> {
+            Long existingId = existing.getId();
+            boolean keep = existingId != null && requestedAttachments.containsKey(existingId);
+            if (!keep) {
+                existing.setResource(null);
             }
+            return !keep;
+        });
+
+        Set<Long> currentAttachmentIds = resource.getAttachments().stream()
+                .map(Attachment::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        for (Long attachmentId : attachmentIds) {
+            if (currentAttachmentIds.contains(attachmentId)) {
+                continue;
+            }
+
+            Attachment attachment = requestedAttachments.get(attachmentId);
+            HeritageResource owner = attachment.getResource();
+            if (owner != null && owner.getId() != null && !owner.getId().equals(resource.getId())) {
+                throw new RuntimeException("Attachment does not belong to this resource");
+            }
+
+            attachment.setResource(resource);
+            resource.getAttachments().add(attachment);
         }
     }
 
