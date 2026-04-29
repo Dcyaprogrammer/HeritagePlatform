@@ -9,6 +9,7 @@ const allResources = ref([])
 const provinces = ref([])
 const heritageGroups = ref([])
 const dynasties = ref([])
+const ALL_OPTION = '__ALL__'
 const list = ref([])
 const total = ref(0)
 const page = ref(0)
@@ -18,13 +19,13 @@ const err = ref('')
 
 const q = ref('')
 const selectedDynastyCodes = ref(new Set())
-const dynastyPickerValue = ref('')
+const dynastyPickerValue = ref([])
 const eraFrom = ref('')
 const eraTo = ref('')
 const selectedProvinceCodes = ref(new Set())
-const provincePickerValue = ref('')
+const provincePickerValue = ref(ALL_OPTION)
 const selectedHeritageTypeCodes = ref(new Set())
-const heritageTypePickerValue = ref('')
+const heritageTypePickerValue = ref(ALL_OPTION)
 const showFilterPanel = ref(false)
 const autoSearchEnabled = ref(false)
 
@@ -38,6 +39,16 @@ const categories = computed(() => {
     if (r.category) map.set(r.category.id, r.category.name)
   }
   return [...map.entries()].map(([id, name]) => ({ id, name }))
+})
+const sortedProvinces = computed(() => {
+  return [...provinces.value].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+})
+const groupedHeritageTypeOptions = computed(() => {
+  return heritageGroups.value.map(group => ({
+    groupCode: group.groupCode,
+    groupName: group.groupName,
+    types: [...(group.types || [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  }))
 })
 
 const categoryId = ref(null)
@@ -207,6 +218,33 @@ const filterWatchKey = computed(() => {
 
 let autoSearchTimer = null
 
+function syncPickerSelections() {
+  selectedDynastyCodes.value = new Set(dynastyPickerValue.value)
+  selectedProvinceCodes.value = provincePickerValue.value === ALL_OPTION
+    ? new Set()
+    : new Set([provincePickerValue.value])
+  selectedHeritageTypeCodes.value = heritageTypePickerValue.value === ALL_OPTION
+    ? new Set()
+    : new Set([heritageTypePickerValue.value])
+}
+
+function applyAdvancedFilters() {
+  syncPickerSelections()
+  page.value = 0
+  search()
+}
+
+function clearAdvancedFilters() {
+  dynastyPickerValue.value = []
+  provincePickerValue.value = ALL_OPTION
+  heritageTypePickerValue.value = ALL_OPTION
+  eraFrom.value = ''
+  eraTo.value = ''
+  syncPickerSelections()
+  page.value = 0
+  search()
+}
+
 async function loadMeta() {
   const [d, p, h, c] = await Promise.all([
     fetch('/api/public/dynasties'),
@@ -269,6 +307,16 @@ watch([q, categoryId], () => {
   search()
 })
 
+watch([provincePickerValue, heritageTypePickerValue], () => {
+  syncPickerSelections()
+  if (!autoSearchEnabled.value) return
+  if (autoSearchTimer) clearTimeout(autoSearchTimer)
+  autoSearchTimer = setTimeout(() => {
+    page.value = 0
+    search()
+  }, 250)
+})
+
 onMounted(() => {
   loadMeta()
   search()
@@ -317,6 +365,47 @@ onMounted(() => {
       </label>
     </div>
 
+    <section class="advanced">
+      <div class="advanced-head">
+        <button type="button" class="btn" @click="showFilterPanel = !showFilterPanel">
+          {{ showFilterPanel ? 'Hide Advanced Filters' : 'Show Advanced Filters' }}
+        </button>
+        <label class="auto">
+          <input v-model="autoSearchEnabled" type="checkbox" />
+          <span>Auto apply</span>
+        </label>
+      </div>
+
+      <div v-if="showFilterPanel" class="advanced-grid">
+        <label class="field">
+          <span class="label">Province</span>
+          <select v-model="provincePickerValue" class="control">
+            <option :value="ALL_OPTION">All</option>
+            <option v-for="p in sortedProvinces" :key="p.code" :value="p.code">{{ p.name }}</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="label">Heritage Type</span>
+          <select v-model="heritageTypePickerValue" class="control">
+            <option :value="ALL_OPTION">All</option>
+            <optgroup
+              v-for="group in groupedHeritageTypeOptions"
+              :key="group.groupCode"
+              :label="group.groupName"
+            >
+              <option v-for="t in group.types" :key="t.code" :value="t.code">{{ t.name }}</option>
+            </optgroup>
+          </select>
+        </label>
+      </div>
+
+      <div v-if="showFilterPanel" class="advanced-actions">
+        <button type="button" class="btn primary" @click="applyAdvancedFilters">Apply</button>
+        <button type="button" class="btn" @click="clearAdvancedFilters">Clear</button>
+      </div>
+    </section>
+
     <p v-if="!filteredResources.length" class="none">No resources match your filters.</p>
 
     <div v-else class="grid">
@@ -337,7 +426,20 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 0;
+  background: color-mix(in srgb, var(--surface) 90%, white 10%);
   border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 0;
+}
+.top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc((100vw - 100%) / -2);
+  right: calc((100vw - 100%) / -2);
+  background: color-mix(in srgb, var(--surface) 90%, white 10%);
+  z-index: -1;
 }
 .header-actions {
   display: flex;
@@ -346,13 +448,19 @@ onMounted(() => {
 .btn {
   padding: 0.5rem 1rem;
   border: 1px solid var(--border);
-  border-radius: 4px;
-  background: white;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
   cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.btn:hover {
+  background: color-mix(in srgb, var(--surface) 85%, var(--accent) 15%);
+  border-color: var(--accent-soft);
 }
 .btn.primary {
   background: var(--accent);
-  color: white;
+  color: #fff;
   border-color: var(--accent);
 }
 .hero {
@@ -374,8 +482,38 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1rem;
   align-items: flex-end;
+}
+.advanced {
+  margin-bottom: 1.75rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.advanced-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.auto {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.advanced-grid {
+  margin-top: 0.9rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+}
+.advanced-actions {
+  margin-top: 0.9rem;
+  display: flex;
+  gap: 0.6rem;
 }
 .field {
   display: flex;
@@ -391,11 +529,15 @@ onMounted(() => {
 }
 .control {
   padding: 0.55rem 0.75rem;
-  border-radius: 8px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   font-family: inherit;
   font-size: 0.9375rem;
   background: var(--surface);
+  color: var(--ink);
+}
+.control optgroup {
+  font-weight: 700;
 }
 .grid {
   display: grid;

@@ -147,25 +147,25 @@ const handleRegister = async () => {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 0;
-  border-bottom: 1px solid var(--border, #eaeaea);
+  border-bottom: 1px solid var(--border);
 }
 .top h1 {
   margin: 0;
   font-family: var(--font-serif, 'Georgia', serif);
   font-size: 1.5rem;
-  color: var(--text, #333);
+  color: var(--ink);
 }
 .btn {
   padding: 0.5rem 1rem;
-  border: 1px solid var(--border, #eaeaea);
-  border-radius: 4px;
-  background: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
   cursor: pointer;
   font-size: 0.875rem;
-  color: var(--text, #333);
+  color: var(--ink);
 }
 .btn:hover {
-  background: #f9f9f9;
+  background: color-mix(in srgb, var(--surface) 85%, var(--accent) 15%);
 }
 .register-container {
   display: flex;
@@ -178,8 +178,8 @@ const handleRegister = async () => {
 .register-card {
   width: 100%;
   max-width: 420px;
-  border-radius: 12px;
-  border: 1px solid var(--border, #eaeaea);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
 }
 
 .card-header {
@@ -188,21 +188,21 @@ const handleRegister = async () => {
 
 .card-header h2 {
   margin: 0;
-  color: var(--text, #333);
+  color: var(--ink);
   font-family: var(--font-serif, 'Georgia', serif);
   font-size: 1.75rem;
 }
 
 .subtitle {
   margin: 0.5rem 0 0;
-  color: var(--muted, #666);
+  color: var(--muted);
   font-size: 0.875rem;
 }
 
 .submit-btn {
   width: 100%;
-  background: var(--accent, #409eff);
-  border-color: var(--accent, #409eff);
+  background: var(--accent);
+  border-color: var(--accent);
   border-radius: 6px;
   font-weight: 600;
 }
@@ -215,11 +215,11 @@ const handleRegister = async () => {
   text-align: center;
   margin-top: 1.5rem;
   font-size: 0.875rem;
-  color: var(--muted, #666);
+  color: var(--muted);
 }
 
 .link {
-  color: var(--accent, #409eff);
+  color: var(--accent);
   text-decoration: none;
   font-weight: 500;
 }

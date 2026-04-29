@@ -27,7 +27,10 @@
       <div class="form-group row-group">
         <div class="col">
           <label for="locationName">Location / Place</label>
-          <input v-model="form.locationName" type="text" id="locationName" placeholder="E.g., Beijing, China" />
+          <select v-model="form.locationName" id="locationName">
+            <option value="">Select a Province</option>
+            <option v-for="p in locationOptions" :key="p" :value="p">{{ p }}</option>
+          </select>
         </div>
         <div class="col">
           <label for="category">Category</label>
@@ -102,6 +105,7 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   createDraft,
   getCategories,
+  getProvinces,
   getHeritageTypeGroups,
   getOwnedResource,
   getTags,
@@ -127,6 +131,7 @@ const form = reactive({
 })
 
 const categories = ref([])
+const provinces = ref([])
 const availableTags = ref([])
 const heritageTypeGroups = ref([])
 const initialUploaderFiles = ref([])
@@ -145,6 +150,16 @@ const resourceId = computed(() => {
 })
 
 const isEditMode = computed(() => Number.isFinite(resourceId.value))
+const sortedProvinces = computed(() => {
+  return [...provinces.value].sort((a, b) => (a || '').localeCompare(b || ''))
+})
+const locationOptions = computed(() => {
+  const names = sortedProvinces.value
+  if (form.locationName && !names.includes(form.locationName)) {
+    return [form.locationName, ...names]
+  }
+  return names
+})
 
 const hasPendingUploads = computed(() => {
   const files = uploaderRef.value?.uploadedFiles || []
@@ -172,15 +187,19 @@ function resetForm() {
 }
 
 async function loadOptions() {
-  const [catRes, tagsRes, typeRes] = await Promise.all([
+  const [catRes, tagsRes, typeRes, provinceRes] = await Promise.all([
     getCategories(),
     getTags(),
     getHeritageTypeGroups(),
+    getProvinces(),
   ])
 
   if (catRes.data.code === 200) categories.value = catRes.data.data
   if (tagsRes.data.code === 200) availableTags.value = tagsRes.data.data
   if (typeRes.data.code === 200) heritageTypeGroups.value = typeRes.data.data
+  if (provinceRes.data.code === 200) {
+    provinces.value = (provinceRes.data.data || []).map((p) => p.name).filter(Boolean)
+  }
 }
 
 async function loadOwnedDraft() {

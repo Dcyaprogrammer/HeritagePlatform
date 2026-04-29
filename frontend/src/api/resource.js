@@ -22,6 +22,8 @@ export const getCategories = () => api.get('/public/categories')
 
 export const getTags = () => api.get('/public/tags')
 
+export const getProvinces = () => api.get('/public/provinces')
+
 export const getHeritageTypeGroups = () => api.get('/public/heritage-type-groups')
 
 export const getPublicResources = (params) => api.get('/public/resources', { params })

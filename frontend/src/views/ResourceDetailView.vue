@@ -197,9 +197,9 @@ function formatDate(iso) {
   font-size: 0.75rem;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
-  background: #1d4ed8;
-  color: #ffffff;
-  border: none;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface) 84%);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border) 78%);
   font-weight: 500;
 }
 .prose {

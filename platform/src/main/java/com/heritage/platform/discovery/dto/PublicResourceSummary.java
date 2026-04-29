@@ -2,6 +2,7 @@ package com.heritage.platform.discovery.dto;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /*
  * 大厅列表里每条已通过审核资源的摘要字段。
@@ -26,6 +27,7 @@ public class PublicResourceSummary {
 	private String heritageTypeCode;
 	private String heritageTypeLabel;
 	private String coverUrl;
+	private List<NamedRow> tags;
 
 	public String getCoverUrl() {
 		return coverUrl;
@@ -161,5 +163,13 @@ public class PublicResourceSummary {
 
 	public void setHeritageTypeLabel(String heritageTypeLabel) {
 		this.heritageTypeLabel = heritageTypeLabel;
+	}
+
+	public List<NamedRow> getTags() {
+		return tags;
+	}
+
+	public void setTags(List<NamedRow> tags) {
+		this.tags = tags;
 	}
 }
