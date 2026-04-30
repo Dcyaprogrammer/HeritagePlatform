@@ -21,10 +21,8 @@ public interface HeritageUserRepository extends JpaRepository<HeritageUser, Long
 
 	boolean existsByEmail(String email);
 
-	/**
-	 * Find users by username containing keyword (case insensitive)
-	 * 根据用户名包含的关键词查询用户（不区分大小写）
-	 */
+	
+	//根据用户名包含的关键词查询用户（不区分大小写）
 	Page<HeritageUser> findByUsernameContainingIgnoreCase(String keyword, Pageable pageable);
 
 	Page<HeritageUser> findByRolesContaining(String role, Pageable pageable);

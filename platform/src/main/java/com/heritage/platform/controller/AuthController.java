@@ -11,12 +11,15 @@ import com.heritage.platform.model.HeritageUser;
 import com.heritage.platform.repository.HeritageUserRepository;
 import com.heritage.platform.service.AuthService;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -69,6 +72,8 @@ public class AuthController {
         return ApiResponse.success(userInfo);
     }
 
+
+    //pbi4
     @PostMapping("/forgot-password")
     public ApiResponse<Void> forgotPassword(@RequestBody ForgotPasswordRequest req) {
         authService.forgotPassword(req);
@@ -79,5 +84,33 @@ public class AuthController {
     public ApiResponse<Void> resetPassword(@RequestBody ResetPasswordRequest req) {
         authService.resetPassword(req);
         return ApiResponse.success("Password reset successful, please login with new password", null);
+    }
+
+
+
+
+
+    //pbi4，前端接口
+    @GetMapping("/reset-password")
+    public ApiResponse<Map<String, Object>> validateResetToken(@RequestParam String token) {
+        
+        
+        try{
+            //       缺验证token有效
+            //token验证：
+            boolean isValid= authService.validateResetToken(token);
+            if(!isValid){
+                return ApiResponse.error(400, "Invalid or expired reset token");
+            }
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("token", token);
+            data.put("valid", true);
+            
+            return ApiResponse.success("Token is valid", data);
+        }catch  (Exception e){//////待修复
+            //log.error("Failed to validate reset token: {}", token, e);
+            return ApiResponse.error(500, "Token validation failed");
+        }
     }
 }

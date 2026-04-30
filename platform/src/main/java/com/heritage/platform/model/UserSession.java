@@ -1,3 +1,6 @@
+//pbi5multisession
+
+
 package com.heritage.platform.model;
 
 import jakarta.persistence.*;
@@ -12,9 +15,9 @@ public class UserSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long userId;          // 关联用户ID
-    private String tokenJti;      // JWT的唯一标识 (JTI)
-    private String ipAddress;     // 登录IP
-    private String deviceInfo;    // 设备信息 (从User-Agent解析)
+    private Long userId;
+    private String tokenJti;
+    private String ipAddress;
+    private String deviceInfo;
     private LocalDateTime loginTime;
 }
