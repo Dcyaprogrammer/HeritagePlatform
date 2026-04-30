@@ -3,31 +3,39 @@ package com.heritage.platform.service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Service;
 
 import com.heritage.platform.model.HeritageUser;
 import com.heritage.platform.model.HeritageResource;
+import com.heritage.platform.model.ReviewAction;
+import com.heritage.platform.model.ReviewLog;
 import com.heritage.platform.model.ResourceStatus;
 import com.heritage.platform.repository.HeritageResourceRepository;
 import com.heritage.platform.repository.HeritageUserRepository;
+import com.heritage.platform.repository.ReviewLogRepository;
 import com.heritage.platform.web.ResourceDetail;
 import com.heritage.platform.web.ReviewController.PendingItem;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ReviewService {
     private final HeritageResourceRepository resources;
     private final HeritageUserRepository users;
+    private final ReviewLogRepository reviewLogs;
 
-    public ReviewService(HeritageResourceRepository resources, HeritageUserRepository users) {
+    public ReviewService(HeritageResourceRepository resources, HeritageUserRepository users, ReviewLogRepository reviewLogs) {
         this.resources = resources;
         this.users = users;
+        this.reviewLogs = reviewLogs;
     }
 
+    @Transactional(readOnly = true)
     public List<PendingItem> listPending() {
         Instant staleThreshold = Instant.now().minus(3, ChronoUnit.DAYS);
 
@@ -37,7 +45,7 @@ public class ReviewService {
         List<HeritageResource> pending = resources.findByStatusOrderBySubmittedAtDesc(ResourceStatus.PENDING_REVIEW);
 
         for(HeritageResource r : pending){
-            boolean isStale = r.getSubmittedAt().isBefore(staleThreshold);
+            boolean isStale = r.getSubmittedAt() != null && r.getSubmittedAt().isBefore(staleThreshold);
             PendingItem p = toPendingItem(r, isStale);
             if(isStale){
                 stale.add(p);
@@ -67,6 +75,7 @@ public class ReviewService {
         return p;
     }
 
+    @Transactional(readOnly = true)
     public ResourceDetail getDetail(Long id) {
         HeritageResource r = resources.findById(id).orElse(null);
         if(r == null){
@@ -77,10 +86,45 @@ public class ReviewService {
         d.id = r.getId();
         d.title = r.getTitle();
         d.category = r.getCategory();
+        d.locationName = r.getLocationName();
+        d.description = r.getDescription();
+        d.copyrightDeclaration = r.getCopyrightDeclaration();
         d.submittedAt = r.getSubmittedAt();
         d.version = r.getVersion();
         d.status = r.getStatus().name();
         d.rejectionReason = r.getRejectionReason();
+        if (r.getSubmitter() != null) {
+            d.submitterName = r.getSubmitter().getDisplayName() != null
+                    ? r.getSubmitter().getDisplayName()
+                    : r.getSubmitter().getUsername();
+        }
+
+        List<Map<String, Object>> tags = new ArrayList<>();
+        r.getTags().forEach(tag -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", tag.getId());
+            item.put("name", tag.getName());
+            tags.add(item);
+        });
+        d.tags = tags;
+
+        List<Map<String, Object>> attachments = new ArrayList<>();
+        r.getAttachments().forEach(attachment -> {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", attachment.getId());
+            item.put("display_name", attachment.getDisplayName());
+            item.put("stored_name", attachment.getStoredName());
+            item.put("file_path", attachment.getFilePath());
+            item.put("file_type", attachment.getFileType());
+            item.put("file_size", attachment.getFileSize());
+            item.put("displayName", attachment.getDisplayName());
+            item.put("storedName", attachment.getStoredName());
+            item.put("filePath", attachment.getFilePath());
+            item.put("fileType", attachment.getFileType());
+            item.put("fileSize", attachment.getFileSize());
+            attachments.add(item);
+        });
+        d.attachments = attachments;
 
 
         return d;
@@ -109,6 +153,7 @@ public class ReviewService {
         r.setRejectionReason(null);
 
         resources.save(r);
+        writeReviewLog(r, reviewer, ReviewAction.APPROVED, null);
     }
 
     @Transactional
@@ -135,5 +180,20 @@ public class ReviewService {
         r.setRejectionReason(reason.trim());
 
         resources.save(r);
+        writeReviewLog(r, reviewer, ReviewAction.REJECTED, reason.trim());
+    }
+
+    private void writeReviewLog(HeritageResource resource, HeritageUser reviewer, ReviewAction action, String reason) {
+        if (reviewer == null) {
+            return;
+        }
+
+        ReviewLog log = new ReviewLog();
+        log.setResource(resource);
+        log.setReviewer(reviewer);
+        log.setAction(action);
+        log.setReason(reason);
+        log.setOperatedAt(resource.getReviewedAt() == null ? Instant.now() : resource.getReviewedAt());
+        reviewLogs.save(log);
     }
 }

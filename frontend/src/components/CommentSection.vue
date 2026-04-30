@@ -1,6 +1,6 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { postComment } from '../api/mockData.js'
+import { computed, ref, watch } from 'vue'
+import { addComment } from '../api/resource.js'
 
 const props = defineProps({
   resourceId: Number,
@@ -11,12 +11,16 @@ const props = defineProps({
 })
 
 const comments = ref([...(props.initialComments || [])])
+
+watch(() => props.initialComments, (newVal) => {
+  comments.value = [...(newVal || [])]
+}, { deep: true })
 const draft = ref('')
 const submitting = ref(false)
 
 const sorted = computed(() =>
   [...comments.value].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   ),
 )
 
@@ -40,9 +44,13 @@ async function submit() {
   if (!text) return
   submitting.value = true
   try {
-    const next = await postComment(props.resourceId, props.currentUserId, text, props.currentUserName)
-    comments.value = [next, ...comments.value]
-    draft.value = ''
+    const res = await addComment(props.resourceId, text)
+    if (res.data.code === 200) {
+      comments.value = [res.data.data, ...comments.value]
+      draft.value = ''
+    }
+  } catch (error) {
+    console.error('Failed to post comment:', error)
   } finally {
     submitting.value = false
   }
@@ -81,7 +89,7 @@ async function submit() {
       <li v-for="c in sorted" :key="c.id" class="item">
         <div class="meta">
           <span class="author">{{ c.authorName }}</span>
-          <time class="time" :datetime="c.created_at">{{ formatTime(c.created_at) }}</time>
+          <time class="time" :datetime="c.createdAt">{{ formatTime(c.createdAt) }}</time>
         </div>
         <p class="content">{{ c.content }}</p>
       </li>

@@ -13,6 +13,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 @Entity
@@ -35,11 +36,18 @@ public class ReviewLog {
 	@Column(nullable = false, length = 16)
 	private ReviewAction action;
 
-	@Column(length = 4000)
+	@Column(name = "feedback_comment", length = 4000)
 	private String reason;
 
-	@Column(nullable = false)
+	@Column(name = "operated_at", nullable = false)
 	private Instant operatedAt;
+
+	@PrePersist
+	private void initOperatedAt() {
+		if (this.operatedAt == null) {
+			this.operatedAt = Instant.now();
+		}
+	}
 
 	public Long getId() {
 		return id;

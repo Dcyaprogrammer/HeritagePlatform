@@ -118,19 +118,21 @@
         autoplay
       ></video>
 
-      <!-- PDF preview (embedded) -->
+      <!-- PDF preview (embedded) — iframe cannot send Bearer token; blob URL or fetched blob avoids 401 -->
       <div
         v-else-if="previewFile.name && previewFile.name.toLowerCase().endsWith('.pdf')"
         class="modal-pdf"
       >
         <iframe
-          v-if="previewFile.previewUrl"
-          :src="previewFile.previewUrl"
+          v-if="pdfModalSrc"
+          :src="pdfModalSrc"
           class="modal-iframe"
           frameborder="0"
+          title="PDF preview"
         ></iframe>
+        <div v-else-if="pdfModalLoading" class="modal-loading">Loading PDF…</div>
         <div v-else class="modal-error">
-          <p>Cannot preview PDF</p>
+          <p>Can not preview PDF</p>
           <a href="#" @click.prevent="downloadFile(previewFile)">Download</a>
         </div>
       </div>
@@ -175,8 +177,15 @@
 </template>
 
 <script setup>
-import { ref, reactive } from "vue";
+import { reactive, ref, watch } from "vue";
 import axios from "axios";
+
+const props = defineProps({
+  initialFiles: {
+    type: Array,
+    default: () => [],
+  },
+});
 
 const uploadedFiles = ref([]);
 const errorMessage = ref("");
@@ -184,6 +193,45 @@ const fileInput = ref(null);
 
 // Stable per-item id for v-for keys (independent of array position)
 let nextFileId = 0;
+
+const createExistingFileItem = (file) => {
+  const previewUrl =
+    file.previewUrl || (file.id ? `/api/attachments/${file.id}/preview` : "");
+  const downloadUrl =
+    file.downloadUrl || (file.id ? `/api/attachments/${file.id}/download` : "");
+
+  return reactive({
+    id: ++nextFileId,
+    name: file.displayName || file.name || "Attachment",
+    displayName: file.displayName || file.name || "Attachment",
+    size: file.fileSize || file.size || 0,
+    isImage: typeof file.fileType === "string" && file.fileType === "image",
+    isVideo: typeof file.fileType === "string" && file.fileType === "video",
+    // Existing files must use the backend preview endpoint. The raw /uploads/... path
+    // is not proxied by Vite during local dev, so edit-mode previews would 404.
+    preview: previewUrl || file.filePath || file.preview || "",
+    rawFile: null,
+    uploading: false,
+    uploadProgress: 0,
+    mergingPhase: false,
+    uploaded: true,
+    uploadError: false,
+    attachmentId: file.id ?? null,
+    uploadController: null,
+    uploadPromise: null,
+    previewUrl,
+    downloadUrl,
+    _removed: false,
+  });
+};
+
+watch(
+  () => props.initialFiles,
+  (files) => {
+    uploadedFiles.value = (files || []).map(createExistingFileItem);
+  },
+  { immediate: true },
+);
 
 // Trigger hidden file input dialog
 const triggerFileInput = () => {
@@ -304,8 +352,16 @@ const uploadSingle = async (file, fileItem) => {
   formData.append("file", file);
 
   try {
+    // Do NOT set Content-Type for FormData — the browser must add the multipart boundary.
+    // A bare "multipart/form-data" breaks parsing and yields an empty MultipartFile (0 bytes on disk).
+    const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const response = await axios.post("/api/attachments/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers,
       timeout: 180000,
       signal: fileItem.uploadController?.signal,
       onUploadProgress: (progressEvent) => {
@@ -351,7 +407,14 @@ const uploadByChunks = async (file, fileItem) => {
     formData.append("fileName", file.name);
     formData.append("chunkSize", CHUNK_SIZE);
 
+    const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     await axios.post("/api/attachments/upload/chunk", formData, {
+      headers,
       timeout: 60000,
       signal: fileItem.uploadController?.signal,
     });
@@ -398,8 +461,15 @@ const uploadByChunks = async (file, fileItem) => {
     fileItem.mergingPhase = true;
     fileItem.uploadProgress = 100;
     const verifyTimeout = Math.max(60000, Math.ceil(file.size / (1024 * 1024)) * 30);
+    const token = localStorage.getItem('token');
+    const headers = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     const mergeResp = await axios.post("/api/attachments/upload/merge", null, {
       params: { uploadId, fileName: file.name, totalChunks, chunkSize: CHUNK_SIZE, fileHash },
+      headers,
       timeout: verifyTimeout,
       signal: fileItem.uploadController?.signal,
     });
@@ -474,7 +544,12 @@ const removeFile = async (file) => {
   // If the upload completed before/despite the abort, clean up the server-side record.
   if (file.attachmentId) {
     try {
-      await axios.delete(`/api/attachments/${file.attachmentId}`);
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      await axios.delete(`/api/attachments/${file.attachmentId}`, { headers });
     } catch (error) {
       console.error("Delete failed", error);
       // If the row is still in the list, surface the error and keep the row so user can retry.
@@ -486,8 +561,9 @@ const removeFile = async (file) => {
     }
   }
 
+  revokeFetchedPdfBlob(file);
   // Release preview URL
-  if (file.preview) {
+  if (file.preview?.startsWith("blob:")) {
     URL.revokeObjectURL(file.preview);
   }
 
@@ -498,32 +574,201 @@ const removeFile = async (file) => {
 
 // Preview modal
 const previewFile = ref(null);
+/** Resolved src for PDF iframe (blob: or fetched blob URL) */
+const pdfModalSrc = ref("");
+const pdfModalLoading = ref(false);
+let pdfFetchSeq = 0;
 
-const openPreview = (file) => {
+const revokeFetchedPdfBlob = (file) => {
+  if (!file?.pdfModalBlobUrl) return;
+  try {
+    URL.revokeObjectURL(file.pdfModalBlobUrl);
+  } catch (_) {
+    /* noop */
+  }
+  delete file.pdfModalBlobUrl;
+};
+
+const openPreview = async (file) => {
+  if (previewFile.value && previewFile.value !== file) {
+    revokeFetchedPdfBlob(previewFile.value);
+  }
   previewFile.value = file;
+  pdfModalSrc.value = "";
+  pdfModalLoading.value = false;
+
+  const name = file.name?.toLowerCase?.() ?? "";
+  if (!name.endsWith(".pdf")) return;
+
+  if (typeof file.preview === "string" && file.preview.startsWith("blob:")) {
+    pdfModalSrc.value = file.preview;
+    return;
+  }
+
+  const url =
+    file.previewUrl ||
+    (typeof file.preview === "string" && file.preview.startsWith("/api")
+      ? file.preview
+      : "");
+  if (!url) return;
+
+  const seq = ++pdfFetchSeq;
+  pdfModalLoading.value = true;
+  try {
+    const token = localStorage.getItem("token");
+    const headers = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    const { data } = await axios.get(url, { responseType: "blob", headers });
+    if (seq !== pdfFetchSeq || previewFile.value !== file) return;
+    revokeFetchedPdfBlob(file);
+    file.pdfModalBlobUrl = URL.createObjectURL(data);
+    pdfModalSrc.value = file.pdfModalBlobUrl;
+  } catch (e) {
+    console.error("PDF preview fetch failed", e);
+  } finally {
+    if (previewFile.value === file) pdfModalLoading.value = false;
+  }
 };
 
 const closePreview = () => {
+  revokeFetchedPdfBlob(previewFile.value);
   previewFile.value = null;
+  pdfModalSrc.value = "";
+  pdfModalLoading.value = false;
+  pdfFetchSeq++;
 };
 
-const downloadFile = (file) => {
+/** ZIP / OOXML (.docx) starts with PK */
+const DOCX_ZIP = [0x50, 0x4b];
+/** Legacy OLE .doc */
+const DOC_OLE = [0xd0, 0xcf, 0x11, 0xe0];
+
+const guessDownloadMime = (name) => {
+  const n = (name || "").toLowerCase();
+  if (n.endsWith(".docx")) {
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  }
+  if (n.endsWith(".doc")) return "application/msword";
+  return "application/octet-stream";
+};
+
+/**
+ * Spot server error bodies saved as .doc/.docx (JSON/HTML/text) vs real Office payloads.
+ */
+const validateOfficeDownloadBlob = async (blob, displayName) => {
+  const n = (displayName || "").toLowerCase();
+  if (!n.endsWith(".doc") && !n.endsWith(".docx")) return { ok: true };
+
+  if (blob.size === 0) return { ok: false, message: "Downloaded file is empty" };
+
+  const head = new Uint8Array(await blob.slice(0, 8).arrayBuffer());
+
+  if (n.endsWith(".docx")) {
+    if (head[0] === DOCX_ZIP[0] && head[1] === DOCX_ZIP[1]) return { ok: true };
+    const probe = await blob.slice(0, 2000).text();
+    if (probe.trimStart().startsWith("{")) {
+      try {
+        const j = JSON.parse(probe);
+        return {
+          ok: false,
+          message: j.message || j.error || "Server returned JSON instead of a DOCX file",
+        };
+      } catch {
+        return { ok: false, message: "Server returned invalid JSON instead of a DOCX file" };
+      }
+    }
+    if (probe.trimStart().startsWith("<")) {
+      return { ok: false, message: "Server returned HTML instead of a DOCX file (check login / network)" };
+    }
+    return { ok: false, message: "Download is not a valid DOCX (PK header missing). The file on server may be corrupt." };
+  }
+
+  if (n.endsWith(".doc")) {
+    let ole = true;
+    for (let i = 0; i < DOC_OLE.length; i++) {
+      if (head[i] !== DOC_OLE[i]) {
+        ole = false;
+        break;
+      }
+    }
+    if (ole) return { ok: true };
+    const probe = await blob.slice(0, 200).text();
+    if (probe.trimStart().startsWith("{") || probe.trimStart().startsWith("<")) {
+      return { ok: false, message: "Server returned an error body instead of a Word file" };
+    }
+    return { ok: false, message: "Download does not look like a valid .doc file" };
+  }
+
+  return { ok: true };
+};
+
+const downloadFile = async (file) => {
   if (!file?.attachmentId) {
     errorMessage.value = "File not uploaded yet, cannot download";
     return;
   }
 
-  // Use a plain anchor click so the browser streams the response straight to disk.
-  // Buffering multi-GB downloads as a Blob via axios crashes the tab; the backend already
-  // sets Content-Disposition: attachment, and the endpoint is unauthenticated so no headers
-  // need to be attached. (If auth headers become required later, switch to fetch + streamsaver.)
-  const link = document.createElement("a");
-  link.href = file.downloadUrl || `/api/attachments/${file.attachmentId}/download`;
-  link.download = file.displayName || file.name || "";
-  link.rel = "noopener";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  const url = file.downloadUrl || `/api/attachments/${file.attachmentId}/download`;
+  const token = localStorage.getItem("token");
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+
+  try {
+    const res = await fetch(url, { method: "GET", headers });
+
+    if (!res.ok) {
+      const ct = res.headers.get("content-type") || "";
+      let msg = `Download failed (${res.status})`;
+      if (ct.includes("application/json")) {
+        try {
+          const j = await res.json();
+          msg = j.message || j.error || msg;
+        } catch {
+          /* noop */
+        }
+      } else {
+        const t = await res.text();
+        if (t && t.length) msg = t.length > 400 ? `${t.slice(0, 400)}…` : t;
+      }
+      if (res.status === 401) msg = "Please log in to download";
+      if (res.status === 403) msg = "No permission to download this file";
+      errorMessage.value = msg;
+      setTimeout(() => {
+        errorMessage.value = "";
+      }, 8000);
+      return;
+    }
+
+    const buf = await res.arrayBuffer();
+    const name = file.displayName || file.name || "download";
+    const mime = guessDownloadMime(name);
+    const blob = new Blob([buf], { type: mime });
+
+    const validated = await validateOfficeDownloadBlob(blob, name);
+    if (!validated.ok) {
+      errorMessage.value = validated.message;
+      setTimeout(() => {
+        errorMessage.value = "";
+      }, 8000);
+      return;
+    }
+
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = name;
+    link.rel = "noopener";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+  } catch (e) {
+    console.error("downloadFile", e);
+    errorMessage.value = e?.message || "Download failed";
+    setTimeout(() => {
+      errorMessage.value = "";
+    }, 5000);
+  }
 };
 
 // Format file size in bytes to human-readable string
@@ -532,6 +777,10 @@ const formatFileSize = (bytes) => {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 };
+
+defineExpose({
+  uploadedFiles,
+});
 </script>
 
 <style scoped>
@@ -717,6 +966,16 @@ const formatFileSize = (bytes) => {
   max-width: 90vw;
   max-height: 70vh;
   border: none;
+}
+
+.modal-loading {
+  min-width: 200px;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 14px;
 }
 
 .modal-pdf,

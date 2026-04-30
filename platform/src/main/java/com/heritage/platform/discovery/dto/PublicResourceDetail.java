@@ -24,6 +24,33 @@ public class PublicResourceDetail {
 	private String provinceName;
 	private String heritageTypeCode;
 	private String heritageTypeLabel;
+	private String copyrightDeclaration;
+	private String contributorName;
+	private List<java.util.Map<String, Object>> attachments;
+
+	public String getCopyrightDeclaration() {
+		return copyrightDeclaration;
+	}
+
+	public void setCopyrightDeclaration(String copyrightDeclaration) {
+		this.copyrightDeclaration = copyrightDeclaration;
+	}
+
+	public String getContributorName() {
+		return contributorName;
+	}
+
+	public void setContributorName(String contributorName) {
+		this.contributorName = contributorName;
+	}
+
+	public List<java.util.Map<String, Object>> getAttachments() {
+		return attachments;
+	}
+
+	public void setAttachments(List<java.util.Map<String, Object>> attachments) {
+		this.attachments = attachments;
+	}
 
 	public Long getId() {
 		return id;

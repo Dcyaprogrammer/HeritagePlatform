@@ -2,10 +2,16 @@ package com.heritage.platform.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,11 +21,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.heritage.platform.dto.ResourceDTO;
 import com.heritage.platform.dto.ResourceDraftRequest;
 import com.heritage.platform.model.Attachment;
+import com.heritage.platform.model.Category;
 import com.heritage.platform.model.HeritageResource;
 import com.heritage.platform.model.HeritageUser;
 import com.heritage.platform.model.ResourceStatus;
 import com.heritage.platform.model.Tag;
 import com.heritage.platform.repository.AttachmentRepository;
+import com.heritage.platform.repository.CategoryRepository;
 import com.heritage.platform.repository.HeritageResourceRepository;
 import com.heritage.platform.repository.HeritageUserRepository;
 import com.heritage.platform.repository.TagRepository;
@@ -39,6 +47,9 @@ public class ResourceService {
     @Autowired
     private AttachmentRepository attachmentRepository;
 
+    @Autowired
+    private CategoryRepository categoryRepository;
+
     @Transactional
     public ResourceDTO createDraft(ResourceDraftRequest request, String username) {
         HeritageUser submitter = userRepository.findByUsername(username)
@@ -55,6 +66,36 @@ public class ResourceService {
 
         HeritageResource savedResource = resourceRepository.save(resource);
         return convertToDTO(savedResource);
+    }
+
+    @Transactional(readOnly = true)
+    public ResourceDTO getOwnedResource(Long id, String username) {
+        HeritageResource resource = resourceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Resource not found"));
+
+        if (!resource.getSubmitter().getUsername().equals(username)) {
+            throw new RuntimeException("Unauthorized: You can only view your own resources");
+        }
+
+        return convertToDTO(resource);
+    }
+
+    @Transactional
+    public void deleteOwnedResource(Long id, String username) {
+        HeritageResource resource = resourceRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Resource not found"));
+
+        if (!resource.getSubmitter().getUsername().equals(username)) {
+            throw new RuntimeException("Unauthorized: You can only delete your own resources");
+        }
+
+        if (resource.getStatus() == ResourceStatus.APPROVED
+                || resource.getStatus() == ResourceStatus.PENDING_REVIEW) {
+            throw new RuntimeException("Approved or pending-review resources cannot be deleted");
+        }
+
+        deleteAttachmentFiles(resource);
+        resourceRepository.delete(resource);
     }
 
 
@@ -110,26 +151,95 @@ public class ResourceService {
         resource.setDescription(request.getDescription());
         resource.setLocationName(request.getLocationName());
         resource.setHeritageTypeCode(request.getHeritageTypeCode());
-        resource.setCategory(request.getCategory());
-        resource.setCategoryId(request.getCategoryId());
+        Integer categoryId = request.getCategoryId();
+        if (categoryId == null) {
+            throw new RuntimeException("categoryId is required");
+        }
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new RuntimeException("Invalid categoryId"));
+        resource.setCategoryId(category.getId());
+        // keep legacy category string field for existing DTO/review list compatibility
+        resource.setCategory(category.getName());
         resource.setCopyrightDeclaration(request.getCopyrightDeclaration());
     }
 
     private void handleTagsAndAttachments(ResourceDraftRequest request, HeritageResource resource) {
         resource.getTags().clear();
         if (request.getTagIds() != null && !request.getTagIds().isEmpty()) {
-            List<Tag> tags = tagRepository.findAllById(request.getTagIds());
+            List<Long> tagIds = request.getTagIds().stream().distinct().toList();
+            List<Tag> tags = tagRepository.findAllById(tagIds);
+            if (tags.size() != tagIds.size()) {
+                throw new RuntimeException("Invalid tagIds");
+            }
             for (Tag tag : tags) {
                 resource.addTag(tag);
             }
         }
 
-        resource.getAttachments().clear();
-        if (request.getAttachmentIds() != null && !request.getAttachmentIds().isEmpty()) {
-            List<Attachment> attachments = attachmentRepository.findAllById(request.getAttachmentIds());
-            for (Attachment attachment : attachments) {
-                attachment.setResource(resource);
-                resource.getAttachments().add(attachment);
+        List<Long> attachmentIds = request.getAttachmentIds() == null
+                ? List.of()
+                : request.getAttachmentIds().stream()
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+
+        Map<Long, Attachment> requestedAttachments = attachmentIds.isEmpty()
+                ? Map.of()
+                : attachmentRepository.findAllById(attachmentIds).stream()
+                        .collect(Collectors.toMap(Attachment::getId, Function.identity()));
+
+        if (requestedAttachments.size() != attachmentIds.size()) {
+            throw new RuntimeException("Invalid attachmentIds");
+        }
+
+        resource.getAttachments().removeIf(existing -> {
+            Long existingId = existing.getId();
+            boolean keep = existingId != null && requestedAttachments.containsKey(existingId);
+            if (!keep) {
+                existing.setResource(null);
+            }
+            return !keep;
+        });
+
+        Set<Long> currentAttachmentIds = resource.getAttachments().stream()
+                .map(Attachment::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
+
+        for (Long attachmentId : attachmentIds) {
+            if (currentAttachmentIds.contains(attachmentId)) {
+                continue;
+            }
+
+            Attachment attachment = requestedAttachments.get(attachmentId);
+            HeritageResource owner = attachment.getResource();
+            if (owner != null && owner.getId() != null && !owner.getId().equals(resource.getId())) {
+                throw new RuntimeException("Attachment does not belong to this resource");
+            }
+            HeritageUser uploader = attachment.getUploader();
+            if (uploader == null
+                    || resource.getSubmitter() == null
+                    || !Objects.equals(uploader.getId(), resource.getSubmitter().getId())) {
+                throw new RuntimeException("Attachment was uploaded by another user");
+            }
+
+            attachment.setResource(resource);
+            resource.getAttachments().add(attachment);
+        }
+    }
+
+    private void deleteAttachmentFiles(HeritageResource resource) {
+        for (Attachment attachment : resource.getAttachments()) {
+            String storedName = attachment.getStoredName();
+            if (storedName == null || storedName.isBlank()) {
+                continue;
+            }
+
+            Path filePath = Paths.get(System.getProperty("user.dir"), "uploads", storedName);
+            try {
+                Files.deleteIfExists(filePath);
+            } catch (java.io.IOException ignored) {
+                // Do not block resource deletion because of leftover files on disk.
             }
         }
     }

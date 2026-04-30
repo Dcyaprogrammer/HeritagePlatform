@@ -2,13 +2,12 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getFeedback, getReviewHistory, resubmitResource } from '../api/resource.js'
+import { getFeedback, getReviewHistory } from '../api/resource.js'
 
 const route = useRoute()
 const router = useRouter()
 
 const loading = ref(true)
-const resubmitting = ref(false)
 const feedback = ref(null)
 const history = ref([])
 
@@ -29,18 +28,8 @@ async function loadPage() {
   }
 }
 
-async function handleResubmit() {
-  resubmitting.value = true
-  try {
-    await resubmitResource(route.params.id)
-    ElMessage.success('Resource resubmitted successfully')
-    router.push('/resources/submissions')
-  } catch (error) {
-    console.error('Failed to resubmit from feedback page:', error)
-    ElMessage.error(error.response?.data?.message || 'Failed to resubmit resource')
-  } finally {
-    resubmitting.value = false
-  }
+function goToEdit() {
+  router.push(`/resources/${route.params.id}/edit`)
 }
 
 onMounted(() => {
@@ -56,7 +45,7 @@ onMounted(() => {
       </div>
       <div class="header-actions">
         <el-button @click="router.push('/resources/submissions')">Back to Submissions</el-button>
-        <el-button type="warning" :loading="resubmitting" @click="handleResubmit">Resubmit</el-button>
+        <el-button type="primary" @click="goToEdit">Edit Draft</el-button>
       </div>
     </div>
 

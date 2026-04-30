@@ -18,6 +18,7 @@ public class UserDTO {
 	private String bio;
 	private Set<String> roles;
 	private String contributorStatus;
+	private String contributorReason;
 	private LocalDateTime createdAt;
 
 	// Default constructor / 默认构造器
@@ -88,6 +89,14 @@ public class UserDTO {
 
 	public void setContributorStatus(String contributorStatus) {
 		this.contributorStatus = contributorStatus;
+	}
+
+	public String getContributorReason() {
+		return contributorReason;
+	}
+
+	public void setContributorReason(String contributorReason) {
+		this.contributorReason = contributorReason;
 	}
 
 	public LocalDateTime getCreatedAt() {

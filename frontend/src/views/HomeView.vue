@@ -1,13 +1,14 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { getToken, logout } from '../api/auth.js'
+import { getToken, logout, getStoredRoles } from '../api/auth.js'
 import ResourceCard from '../components/ResourceCard.vue'
-import { getApprovedResources } from '../api/mockData.js'
+import { getPublicResources } from '../api/resource.js'
 
-const allResources = ref(getApprovedResources())
+const allResources = ref([])
 const provinces = ref([])
 const heritageGroups = ref([])
+const dynasties = ref([])
 const list = ref([])
 const total = ref(0)
 const page = ref(0)
@@ -42,35 +43,32 @@ const categories = computed(() => {
 const categoryId = ref(null)
 
 const filteredResources = computed(() => {
-  const text = q.value.trim().toLowerCase()
-  return allResources.value.filter((r) => {
-    if (categoryId.value != null && r.category?.id !== categoryId.value) return false
-    if (!text) return true
-    const inTitle = (r.title || '').toLowerCase().includes(text)
-    const inDesc = (r.description || '').toLowerCase().includes(text)
-    const inTags = (r.tags || []).some((t) => (t.name || '').toLowerCase().includes(text))
-    const inLoc = (r.location_name ?? '').toLowerCase().includes(text)
-    return inTitle || inDesc || inTags || inLoc
-  })
+  return list.value
 })
 
 const isLoggedIn = ref(!!getToken())
-const isAdmin = ref(localStorage.getItem('role') === 'ADMIN')
-const isContributor = ref(localStorage.getItem('role') === 'CONTRIBUTOR' || localStorage.getItem('role') === 'ADMIN')
+const initialRoles = getStoredRoles()
+const isAdmin = ref(initialRoles.includes('ADMIN'))
+const isContributor = ref(initialRoles.includes('CONTRIBUTOR') || initialRoles.includes('ADMIN'))
 
 // Update on route change or when storage changes
 onMounted(() => {
   isLoggedIn.value = !!getToken()
-  isAdmin.value = localStorage.getItem('role') === 'ADMIN'
-  isContributor.value = localStorage.getItem('role') === 'CONTRIBUTOR' || localStorage.getItem('role') === 'ADMIN'
+  const r = getStoredRoles()
+  isAdmin.value = r.includes('ADMIN')
+  isContributor.value = r.includes('CONTRIBUTOR') || r.includes('ADMIN')
 })
 
 const goToAdmin = () => {
-  router.push('/admin/users')
+  router.push('/admin/resource-review')
 }
 
 const goToCreateResource = () => {
   router.push('/resources/create')
+}
+
+const goToSubmissions = () => {
+  router.push('/resources/submissions')
 }
 
 const goToProfile = () => {
@@ -215,41 +213,70 @@ const filterWatchKey = computed(() => {
 let autoSearchTimer = null
 
 async function loadMeta() {
-  const [d, p, h] = await Promise.all([
+  const [d, p, h, c] = await Promise.all([
     fetch('/api/public/dynasties'),
     fetch('/api/public/provinces'),
     fetch('/api/public/heritage-type-groups'),
+    fetch('/api/public/categories')
   ])
   const dj = await d.json()
   const pj = await p.json()
   const hj = await h.json()
+  const cj = await c.json()
   if (dj.code === 200) {
     dynasties.value = dj.data
   }
-
+  if (pj.code === 200) provinces.value = pj.data
+  if (hj.code === 200) heritageGroups.value = ensureHeritageOtherGroup(hj.data)
+  if (cj.code === 200) allResources.value = cj.data.map(cat => ({ category: { id: cat.id, name: cat.name } }))
 }
 
-function summaryLine(item) {
-  const parts = []
-  if (item.heritageTypeLabel) {
-    parts.push(item.heritageTypeLabel)
+async function search() {
+  loading.value = true
+  err.value = ''
+  try {
+    const params = {
+      page: page.value,
+      size: size.value
+    }
+    if (q.value) params.q = q.value
+    if (categoryId.value) params.categoryId = categoryId.value
+    
+    if (selectedDynastyCodes.value.size > 0) {
+      params.dynastyCode = Array.from(selectedDynastyCodes.value).join(',')
+    }
+    if (selectedProvinceCodes.value.size > 0) {
+      params.provinceCode = Array.from(selectedProvinceCodes.value).join(',')
+    }
+    if (selectedHeritageTypeCodes.value.size > 0) {
+      params.heritageTypeCode = Array.from(selectedHeritageTypeCodes.value).join(',')
+    }
+    if (eraFrom.value && eraTo.value) {
+      params.eraFrom = eraFrom.value
+      params.eraTo = eraTo.value
+    }
+
+    const res = await getPublicResources(params)
+    if (res.data.code === 200) {
+      list.value = res.data.data.items || []
+      total.value = res.data.data.total || 0
+    }
+  } catch (e) {
+    err.value = e.message || 'Failed to load resources'
+    console.error(e)
+  } finally {
+    loading.value = false
   }
-  if (item.dynastyName) {
-    parts.push(item.dynastyName)
-  }
-  if (item.provinceName) {
-    parts.push(item.provinceName)
-  }
-  if (item.categoryName) {
-    parts.push(item.categoryName)
-  }
-  if (item.locationName) {
-    parts.push(item.locationName)
-  }
-  return parts.length ? parts.join(' · ') : '—'
 }
+
+watch([q, categoryId], () => {
+  page.value = 0
+  search()
+})
 
 onMounted(() => {
+  loadMeta()
+  search()
 })
 </script>
 
@@ -261,6 +288,9 @@ onMounted(() => {
         <template v-if="isLoggedIn">
           <button v-if="isContributor" type="button" class="btn" @click="goToCreateResource">
             + Create Draft
+          </button>
+          <button v-if="isContributor" type="button" class="btn" @click="goToSubmissions">
+            My Submissions
           </button>
           <button v-if="isAdmin" type="button" class="btn primary" @click="goToAdmin">Admin Panel</button>
           <button type="button" class="btn" @click="goToProfile">Profile</button>

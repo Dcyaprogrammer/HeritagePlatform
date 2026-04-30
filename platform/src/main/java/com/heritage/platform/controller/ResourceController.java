@@ -25,6 +25,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,12 +51,28 @@ public class ResourceController {
 		return ApiResponse.success(dto);
 	}
 
+	@GetMapping("/{id}")
+	@PreAuthorize("hasRole('CONTRIBUTOR') or hasRole('ADMIN')")
+	public ApiResponse<ResourceDTO> getOwnedResource(@PathVariable Long id, Authentication authentication) {
+		String username = authentication.getName();
+		ResourceDTO dto = resourceService.getOwnedResource(id, username);
+		return ApiResponse.success(dto);
+	}
+
 	@PutMapping("/{id}")
 	@PreAuthorize("hasRole('CONTRIBUTOR') or hasRole('ADMIN')")
 	public ApiResponse<ResourceDTO> updateDraft(@PathVariable Long id, @RequestBody ResourceDraftRequest request, Authentication authentication) {
 		String username = authentication.getName();
 		ResourceDTO dto = resourceService.updateDraft(id, request, username);
 		return ApiResponse.success(dto);
+	}
+
+	@DeleteMapping("/{id}")
+	@PreAuthorize("hasRole('CONTRIBUTOR') or hasRole('ADMIN')")
+	public ApiResponse<Void> deleteOwnedResource(@PathVariable Long id, Authentication authentication) {
+		String username = authentication.getName();
+		resourceService.deleteOwnedResource(id, username);
+		return ApiResponse.success("Resource deleted successfully", null);
 	}
 
 	@PostMapping("/{id}/submit")
@@ -77,10 +94,10 @@ public class ResourceController {
 			boolean rejected = resource.getStatus() == ResourceStatus.REJECTED;
 			data.add(Map.of(
 					"id", resource.getId(),
-					"title", resource.getTitle(),
-					"category", resource.getCategory(),
-					"status", resource.getStatus().toString(),
-					"submittedAt", resource.getSubmittedAt().toString(),
+					"title", resource.getTitle() == null ? "" : resource.getTitle(),
+					"category", resource.getCategory() == null ? "" : resource.getCategory(),
+					"status", resource.getStatus() == null ? "" : resource.getStatus().toString(),
+					"submittedAt", resource.getSubmittedAt() == null ? "" : resource.getSubmittedAt().toString(),
 					"canViewFeedback", rejected,
 					"canResubmit", rejected));
 		}
@@ -91,18 +108,17 @@ public class ResourceController {
 	@GetMapping("/{id}/feedback")
 	public ApiResponse<Map<String, String>> getFeedback(@PathVariable Long id, Authentication authentication) {
 		HeritageResource resource = requireOwnedResource(id, authentication);
-		Optional<ReviewLog> log = reviewLogRepository.findFirstByResourceIdAndActionOrderByOperatedAtDesc(
-				resource.getId(),
-				ReviewAction.REJECTED);
+		ReviewLog reviewLog = findLatestRejectedLog(resource.getId()).orElse(null);
+		String reason = reviewLog != null ? reviewLog.getReason() : resource.getRejectionReason();
+		Instant operatedAt = reviewLog != null ? reviewLog.getOperatedAt() : resource.getReviewedAt();
 
-		if (log.isEmpty()) {
-			throw new RuntimeException("No rejection feedback found");
+		if ((reason == null || reason.isBlank()) && operatedAt == null) {
+			return ApiResponse.success(null);
 		}
 
-		ReviewLog reviewLog = log.get();
 		return ApiResponse.success(Map.of(
-				"reason", reviewLog.getReason() == null ? "" : reviewLog.getReason(),
-				"operatedAt", reviewLog.getOperatedAt().toString()));
+				"reason", reason == null ? "" : reason,
+				"operatedAt", operatedAt == null ? "" : operatedAt.toString()));
 	}
 
 	@PostMapping("/{id}/resubmit")
@@ -140,12 +156,25 @@ public class ResourceController {
 
 		for (ReviewLog log : logs) {
 			data.add(Map.of(
-					"action", log.getAction().toString(),
+					"action", log.getAction().toDisplayValue(),
 					"reason", log.getReason() == null ? "" : log.getReason(),
 					"operatedAt", log.getOperatedAt().toString()));
 		}
 
+		if (data.isEmpty() && (resource.getReviewedAt() != null || resource.getRejectionReason() != null)) {
+			data.add(Map.of(
+					"action", resource.getStatus() == ResourceStatus.APPROVED ? "APPROVED" : "REJECTED",
+					"reason", resource.getRejectionReason() == null ? "" : resource.getRejectionReason(),
+					"operatedAt", resource.getReviewedAt() == null ? "" : resource.getReviewedAt().toString()));
+		}
+
 		return ApiResponse.success(data);
+	}
+
+	private Optional<ReviewLog> findLatestRejectedLog(Long resourceId) {
+		return reviewLogRepository.findByResourceIdOrderByOperatedAtDesc(resourceId).stream()
+				.filter(log -> log.getAction() != null && log.getAction().isRejected())
+				.findFirst();
 	}
 
 	private HeritageResource requireOwnedResource(Long id, Authentication authentication) {

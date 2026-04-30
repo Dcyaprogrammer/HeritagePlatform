@@ -14,7 +14,8 @@ INSERT IGNORE INTO heritage_users (id, username, password_hash, email, display_n
 INSERT IGNORE INTO heritage_user_roles (user_id, role) VALUES 
 (1, 'ADMIN'),
 (2, 'ADMIN'),
-(3, 'CONTRIBUTOR');
+(3, 'CONTRIBUTOR'),
+(3, 'VIEWER');
 
 -- 4. 插入分类 (Categories)
 INSERT IGNORE INTO categories (id, name, description, created_at) VALUES
@@ -31,11 +32,11 @@ INSERT IGNORE INTO tags (id, name, created_at) VALUES
 (5, 'proverbs', NOW());
 
 -- 6. 插入资源 (Resources) - 包含不同状态供不同组员测试
-INSERT IGNORE INTO resources (id, title, description, location_name, copyright_declaration, status, contributor_id, category_id, created_at, updated_at) VALUES
-(1, 'Oral history excerpt: Pingjiang Road historic district', 'Local chronicles from the Han dynasty, detailing the water town lifestyle.', 'Suzhou, China', 'CC BY-NC-SA 4.0', 'APPROVED', 3, 3, NOW(), NOW()),
-(2, 'Traditional indigo resist-dyed cloth (lan yin hua bu)', 'Tongxiang blue calico uses plant indigo. This resource details the traditional dyeing patterns.', 'Tongxiang, Jiaxing', 'Educational use only', 'PENDING_REVIEW', 3, 2, NOW(), NOW()),
-(3, 'Coastal tide and weather proverbs', 'A community-compiled set of more than fifty proverbs about the tides and weather near the coast.', 'Haining, Zhejiang', 'Community share-alike', 'REJECTED', 3, 1, NOW(), NOW()),
-(4, 'Draft: Old city wall restoration', 'Initial notes on the old city wall structure before the 2020 restoration project.', 'Nanjing, Jiangsu', 'None', 'DRAFT', 3, 3, NOW(), NOW());
+INSERT IGNORE INTO resources (id, title, description, location_name, copyright_declaration, status, contributor_id, category_id, created_at, updated_at, submitted_at) VALUES
+(1, 'Oral history excerpt: Pingjiang Road historic district', 'Local chronicles from the Han dynasty, detailing the water town lifestyle.', 'Suzhou, China', 'CC BY-NC-SA 4.0', 'APPROVED', 3, 3, NOW(), NOW(), NOW()),
+(2, 'Traditional indigo resist-dyed cloth (lan yin hua bu)', 'Tongxiang blue calico uses plant indigo. This resource details the traditional dyeing patterns.', 'Tongxiang, Jiaxing', 'Educational use only', 'PENDING_REVIEW', 3, 2, NOW(), NOW(), NOW()),
+(3, 'Coastal tide and weather proverbs', 'A community-compiled set of more than fifty proverbs about the tides and weather near the coast.', 'Haining, Zhejiang', 'Community share-alike', 'REJECTED', 3, 1, NOW(), NOW(), NOW()),
+(4, 'Draft: Old city wall restoration', 'Initial notes on the old city wall structure before the 2020 restoration project.', 'Nanjing, Jiangsu', 'None', 'DRAFT', 3, 3, NOW(), NOW(), NULL);
 
 -- 7. 绑定资源标签 (Resource Tags)
 INSERT IGNORE INTO resource_tags (resource_id, tag_id) VALUES 
@@ -44,6 +45,11 @@ INSERT IGNORE INTO resource_tags (resource_id, tag_id) VALUES
 (3, 4), (3, 5);
 
 -- 8. 插入审核日志 (Review Logs) - 供组员6/7测试查看历史记录
-INSERT IGNORE INTO review_logs (id, resource_id, reviewer_id, action, feedback_comment, created_at) VALUES
-(1, 1, 2, 'APPROVE', 'Looks great, the information is accurate. Approved for publishing.', NOW()),
-(2, 3, 2, 'REJECT', 'Please provide more reliable sources and references for these proverbs before resubmitting.', NOW());
+INSERT IGNORE INTO review_logs (id, resource_id, reviewer_id, action, reason, operated_at) VALUES
+(1, 1, 2, 'APPROVED', 'Looks great, the information is accurate. Approved for publishing.', NOW()),
+(2, 3, 2, 'REJECTED', 'Please provide more reliable sources and references for these proverbs before resubmitting.', NOW());
+
+-- 9. 插入测试评论 (Comments) - 供评论系统测试
+INSERT IGNORE INTO comments (id, resource_id, user_id, content, created_at, updated_at) VALUES
+(1, 1, 3, 'The stone-lane photos feel very atmospheric. Thanks for compiling this.', NOW(), NOW()),
+(2, 3, 2, 'Pairing the proverbs with disaster-prep talks would work really well.', NOW(), NOW());

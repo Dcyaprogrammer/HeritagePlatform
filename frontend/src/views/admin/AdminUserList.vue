@@ -115,6 +115,12 @@
           </template>
         </el-table-column>
 
+        <el-table-column label="Application Reason" min-width="150" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.contributorReason || '-' }}
+          </template>
+        </el-table-column>
+
         <el-table-column label="Created" width="180">
           <template #default="{ row }">
             {{ formatDate(row.createdAt) }}
@@ -177,6 +183,9 @@
               {{ selectedUser.contributorStatus }}
             </el-tag>
             <span v-else>-</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="Application Reason" v-if="selectedUser.contributorReason">
+            {{ selectedUser.contributorReason }}
           </el-descriptions-item>
           <el-descriptions-item label="Created At">
             {{ formatDate(selectedUser.createdAt) }}

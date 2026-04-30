@@ -1,6 +1,11 @@
 <template>
   <div class="profile-page">
-    <el-button @click="goBack" class="back-btn">← Back</el-button>
+    <div class="header-actions">
+      <el-button @click="goBack" class="back-btn">← Back</el-button>
+      <el-button type="primary" plain class="home-btn" @click="router.push('/')">
+        <el-icon><House /></el-icon>
+      </el-button>
+    </div>
     <el-card class="profile-card">
       <template #header>
         <div class="card-header">
@@ -118,7 +123,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Timer, CircleClose } from '@element-plus/icons-vue'
+import { Timer, CircleClose, House } from '@element-plus/icons-vue'
 import { getCurrentUser } from '../api/auth.js'
 import { getUser, updateUser, updatePassword, applyContributor } from '../api/user.js'
 
@@ -162,12 +167,7 @@ const getRoleType = (role) => {
 }
 
 const goBack = () => {
-  const role = localStorage.getItem('role')
-  if (role === 'ADMIN') {
-    router.push('/admin/users')
-  } else {
-    router.push('/home')
-  }
+  router.go(-1)
 }
 
 const fetchProfile = async () => {
@@ -254,12 +254,18 @@ onMounted(() => {
 <style scoped>
 .profile-page {
   max-width: 600px;
-  margin: 40px auto;
-  padding: 0 20px;
+  margin: 0 auto;
+  padding: 40px 20px;
 }
 
-.back-btn {
-  margin-bottom: 16px;
+.header-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.back-btn, .home-btn {
+  margin: 0;
 }
 
 .profile-card,

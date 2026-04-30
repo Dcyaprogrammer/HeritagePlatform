@@ -23,8 +23,12 @@ dist/
 
 ### Uploaded files ###
 /uploads/
+/platform/uploads/
 
 ### Environment ###
 .env
 .env.local
 *.local
+
+# Local Spring Boot overrides (secrets)
+application-local.properties

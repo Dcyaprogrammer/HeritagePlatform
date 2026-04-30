@@ -15,6 +15,10 @@ public class Attachment {
     @JoinColumn(name = "resource_id")
     private HeritageResource resource;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "uploader_id")
+    private HeritageUser uploader;
+
     @Column(name = "stored_name")
     private String storedName;   
     
@@ -42,6 +46,9 @@ public class Attachment {
     
     public HeritageResource getResource() { return resource; }
     public void setResource(HeritageResource resource) { this.resource = resource; }
+
+    public HeritageUser getUploader() { return uploader; }
+    public void setUploader(HeritageUser uploader) { this.uploader = uploader; }
     
     public String getStoredName() { return storedName; }
     public void setStoredName(String storedName) { this.storedName = storedName; }

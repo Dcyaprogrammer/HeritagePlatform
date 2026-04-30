@@ -40,8 +40,12 @@ public class SecurityConfig {
                  "/api/auth/login", 
                  "/api/auth/forgot-password", 
                  "/api/auth/reset-password",
+                 "/api/attachments/*/preview",
+                 "/api/attachments/*/download",
+                 "/uploads/**",
                  "/api/public/**").permitAll()
                 .requestMatchers("/api/review/**").hasRole("ADMIN")
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                  //.requestMatchers("/api/sessions/**").hasAnyRole("VIEWER", "ADMIN")
                  .requestMatchers("/api/sessions/**").permitAll()
 
