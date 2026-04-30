@@ -44,40 +44,61 @@
           </div>
           <!-- Document icon -->
           <div v-else class="file-icon">
-            <i
-              v-if="file.name.toLowerCase().endsWith('.pdf')"
-              class="fas fa-file-pdf"
-              style="color: #e74c3c; font-size: 24px"
-            ></i>
-            <i
+            <el-icon v-if="file.name.toLowerCase().endsWith('.pdf')" :size="24" class="file-ico file-ico--pdf">
+              <Document />
+            </el-icon>
+            <el-icon
               v-else-if="file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')"
-              class="fas fa-file-word"
-              style="color: #2b579a; font-size: 24px"
-            ></i>
-            <i
-              v-else-if="file.name.toLowerCase().endsWith('.mp4') || file.name.toLowerCase().endsWith('.mov') || file.name.toLowerCase().endsWith('.avi') || file.name.toLowerCase().endsWith('.mkv')"
-              class="fas fa-file-video"
-              style="color: #9b59b6; font-size: 24px"
-            ></i>
-            <i
-              v-else-if="file.name.toLowerCase().endsWith('.mp3') || file.name.toLowerCase().endsWith('.wav') || file.name.toLowerCase().endsWith('.m4a') || file.name.toLowerCase().endsWith('.flac')"
-              class="fas fa-file-audio"
-              style="color: #f39c12; font-size: 24px"
-            ></i>
-            <i
-              v-else-if="file.name.toLowerCase().endsWith('.jpg') || file.name.toLowerCase().endsWith('.jpeg') || file.name.toLowerCase().endsWith('.png') || file.name.toLowerCase().endsWith('.gif') || file.name.toLowerCase().endsWith('.bmp') || file.name.toLowerCase().endsWith('.webp')"
-              class="fas fa-file-image"
-              style="color: #27ae60; font-size: 24px"
-            ></i>
-            <i
-              v-else
-              class="fas fa-file"
-              style="color: #7f8c8d; font-size: 24px"
-            ></i>
+              :size="24"
+              class="file-ico file-ico--doc"
+            >
+              <Notebook />
+            </el-icon>
+            <el-icon
+              v-else-if="
+                file.name.toLowerCase().endsWith('.mp4') ||
+                file.name.toLowerCase().endsWith('.mov') ||
+                file.name.toLowerCase().endsWith('.avi') ||
+                file.name.toLowerCase().endsWith('.mkv')
+              "
+              :size="24"
+              class="file-ico file-ico--video"
+            >
+              <VideoPlay />
+            </el-icon>
+            <el-icon
+              v-else-if="
+                file.name.toLowerCase().endsWith('.mp3') ||
+                file.name.toLowerCase().endsWith('.wav') ||
+                file.name.toLowerCase().endsWith('.m4a') ||
+                file.name.toLowerCase().endsWith('.flac')
+              "
+              :size="24"
+              class="file-ico file-ico--audio"
+            >
+              <Headset />
+            </el-icon>
+            <el-icon
+              v-else-if="
+                file.name.toLowerCase().endsWith('.jpg') ||
+                file.name.toLowerCase().endsWith('.jpeg') ||
+                file.name.toLowerCase().endsWith('.png') ||
+                file.name.toLowerCase().endsWith('.gif') ||
+                file.name.toLowerCase().endsWith('.bmp') ||
+                file.name.toLowerCase().endsWith('.webp')
+              "
+              :size="24"
+              class="file-ico file-ico--image"
+            >
+              <Picture />
+            </el-icon>
+            <el-icon v-else :size="24" class="file-ico file-ico--generic">
+              <Document />
+            </el-icon>
           </div>
           <span class="file-name">{{ file.displayName || file.name }}</span>
           <span v-if="file.uploaded" class="success-check">
-            <i class="fas fa-check-circle"></i>
+            <el-icon :size="16"><CircleCheck /></el-icon>
           </span>
           <span class="file-size">{{ formatFileSize(file.size) }}</span>
           <button @click.stop="removeFile(file)" class="delete-btn">×</button>
@@ -161,7 +182,7 @@
 
       <!-- Other file types -->
       <div v-else class="modal-other">
-        <i class="fas fa-file" style="font-size: 64px; color: #7f8c8d"></i>
+        <el-icon :size="64" class="modal-other-icon"><Document /></el-icon>
         <p>{{ previewFile.displayName || previewFile.name }}</p>
         <a
           href="#"
@@ -177,6 +198,7 @@
 <script setup>
 import { reactive, ref, watch } from "vue";
 import axios from "axios";
+import { CircleCheck, Document, Headset, Notebook, Picture, VideoPlay } from "@element-plus/icons-vue";
 
 const props = defineProps({
   initialFiles: {
@@ -625,11 +647,11 @@ defineExpose({
   transition: all 0.3s;
 }
 .drop-zone:hover {
-  border-color: #409eff;
-  background: #f5f7fa;
+  border-color: var(--accent-soft, #8f4a3a);
+  background: color-mix(in srgb, var(--surface, #faf8f3) 92%, var(--accent, #6b2d2d) 8%);
 }
 .drop-zone:focus-visible {
-  outline: 2px solid #409eff;
+  outline: 2px solid var(--accent, #6b2d2d);
   outline-offset: 2px;
 }
 .file-list {
@@ -688,6 +710,27 @@ defineExpose({
   justify-content: center;
   flex-shrink: 0;
 }
+.file-ico--pdf {
+  color: #c0392b;
+}
+.file-ico--doc {
+  color: #2b579a;
+}
+.file-ico--video {
+  color: #8e44ad;
+}
+.file-ico--audio {
+  color: #d68910;
+}
+.file-ico--image {
+  color: #1e8449;
+}
+.file-ico--generic {
+  color: #7f8c8d;
+}
+.modal-other-icon {
+  color: #7f8c8d;
+}
 .file-name {
   flex: 1;
   font-size: 14px;
@@ -724,7 +767,7 @@ defineExpose({
 }
 .progress-fill {
   height: 100%;
-  background: #409eff;
+  background: var(--accent, #6b2d2d);
   transition: width 0.3s;
 }
 .progress-bar span {
@@ -807,14 +850,14 @@ defineExpose({
   display: inline-block;
   margin-top: 15px;
   padding: 8px 16px;
-  background: #409eff;
+  background: var(--accent, #6b2d2d);
   color: white;
   text-decoration: none;
   border-radius: 4px;
 }
 
 .modal-link:hover {
-  background: #66b1ff;
+  background: var(--accent-soft, #8f4a3a);
 }
 
 .modal-error {

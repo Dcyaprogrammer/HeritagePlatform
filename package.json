@@ -4,8 +4,8 @@
   "scripts": {
     "dev:frontend": "npm --prefix frontend run dev",
     "build:frontend": "npm --prefix frontend run build",
-    "dev:backend": "cd platform && ./mvnw spring-boot:run",
-    "test:backend": "cd platform && ./mvnw test",
-    "build:backend": "cd platform && ./mvnw -DskipTests package"
+    "dev:backend": "node scripts/mvnw-run.cjs spring-boot:run",
+    "test:backend": "node scripts/mvnw-run.cjs test",
+    "build:backend": "node scripts/mvnw-run.cjs -DskipTests package"
   }
 }

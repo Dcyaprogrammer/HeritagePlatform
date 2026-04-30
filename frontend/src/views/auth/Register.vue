@@ -1,12 +1,11 @@
 <template>
-  <div class="wrap">
-    <header class="top">
-      <h1>Heritage Resource Hall</h1>
-      <div class="header-actions">
-        <button type="button" class="btn" @click="$router.push('/')">Home</button>
-      </div>
-    </header>
-
+  <AuthPageFrame
+    eyebrow="Join the community"
+    aside-title="Create your contributor profile"
+    aside-lead="Register to save work in progress, apply for contributor access, and help grow a shared catalog of heritage resources."
+    :points="asidePoints"
+    quote="New voices and local knowledge make the archive stronger for everyone."
+  >
     <div class="register-container">
       <el-card class="register-card" shadow="hover">
         <template #header>
@@ -48,7 +47,7 @@
         </el-form>
       </el-card>
     </div>
-  </div>
+  </AuthPageFrame>
 </template>
 
 <script setup>
@@ -56,6 +55,13 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { register, login, setToken, setUserInfo } from '../../api/auth.js'
+import AuthPageFrame from '../../components/auth/AuthPageFrame.vue'
+
+const asidePoints = [
+  'One account for browsing and optional submissions',
+  'Secure sign-in with email and password',
+  'Start exploring before you apply to contribute',
+]
 
 const router = useRouter()
 const registerFormRef = ref(null)
@@ -137,42 +143,10 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
-.wrap {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 0 1.25rem;
-}
-.top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 0;
-  border-bottom: 1px solid var(--border);
-}
-.top h1 {
-  margin: 0;
-  font-family: var(--font-serif, 'Georgia', serif);
-  font-size: 1.5rem;
-  color: var(--ink);
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: var(--ink);
-}
-.btn:hover {
-  background: color-mix(in srgb, var(--surface) 85%, var(--accent) 15%);
-}
 .register-container {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding-top: 4rem;
-  min-height: calc(100vh - 100px);
+  width: 100%;
 }
 
 .register-card {
@@ -180,6 +154,7 @@ const handleRegister = async () => {
   max-width: 420px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
 }
 
 .card-header {

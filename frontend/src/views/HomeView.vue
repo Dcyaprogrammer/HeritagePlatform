@@ -1,14 +1,11 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
-import { getToken, logout, getStoredRoles } from '../api/auth.js'
 import ResourceCard from '../components/ResourceCard.vue'
 import { getPublicResources } from '../api/resource.js'
 
 const allResources = ref([])
 const provinces = ref([])
 const heritageGroups = ref([])
-const dynasties = ref([])
 const ALL_OPTION = '__ALL__'
 const list = ref([])
 const total = ref(0)
@@ -18,20 +15,12 @@ const loading = ref(false)
 const err = ref('')
 
 const q = ref('')
-const selectedDynastyCodes = ref(new Set())
-const dynastyPickerValue = ref([])
-const eraFrom = ref('')
-const eraTo = ref('')
 const selectedProvinceCodes = ref(new Set())
 const provincePickerValue = ref(ALL_OPTION)
 const selectedHeritageTypeCodes = ref(new Set())
 const heritageTypePickerValue = ref(ALL_OPTION)
 const showFilterPanel = ref(false)
 const autoSearchEnabled = ref(false)
-
-const eraFromInputRef = ref(null)
-const eraToInputRef = ref(null)
-const router = useRouter()
 
 const categories = computed(() => {
   const map = new Map()
@@ -44,10 +33,10 @@ const sortedProvinces = computed(() => {
   return [...provinces.value].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 })
 const groupedHeritageTypeOptions = computed(() => {
-  return heritageGroups.value.map(group => ({
+  return heritageGroups.value.map((group) => ({
     groupCode: group.groupCode,
     groupName: group.groupName,
-    types: [...(group.types || [])].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    types: [...(group.types || [])].sort((a, b) => (a.name || '').localeCompare(b.name || '')),
   }))
 })
 
@@ -56,50 +45,6 @@ const categoryId = ref(null)
 const filteredResources = computed(() => {
   return list.value
 })
-
-const isLoggedIn = ref(!!getToken())
-const initialRoles = getStoredRoles()
-const isAdmin = ref(initialRoles.includes('ADMIN'))
-const isContributor = ref(initialRoles.includes('CONTRIBUTOR') || initialRoles.includes('ADMIN'))
-
-// Update on route change or when storage changes
-onMounted(() => {
-  isLoggedIn.value = !!getToken()
-  const r = getStoredRoles()
-  isAdmin.value = r.includes('ADMIN')
-  isContributor.value = r.includes('CONTRIBUTOR') || r.includes('ADMIN')
-})
-
-const goToAdmin = () => {
-  router.push('/admin/resource-review')
-}
-
-const goToCreateResource = () => {
-  router.push('/resources/create')
-}
-
-const goToSubmissions = () => {
-  router.push('/resources/submissions')
-}
-
-const goToProfile = () => {
-  router.push('/profile')
-}
-
-const goToLogin = () => {
-  router.push('/login')
-}
-
-const goToRegister = () => {
-  router.push('/register')
-}
-
-const handleLogout = () => {
-  logout()
-  isLoggedIn.value = false
-  isAdmin.value = false
-  router.push('/login')
-}
 
 /** 与后端 TaxonomyCatalog 一致；接口未返回时兜底（例如未重启的旧后端） */
 const HERITAGE_OTHER_GROUP_FALLBACK = Object.freeze({
@@ -127,12 +72,6 @@ const totalPages = computed(() => {
 
 const activeFilterCount = computed(() => {
   let n = 0
-  if (selectedDynastyCodes.value.size > 0) {
-    n += 1
-  }
-  if (eraFrom.value && eraTo.value) {
-    n += 1
-  }
   if (selectedProvinceCodes.value.size > 0) {
     n += 1
   }
@@ -142,90 +81,23 @@ const activeFilterCount = computed(() => {
   return n
 })
 
-const dynastyNameByCode = computed(() => {
-  const m = new Map()
-  for (const d of dynasties.value) {
-    m.set(d.code, d.name)
-  }
-  return m
-})
-
-const provinceNameByCode = computed(() => {
-  const m = new Map()
-  for (const p of provinces.value) {
-    m.set(p.code, p.name)
-  }
-  return m
-})
-
-const heritageNameByCode = computed(() => {
-  const m = new Map()
-  for (const g of heritageGroups.value) {
-    m.set(g.groupCode, g.groupName)
-    for (const t of g.types || []) {
-      m.set(t.code, t.name)
-    }
-  }
-  return m
-})
-
-const selectedFilterChips = computed(() => {
-  const chips = []
-  const selectedDynastySorted = [...selectedDynastyCodes.value].sort()
-  for (const code of selectedDynastySorted) {
-    chips.push({
-      key: `dynasty:${code}`,
-      type: 'dynasty',
-      value: code,
-      label: `Dynasty: ${dynastyNameByCode.value.get(code) || code}`,
-    })
-  }
-  if (eraFrom.value && eraTo.value) {
-    chips.push({
-      key: `date:${eraFrom.value}-${eraTo.value}`,
-      type: 'dateRange',
-      label: `Date: ${formatIsoToCnYmd(eraFrom.value)} to ${formatIsoToCnYmd(eraTo.value)}`,
-    })
-  }
-  const selectedProvinceSorted = [...selectedProvinceCodes.value].sort()
-  for (const code of selectedProvinceSorted) {
-    chips.push({
-      key: `province:${code}`,
-      type: 'province',
-      value: code,
-      label: `Region: ${provinceNameByCode.value.get(code) || code}`,
-    })
-  }
-
-  const selectedTypeSorted = [...selectedHeritageTypeCodes.value].sort()
-  for (const code of selectedTypeSorted) {
-    chips.push({
-      key: `type:${code}`,
-      type: 'heritageType',
-      value: code,
-      label: `Type: ${heritageNameByCode.value.get(code) || code}`,
-    })
-  }
-  return chips
-})
-
-const filterWatchKey = computed(() => {
-  const dynKey = [...selectedDynastyCodes.value].sort().join(',')
-  const provinceKey = [...selectedProvinceCodes.value].sort().join(',')
-  const typeKey = [...selectedHeritageTypeCodes.value].sort().join(',')
-  return [dynKey, eraFrom.value, eraTo.value, provinceKey, typeKey].join('|')
+const hasListFilters = computed(() => {
+  return !!(
+    (q.value && q.value.trim()) ||
+    categoryId.value != null ||
+    activeFilterCount.value > 0
+  )
 })
 
 let autoSearchTimer = null
 
 function syncPickerSelections() {
-  selectedDynastyCodes.value = new Set(dynastyPickerValue.value)
-  selectedProvinceCodes.value = provincePickerValue.value === ALL_OPTION
-    ? new Set()
-    : new Set([provincePickerValue.value])
-  selectedHeritageTypeCodes.value = heritageTypePickerValue.value === ALL_OPTION
-    ? new Set()
-    : new Set([heritageTypePickerValue.value])
+  selectedProvinceCodes.value =
+    provincePickerValue.value === ALL_OPTION ? new Set() : new Set([provincePickerValue.value])
+  selectedHeritageTypeCodes.value =
+    heritageTypePickerValue.value === ALL_OPTION
+      ? new Set()
+      : new Set([heritageTypePickerValue.value])
 }
 
 function applyAdvancedFilters() {
@@ -235,33 +107,52 @@ function applyAdvancedFilters() {
 }
 
 function clearAdvancedFilters() {
-  dynastyPickerValue.value = []
   provincePickerValue.value = ALL_OPTION
   heritageTypePickerValue.value = ALL_OPTION
-  eraFrom.value = ''
-  eraTo.value = ''
   syncPickerSelections()
   page.value = 0
   search()
 }
 
+function clearAllListFilters() {
+  const hadQOrCat = !!(q.value?.trim() || categoryId.value != null)
+  q.value = ''
+  categoryId.value = null
+  provincePickerValue.value = ALL_OPTION
+  heritageTypePickerValue.value = ALL_OPTION
+  syncPickerSelections()
+  page.value = 0
+  if (!hadQOrCat) {
+    search()
+  }
+}
+
+function goPrevPage() {
+  if (page.value <= 0) return
+  page.value -= 1
+  search()
+}
+
+function goNextPage() {
+  if (page.value >= totalPages.value - 1) return
+  page.value += 1
+  search()
+}
+
 async function loadMeta() {
-  const [d, p, h, c] = await Promise.all([
-    fetch('/api/public/dynasties'),
+  const [p, h, c] = await Promise.all([
     fetch('/api/public/provinces'),
     fetch('/api/public/heritage-type-groups'),
-    fetch('/api/public/categories')
+    fetch('/api/public/categories'),
   ])
-  const dj = await d.json()
   const pj = await p.json()
   const hj = await h.json()
   const cj = await c.json()
-  if (dj.code === 200) {
-    dynasties.value = dj.data
-  }
   if (pj.code === 200) provinces.value = pj.data
   if (hj.code === 200) heritageGroups.value = ensureHeritageOtherGroup(hj.data)
-  if (cj.code === 200) allResources.value = cj.data.map(cat => ({ category: { id: cat.id, name: cat.name } }))
+  if (cj.code === 200) {
+    allResources.value = cj.data.map((cat) => ({ category: { id: cat.id, name: cat.name } }))
+  }
 }
 
 async function search() {
@@ -270,23 +161,16 @@ async function search() {
   try {
     const params = {
       page: page.value,
-      size: size.value
+      size: size.value,
     }
     if (q.value) params.q = q.value
     if (categoryId.value) params.categoryId = categoryId.value
-    
-    if (selectedDynastyCodes.value.size > 0) {
-      params.dynastyCode = Array.from(selectedDynastyCodes.value).join(',')
-    }
+
     if (selectedProvinceCodes.value.size > 0) {
       params.provinceCode = Array.from(selectedProvinceCodes.value).join(',')
     }
     if (selectedHeritageTypeCodes.value.size > 0) {
       params.heritageTypeCode = Array.from(selectedHeritageTypeCodes.value).join(',')
-    }
-    if (eraFrom.value && eraTo.value) {
-      params.eraFrom = eraFrom.value
-      params.eraTo = eraTo.value
     }
 
     const res = await getPublicResources(params)
@@ -324,41 +208,25 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="wrap">
-    <header class="top">
-      <h1>Heritage Resource Hall</h1>
-      <div class="header-actions">
-        <template v-if="isLoggedIn">
-          <button v-if="isContributor" type="button" class="btn" @click="goToCreateResource">
-            + Create Draft
-          </button>
-          <button v-if="isContributor" type="button" class="btn" @click="goToSubmissions">
-            My Submissions
-          </button>
-          <button v-if="isAdmin" type="button" class="btn primary" @click="goToAdmin">Admin Panel</button>
-          <button type="button" class="btn" @click="goToProfile">Profile</button>
-          <button type="button" class="btn" @click="handleLogout">Logout</button>
-        </template>
-        <template v-else>
-          <button type="button" class="btn" @click="goToLogin">Login</button>
-          <button type="button" class="btn primary" @click="goToRegister">Register</button>
-        </template>
-      </div>
-    </header>
-
+  <div class="home">
     <div class="hero">
       <h2 class="page-title">Discover community heritage</h2>
       <p class="lead">Browse published heritage resources.</p>
     </div>
 
     <div class="toolbar">
-      <label class="field">
+      <label class="field field--grow">
         <span class="label">Search</span>
-        <input v-model="q" type="search" class="control" placeholder="Title, place, tags, description" />
+        <input
+          v-model="q"
+          type="search"
+          class="control home-control"
+          placeholder="Title, place, tags, description"
+        />
       </label>
       <label class="field">
         <span class="label">Category</span>
-        <select v-model="categoryId" class="control">
+        <select v-model="categoryId" class="control home-control">
           <option :value="null">All</option>
           <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
@@ -367,11 +235,11 @@ onMounted(() => {
 
     <section class="advanced">
       <div class="advanced-head">
-        <button type="button" class="btn" @click="showFilterPanel = !showFilterPanel">
+        <button type="button" class="public-btn" @click="showFilterPanel = !showFilterPanel">
           {{ showFilterPanel ? 'Hide Advanced Filters' : 'Show Advanced Filters' }}
         </button>
         <label class="auto">
-          <input v-model="autoSearchEnabled" type="checkbox" />
+          <input v-model="autoSearchEnabled" type="checkbox" class="home-control" />
           <span>Auto apply</span>
         </label>
       </div>
@@ -379,7 +247,7 @@ onMounted(() => {
       <div v-if="showFilterPanel" class="advanced-grid">
         <label class="field">
           <span class="label">Province</span>
-          <select v-model="provincePickerValue" class="control">
+          <select v-model="provincePickerValue" class="control home-control">
             <option :value="ALL_OPTION">All</option>
             <option v-for="p in sortedProvinces" :key="p.code" :value="p.code">{{ p.name }}</option>
           </select>
@@ -387,7 +255,7 @@ onMounted(() => {
 
         <label class="field">
           <span class="label">Heritage Type</span>
-          <select v-model="heritageTypePickerValue" class="control">
+          <select v-model="heritageTypePickerValue" class="control home-control">
             <option :value="ALL_OPTION">All</option>
             <optgroup
               v-for="group in groupedHeritageTypeOptions"
@@ -401,70 +269,67 @@ onMounted(() => {
       </div>
 
       <div v-if="showFilterPanel" class="advanced-actions">
-        <button type="button" class="btn primary" @click="applyAdvancedFilters">Apply</button>
-        <button type="button" class="btn" @click="clearAdvancedFilters">Clear</button>
+        <button type="button" class="public-btn public-btn--primary" @click="applyAdvancedFilters">Apply</button>
+        <button type="button" class="public-btn" @click="clearAdvancedFilters">Clear</button>
       </div>
     </section>
 
-    <p v-if="!filteredResources.length" class="none">No resources match your filters.</p>
-
-    <div v-else class="grid">
-      <ResourceCard v-for="item in filteredResources" :key="item.id" :item="item" />
+    <div v-if="err" class="panel-error" role="alert">
+      <p>{{ err }}</p>
+      <button type="button" class="public-btn public-btn--primary" @click="search">Retry</button>
     </div>
 
+    <div v-if="loading && !filteredResources.length && !err" class="skeleton-grid" aria-busy="true" aria-label="Loading">
+      <div v-for="i in 8" :key="i" class="skeleton-card">
+        <el-skeleton animated>
+          <template #template>
+            <el-skeleton-item variant="image" style="width: 100%; height: 160px" />
+            <div style="padding: 12px 0 0">
+              <el-skeleton-item variant="h3" style="width: 55%; margin-bottom: 8px" />
+              <el-skeleton-item variant="text" style="width: 100%" />
+              <el-skeleton-item variant="text" style="width: 40%" />
+            </div>
+          </template>
+        </el-skeleton>
+      </div>
+    </div>
+
+    <div v-else-if="!filteredResources.length && !loading" class="empty-panel">
+      <template v-if="hasListFilters">
+        <p class="empty-title">No resources match your filters.</p>
+        <p class="empty-hint">Try widening your search or clearing some criteria.</p>
+        <button type="button" class="public-btn public-btn--primary" @click="clearAllListFilters">
+          Clear all filters
+        </button>
+      </template>
+      <template v-else>
+        <p class="empty-title">No published resources yet.</p>
+        <p class="empty-hint">Check back later as contributors add entries.</p>
+      </template>
+    </div>
+
+    <div v-else class="grid-wrap" :class="{ 'grid-wrap--dim': loading }">
+      <div class="grid">
+        <ResourceCard v-for="item in filteredResources" :key="item.id" :item="item" />
+      </div>
+    </div>
+
+    <nav v-if="totalPages > 1 && filteredResources.length && !err" class="pager" aria-label="Pagination">
+      <button type="button" class="public-btn" :disabled="page <= 0" @click="goPrevPage">Previous</button>
+      <span class="pager-meta">Page {{ page + 1 }} of {{ totalPages }}</span>
+      <button type="button" class="public-btn" :disabled="page >= totalPages - 1" @click="goNextPage">
+        Next
+      </button>
+    </nav>
   </div>
 </template>
 
 <style scoped>
-.wrap {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 0 1.25rem;
-}
-.top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 0;
-  background: color-mix(in srgb, var(--surface) 90%, white 10%);
-  border-bottom: 1px solid var(--border);
-  position: relative;
-  z-index: 0;
-}
-.top::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc((100vw - 100%) / -2);
-  right: calc((100vw - 100%) / -2);
-  background: color-mix(in srgb, var(--surface) 90%, white 10%);
-  z-index: -1;
-}
-.header-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--ink);
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-.btn:hover {
-  background: color-mix(in srgb, var(--surface) 85%, var(--accent) 15%);
-  border-color: var(--accent-soft);
-}
-.btn.primary {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+.home {
+  padding-top: 0.25rem;
 }
 .hero {
-  margin: 1.5rem 0;
+  margin: 1.25rem 0 1.5rem;
 }
 .page-title {
   margin: 0 0 0.5rem;
@@ -485,6 +350,10 @@ onMounted(() => {
   margin-bottom: 1rem;
   align-items: flex-end;
 }
+.field--grow {
+  flex: 1 1 220px;
+  min-width: min(100%, 220px);
+}
 .advanced {
   margin-bottom: 1.75rem;
   padding: 0.9rem;
@@ -496,6 +365,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex-wrap: wrap;
 }
 .auto {
   display: inline-flex;
@@ -514,6 +384,7 @@ onMounted(() => {
   margin-top: 0.9rem;
   display: flex;
   gap: 0.6rem;
+  flex-wrap: wrap;
 }
 .field {
   display: flex;
@@ -536,8 +407,71 @@ onMounted(() => {
   background: var(--surface);
   color: var(--ink);
 }
+.home :deep(.control):focus-visible,
+.home .home-control:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, var(--ink) 45%);
+  outline-offset: 2px;
+}
 .control optgroup {
   font-weight: 700;
+}
+.panel-error {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  margin-bottom: 1.25rem;
+}
+.panel-error p {
+  margin: 0 0 0.75rem;
+  color: var(--ink);
+}
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.25rem;
+}
+@media (min-width: 640px) {
+  .skeleton-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (min-width: 960px) {
+  .skeleton-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.skeleton-card {
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0 0 0.75rem;
+}
+.empty-panel {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 92%, var(--bg) 8%);
+  margin-bottom: 1.5rem;
+}
+.empty-title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.empty-hint {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+  font-size: 0.9375rem;
+}
+.grid-wrap {
+  transition: opacity 0.18s ease;
+}
+.grid-wrap--dim {
+  opacity: 0.48;
+  pointer-events: none;
 }
 .grid {
   display: grid;
@@ -554,8 +488,18 @@ onMounted(() => {
     grid-template-columns: repeat(3, 1fr);
   }
 }
-.none {
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.pager-meta {
+  font-size: 0.875rem;
   color: var(--muted);
-  font-size: 0.9375rem;
 }
 </style>
