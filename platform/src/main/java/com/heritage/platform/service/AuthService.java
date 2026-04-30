@@ -131,12 +131,10 @@ public class AuthService {
                 )).collect(Collectors.toList());
     }
 
-    // 【新增】远程注销特定设备
     public void logoutSession(String jti) {
         sessionRepository.deleteByTokenJti(jti);
     }
 
-    // 【新增】简单解析 User-Agent
     private String parseDeviceInfo(String ua) {
         if (ua == null) return "Unknown Device";
         if (ua.contains("Mobi")) return "Mobile Device";
@@ -152,7 +150,6 @@ public class AuthService {
 
     //pbi4正式版邮件重置密码
     public void forgotPassword(ForgotPasswordRequest req) {
-        // 1. 正确处理 Optional
         HeritageUser user = userRepository.findByEmail(req.getEmail()).orElse(null);
 
         if (user == null) {
@@ -189,5 +186,23 @@ public class AuthService {
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
         userRepository.save(user);
+    }
+
+
+    
+    //验证reset的token过期 4
+    public boolean validateResetToken(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return false;
+        }
+        HeritageUser user = userRepository.findByResetToken(token).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.getResetTokenExpiry() == null || 
+            user.getResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            return false;
+        }
+        return true;
     }
 }

@@ -15,11 +15,9 @@ public class EmailService {
     @Value("${spring.mail.username}")
     private String fromEmail;
 
-    /**
-     * 发送密码重置邮件（生产版本）
-     */
+
     public void sendResetPasswordEmail(String toEmail, String resetToken) {
-        String resetLink = "http://localhost:8080/api/auth/reset-password?token=" + resetToken;
+        String resetLink = "http://localhost:5173/reset-password?token=" + resetToken;
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(fromEmail);           // 发件人
