@@ -62,7 +62,7 @@ const hasVideo = computed(() => props.item?.hasVideo || false)
 }
 .media {
   aspect-ratio: 4 / 3;
-  background: #e7e5e4;
+  background: color-mix(in srgb, var(--bg) 75%, var(--surface) 25%);
   overflow: hidden;
   position: relative;
 }
@@ -95,7 +95,11 @@ const hasVideo = computed(() => props.item?.hasVideo || false)
   justify-content: center;
   color: var(--muted);
   font-size: 0.875rem;
-  background: linear-gradient(145deg, #f5f5f4, #e7e5e4);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--surface) 80%, var(--bg) 20%),
+    color-mix(in srgb, var(--bg) 85%, var(--ink) 15%)
+  );
 }
 .body {
   padding: 1rem 1.1rem 1.15rem;
@@ -136,9 +140,9 @@ const hasVideo = computed(() => props.item?.hasVideo || false)
   font-size: 0.75rem;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
-  background: #1d4ed8;
-  color: #ffffff;
-  border: none;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface) 84%);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border) 78%);
   font-weight: 500;
 }
 .cta {

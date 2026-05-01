@@ -168,10 +168,12 @@ function formatDate(iso) {
 </template>
 
 <style scoped>
+/* Match public-shell width (1120px); avoid double horizontal padding — shell already pads */
 .inner {
-  max-width: 800px;
+  max-width: 1120px;
+  width: 100%;
   margin: 0 auto;
-  padding: 0 1.25rem;
+  padding: 0;
 }
 .notfound {
   padding-top: 4rem;
@@ -238,9 +240,9 @@ function formatDate(iso) {
   font-size: 0.75rem;
   padding: 0.25rem 0.6rem;
   border-radius: 999px;
-  background: #1d4ed8;
-  color: #ffffff;
-  border: none;
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface) 84%);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border) 78%);
   font-weight: 500;
 }
 .prose {
@@ -253,17 +255,17 @@ function formatDate(iso) {
 }
 .legal {
   background: var(--surface);
-  padding: 1rem;
+  padding: 1.25rem 1.5rem;
   border-left: 4px solid var(--border);
   font-size: 0.875rem;
   margin-bottom: 1.5rem;
 }
 .facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
   background: var(--surface);
-  padding: 1.25rem;
+  padding: 1.5rem;
   border-radius: var(--radius);
   border: 1px solid var(--border);
 }

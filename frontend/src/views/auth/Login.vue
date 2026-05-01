@@ -1,12 +1,11 @@
 <template>
-  <div class="wrap">
-    <header class="top">
-      <h1>Heritage Resource Hall</h1>
-      <div class="header-actions">
-        <button type="button" class="btn" @click="$router.push('/')">Home</button>
-      </div>
-    </header>
-
+  <AuthPageFrame
+    eyebrow="Community archive"
+    aside-title="Preserve and share local heritage"
+    aside-lead="Sign in to contribute drafts, track submissions, and join conversations around places, crafts, and stories that matter to your community."
+    :points="asidePoints"
+    quote="Every record you add helps future visitors understand where you came from."
+  >
     <div class="login-container">
       <el-card class="login-card" shadow="hover">
         <template #header>
@@ -22,8 +21,15 @@
           </el-form-item>
 
           <el-form-item label="Password" prop="password">
-            <el-input v-model="loginForm.password" type="password" placeholder="Enter password" prefix-icon="Lock" size="large"
-              show-password @keyup.enter="handleLogin" />
+            <el-input
+              v-model="loginForm.password"
+              type="password"
+              placeholder="Enter password"
+              prefix-icon="Lock"
+              size="large"
+              show-password
+              @keyup.enter="handleLogin"
+            />
           </el-form-item>
 
           <el-form-item>
@@ -42,14 +48,21 @@
         </el-form>
       </el-card>
     </div>
-  </div>
+  </AuthPageFrame>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { login, setToken, setUserInfo } from '../../api/auth.js'
+import AuthPageFrame from '../../components/auth/AuthPageFrame.vue'
+
+const asidePoints = [
+  'Explore published resources from contributors worldwide',
+  'Save drafts and submit heritage entries for review',
+  'Comment and discuss entries you care about',
+]
 
 const router = useRouter()
 const loginFormRef = ref(null)
@@ -57,12 +70,12 @@ const loading = ref(false)
 
 const loginForm = reactive({
   username: '',
-  password: ''
+  password: '',
 })
 
 const rules = {
   username: [{ required: true, message: 'Please enter username', trigger: 'blur' }],
-  password: [{ required: true, message: 'Please enter password', trigger: 'blur' }]
+  password: [{ required: true, message: 'Please enter password', trigger: 'blur' }],
 }
 
 const handleLogin = async () => {
@@ -74,12 +87,12 @@ const handleLogin = async () => {
     loading.value = true
     try {
       const res = await login(loginForm)
-      
+
       if (res.data.code === 200) {
         const { token, username, roles } = res.data.data
         setToken(token)
         setUserInfo(username, roles)
-        
+
         ElMessage.success('Login successful')
         router.push('/')
       } else {
@@ -96,49 +109,18 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-.wrap {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 0 1.25rem;
-}
-.top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 0;
-  border-bottom: 1px solid var(--border, #eaeaea);
-}
-.top h1 {
-  margin: 0;
-  font-family: var(--font-serif, 'Georgia', serif);
-  font-size: 1.5rem;
-  color: var(--text, #333);
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border, #eaeaea);
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: var(--text, #333);
-}
-.btn:hover {
-  background: #f9f9f9;
-}
 .login-container {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding-top: 4rem;
-  min-height: calc(100vh - 100px);
+  width: 100%;
 }
 
 .login-card {
   width: 100%;
   max-width: 420px;
-  border-radius: 12px;
-  border: 1px solid var(--border, #eaeaea);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
 }
 
 .card-header {
@@ -147,21 +129,21 @@ const handleLogin = async () => {
 
 .card-header h2 {
   margin: 0;
-  color: var(--text, #333);
+  color: var(--ink);
   font-family: var(--font-serif, 'Georgia', serif);
   font-size: 1.75rem;
 }
 
 .subtitle {
   margin: 0.5rem 0 0;
-  color: var(--muted, #666);
+  color: var(--muted);
   font-size: 0.875rem;
 }
 
 .submit-btn {
   width: 100%;
-  background: var(--accent, #409eff);
-  border-color: var(--accent, #409eff);
+  background: var(--accent);
+  border-color: var(--accent);
   border-radius: 6px;
   font-weight: 600;
 }
@@ -174,11 +156,11 @@ const handleLogin = async () => {
   text-align: center;
   margin-top: 1.5rem;
   font-size: 0.875rem;
-  color: var(--muted, #666);
+  color: var(--muted);
 }
 
 .link {
-  color: var(--accent, #409eff);
+  color: var(--accent);
   text-decoration: none;
   font-weight: 500;
 }

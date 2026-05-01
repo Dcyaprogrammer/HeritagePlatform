@@ -1,12 +1,11 @@
 <template>
-  <div class="wrap">
-    <header class="top">
-      <h1>Heritage Resource Hall</h1>
-      <div class="header-actions">
-        <button type="button" class="btn" @click="$router.push('/')">Home</button>
-      </div>
-    </header>
-
+  <AuthPageFrame
+    eyebrow="Join the community"
+    aside-title="Create your contributor profile"
+    aside-lead="Register to save work in progress, apply for contributor access, and help grow a shared catalog of heritage resources."
+    :points="asidePoints"
+    quote="New voices and local knowledge make the archive stronger for everyone."
+  >
     <div class="register-container">
       <el-card class="register-card" shadow="hover">
         <template #header>
@@ -48,7 +47,7 @@
         </el-form>
       </el-card>
     </div>
-  </div>
+  </AuthPageFrame>
 </template>
 
 <script setup>
@@ -56,6 +55,13 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { register, login, setToken, setUserInfo } from '../../api/auth.js'
+import AuthPageFrame from '../../components/auth/AuthPageFrame.vue'
+
+const asidePoints = [
+  'One account for browsing and optional submissions',
+  'Secure sign-in with email and password',
+  'Start exploring before you apply to contribute',
+]
 
 const router = useRouter()
 const registerFormRef = ref(null)
@@ -137,49 +143,18 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
-.wrap {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 0 1.25rem;
-}
-.top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 0;
-  border-bottom: 1px solid var(--border, #eaeaea);
-}
-.top h1 {
-  margin: 0;
-  font-family: var(--font-serif, 'Georgia', serif);
-  font-size: 1.5rem;
-  color: var(--text, #333);
-}
-.btn {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border, #eaeaea);
-  border-radius: 4px;
-  background: white;
-  cursor: pointer;
-  font-size: 0.875rem;
-  color: var(--text, #333);
-}
-.btn:hover {
-  background: #f9f9f9;
-}
 .register-container {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding-top: 4rem;
-  min-height: calc(100vh - 100px);
+  width: 100%;
 }
 
 .register-card {
   width: 100%;
   max-width: 420px;
-  border-radius: 12px;
-  border: 1px solid var(--border, #eaeaea);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--card-shadow);
 }
 
 .card-header {
@@ -188,21 +163,21 @@ const handleRegister = async () => {
 
 .card-header h2 {
   margin: 0;
-  color: var(--text, #333);
+  color: var(--ink);
   font-family: var(--font-serif, 'Georgia', serif);
   font-size: 1.75rem;
 }
 
 .subtitle {
   margin: 0.5rem 0 0;
-  color: var(--muted, #666);
+  color: var(--muted);
   font-size: 0.875rem;
 }
 
 .submit-btn {
   width: 100%;
-  background: var(--accent, #409eff);
-  border-color: var(--accent, #409eff);
+  background: var(--accent);
+  border-color: var(--accent);
   border-radius: 6px;
   font-weight: 600;
 }
@@ -215,11 +190,11 @@ const handleRegister = async () => {
   text-align: center;
   margin-top: 1.5rem;
   font-size: 0.875rem;
-  color: var(--muted, #666);
+  color: var(--muted);
 }
 
 .link {
-  color: var(--accent, #409eff);
+  color: var(--accent);
   text-decoration: none;
   font-weight: 500;
 }

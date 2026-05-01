@@ -6,8 +6,8 @@
         <div class="sidebar-header">
           <h3>Admin Panel</h3>
         </div>
-        <el-menu :default-active="$route.path" router class="admin-menu" background-color="#304156"
-          text-color="#bfcbd9" active-text-color="#409EFF">
+        <el-menu :default-active="$route.path" router class="admin-menu" background-color="var(--ink)"
+          text-color="#e2ddd4" active-text-color="#faf8f3">
           <el-menu-item index="/admin/users">
             <el-icon>
               <UserFilled />
@@ -16,25 +16,25 @@
           </el-menu-item>
           <el-menu-item index="/admin/review">
             <el-icon>
-              <DocumentChecked />
+              <Stamp />
             </el-icon>
             <span>Contributor Review</span>
           </el-menu-item>
           <el-menu-item index="/admin/resource-review">
             <el-icon>
-            <DocumentChecked />
+              <DocumentChecked />
             </el-icon>
             <span>Resource Review</span>
           </el-menu-item>
           <el-menu-item index="/admin/resources">
             <el-icon>
-              <DocumentChecked />
+              <FolderOpened />
             </el-icon>
             <span>All Resources</span>
           </el-menu-item>
           <el-menu-item index="/admin/master-data">
             <el-icon>
-              <DocumentChecked />
+              <Setting />
             </el-icon>
             <span>Master Data</span>
           </el-menu-item>
@@ -77,7 +77,15 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { UserFilled, DocumentChecked, ArrowDown, House } from '@element-plus/icons-vue'
+import {
+  UserFilled,
+  DocumentChecked,
+  ArrowDown,
+  House,
+  Stamp,
+  FolderOpened,
+  Setting,
+} from '@element-plus/icons-vue'
 import { logout } from '../../api/auth.js'
 
 const router = useRouter()
@@ -105,20 +113,21 @@ const handleCommand = (command) => {
 }
 
 .sidebar {
-  background-color: #304156;
-  color: #fff;
+  background-color: var(--ink);
+  color: var(--surface);
 }
 
 .sidebar-header {
   padding: 20px;
   text-align: center;
-  border-bottom: 1px solid #1f2d3d;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 75%, #fff 25%);
 }
 
 .sidebar-header h3 {
   margin: 0;
-  color: #fff;
+  color: var(--surface);
   font-size: 18px;
+  font-family: var(--font-serif);
 }
 
 .admin-menu {
@@ -126,16 +135,17 @@ const handleCommand = (command) => {
 }
 
 .right-container {
-  background-color: #f0f2f5;
+  background-color: var(--bg);
 }
 
 .top-header {
-  background-color: #fff;
+  background-color: var(--surface);
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--card-shadow);
   z-index: 10;
+  border-bottom: 1px solid var(--border);
 }
 
 .header-right {
@@ -160,12 +170,12 @@ const handleCommand = (command) => {
 }
 
 .user-info:hover {
-  background-color: #f5f7fa;
+  background-color: color-mix(in srgb, var(--surface) 85%, var(--accent) 15%);
 }
 
 .username {
   font-size: 14px;
-  color: #606266;
+  color: var(--muted);
 }
 
 .main-content {

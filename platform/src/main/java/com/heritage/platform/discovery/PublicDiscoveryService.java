@@ -162,6 +162,7 @@ public class PublicDiscoveryService {
 				""";
 
 		List<PublicResourceSummary> rows = jdbc.query(listSql, params, new SummaryMapper());
+		enrichSummaryTags(rows);
 
 		SlicePage<PublicResourceSummary> out = new SlicePage<>();
 		out.setItems(rows);
@@ -169,6 +170,44 @@ public class PublicDiscoveryService {
 		out.setPage(page);
 		out.setSize(size);
 		return out;
+	}
+
+	private void enrichSummaryTags(List<PublicResourceSummary> rows) {
+		if (rows == null || rows.isEmpty()) {
+			return;
+		}
+
+		List<Long> resourceIds = rows.stream()
+				.map(PublicResourceSummary::getId)
+				.filter(id -> id != null)
+				.distinct()
+				.toList();
+		if (resourceIds.isEmpty()) {
+			return;
+		}
+
+		String tagSql = """
+				SELECT rt.resource_id, t.id, t.name
+				FROM resource_tags rt
+				INNER JOIN tags t ON t.id = rt.tag_id
+				WHERE rt.resource_id IN (:resourceIds)
+				ORDER BY rt.resource_id ASC, t.name ASC
+				""";
+		MapSqlParameterSource tagParams = new MapSqlParameterSource("resourceIds", resourceIds);
+		List<Map<String, Object>> tagRows = jdbc.queryForList(tagSql, tagParams);
+		Map<Long, List<NamedRow>> tagMap = new java.util.HashMap<>();
+		for (Map<String, Object> row : tagRows) {
+			Long resourceId = ((Number) row.get("resource_id")).longValue();
+			Long tagId = ((Number) row.get("id")).longValue();
+			String tagName = (String) row.get("name");
+			tagMap.computeIfAbsent(resourceId, k -> new ArrayList<>())
+					.add(new NamedRow(tagId, tagName));
+		}
+
+		for (PublicResourceSummary summary : rows) {
+			List<NamedRow> tags = tagMap.get(summary.getId());
+			summary.setTags(tags != null ? tags : List.of());
+		}
 	}
 
 	public Optional<PublicResourceDetail> findApprovedDetail(Long id) {
