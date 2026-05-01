@@ -14,7 +14,14 @@
     <el-card class="filter-card">
       <el-form :inline="true" class="filter-form">
         <el-form-item label="Status">
-          <el-select v-model="filters.status" placeholder="All" clearable @change="handleFilterChange">
+          <el-select
+            v-model="filters.status"
+            placeholder="All"
+            clearable
+            class="resource-status-select"
+            :fit-input-width="false"
+            @change="handleFilterChange"
+          >
             <el-option label="Approved" value="APPROVED" />
             <el-option label="Archived" value="ARCHIVED" />
             <el-option label="Pending review" value="PENDING_REVIEW" />
@@ -24,12 +31,21 @@
         </el-form-item>
 
         <el-form-item label="Category">
-          <el-select v-model="filters.categoryId" placeholder="All" clearable filterable @change="handleFilterChange">
+          <el-select
+            v-model="filters.categoryId"
+            placeholder="All"
+            clearable
+            filterable
+            class="resource-category-select"
+            :fit-input-width="false"
+            @change="handleFilterChange"
+          >
             <el-option
               v-for="c in categories"
               :key="c.id"
               :label="c.name"
               :value="c.id"
+              :title="c.name"
             />
           </el-select>
         </el-form-item>
@@ -282,6 +298,21 @@ onMounted(async () => {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.filter-form :deep(.el-form-item) {
+  /* Prevent inline filter flex layout from shrinking el-select width */
+  flex: 0 0 auto;
+}
+
+.resource-status-select {
+  width: 200px;
+  min-width: 200px;
+}
+
+.resource-category-select {
+  width: 260px;
+  min-width: 260px;
 }
 
 .table-card {

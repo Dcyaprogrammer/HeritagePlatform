@@ -17,6 +17,8 @@ import SubmissionsView from '../views/SubmissionsView.vue'
 import FeedbackView from '../views/FeedbackView.vue'
 import CreateResource from '../views/CreateResource.vue'
 import { getStoredRoles, getToken } from '../api/auth.js'
+import ResetPassword from '../views/auth/ResetPassword.vue'
+
 
 const routes = [
   {
@@ -93,6 +95,43 @@ const routes = [
       },
     ],
   },
+
+
+  //忘记/重置
+    {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../views/auth/ForgotPassword.vue'),
+    meta: { title: 'Forgot Password' }
+  },
+    {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: ResetPassword,     //
+    props: true,
+    meta: { title: 'Reset Password' }
+  },
+
+
+
+
+  //多会话
+    {
+    path: '/sessions',
+    name: 'Sessions',
+    component: () => import('../views/auth/Sessions.vue'),
+    meta: {
+      title: 'Active Sessions',
+      requiresAuth: true
+    }
+  },
+
+
+
+
+
+
+  // Home page for viewers
   {
     path: '/home',
     redirect: '/',

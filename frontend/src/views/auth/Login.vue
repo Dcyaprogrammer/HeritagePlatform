@@ -40,7 +40,10 @@
 
           <div class="form-footer">
             <span>Don't have an account? </span>
-            <router-link to="/register" class="link">Register</router-link>
+            <router-link to="/register">Register</router-link>
+            <br>
+            <span>Forgot your password? </span>
+            <router-link to="/forgot-password">Click here</router-link>
           </div>
         </el-form>
       </el-card>

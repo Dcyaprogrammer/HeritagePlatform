@@ -1,7 +1,11 @@
 package com.heritage.platform.controller;
 
 import com.heritage.platform.model.Attachment;
+import com.heritage.platform.model.HeritageResource;
+import com.heritage.platform.model.HeritageUser;
+import com.heritage.platform.model.ResourceStatus;
 import com.heritage.platform.repository.AttachmentRepository;
+import com.heritage.platform.repository.HeritageUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -11,6 +15,9 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
@@ -35,6 +42,9 @@ public class AttachmentController {
 
     @Autowired
     private AttachmentRepository attachmentRepository;
+
+    @Autowired
+    private HeritageUserRepository heritageUserRepository;
 
     private final String UPLOAD_DIR = System.getProperty("user.dir") + "/uploads/";
 
@@ -73,16 +83,19 @@ public class AttachmentController {
         final int totalChunks;
         final long chunkSize;
         final String storedName;
-        UploadDescriptor(String fileName, int totalChunks, long chunkSize, String storedName) {
+        final String username;
+        UploadDescriptor(String fileName, int totalChunks, long chunkSize, String storedName, String username) {
             this.fileName = fileName;
             this.totalChunks = totalChunks;
             this.chunkSize = chunkSize;
             this.storedName = storedName;
+            this.username = username;
         }
-        boolean matches(String fileName, int totalChunks, long chunkSize) {
+        boolean matches(String fileName, int totalChunks, long chunkSize, String username) {
             return this.totalChunks == totalChunks
                     && this.chunkSize == chunkSize
-                    && Objects.equals(this.fileName, fileName);
+                    && Objects.equals(this.fileName, fileName)
+                    && Objects.equals(this.username, username);
         }
     }
 
@@ -93,7 +106,9 @@ public class AttachmentController {
 
     // ----- Standard single upload -----
     @PostMapping("/upload")
-    public ResponseEntity<Map<String, Object>> uploadFile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, Object>> uploadFile(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) {
         log.info("========== Upload method called ==========");
         log.info("File name: {}", file.getOriginalFilename());
         log.info("File size: {}", file.getSize());
@@ -101,6 +116,8 @@ public class AttachmentController {
         Map<String, Object> response = new HashMap<>();
         
         try {
+            HeritageUser uploader = requireAuthenticatedUser(authentication);
+
             // Create upload directory
             File uploadDir = new File(UPLOAD_DIR);
             if (!uploadDir.exists()) {
@@ -112,6 +129,12 @@ public class AttachmentController {
             if (!isAllowedFileType(originalName)) {
                 response.put("success", false);
                 response.put("message", "File type not allowed");
+                return ResponseEntity.status(400).body(response);
+            }
+
+            if (file.isEmpty() || file.getSize() == 0) {
+                response.put("success", false);
+                response.put("message", "Empty file refused");
                 return ResponseEntity.status(400).body(response);
             }
 
@@ -127,7 +150,14 @@ public class AttachmentController {
             checkDiskSpace(file.getSize());
             Path filePath = Paths.get(UPLOAD_DIR + storedName);
             Files.copy(file.getInputStream(), filePath);
-            log.info("File saved successfully, path: {}", filePath.toString());
+            long savedSize = Files.size(filePath);
+            if (savedSize == 0) {
+                Files.deleteIfExists(filePath);
+                response.put("success", false);
+                response.put("message", "Saved file was empty — check multipart upload (multipart boundary must not be stripped)");
+                return ResponseEntity.status(400).body(response);
+            }
+            log.info("File saved successfully, path: {}, {} bytes", filePath.toString(), savedSize);
             
             // Determine file type
             String fileType = "document";
@@ -150,8 +180,9 @@ public class AttachmentController {
             attachment.setDisplayName(originalName);
             attachment.setFilePath("/uploads/" + storedName);
             attachment.setFileType(fileType);
-            attachment.setFileSize(file.getSize());
+            attachment.setFileSize(savedSize);
             attachment.setCreatedAt(LocalDateTime.now());
+            attachment.setUploader(uploader);
             attachment.setResource(null); // 暂设为 null，对接组员4后改为真实 resource_id
             attachmentRepository.save(attachment);
             
@@ -165,11 +196,16 @@ public class AttachmentController {
             response.put("filePath", "/uploads/" + storedName);
             response.put("previewUrl", "/api/attachments/" + attachment.getId() + "/preview");
             response.put("downloadUrl", "/api/attachments/" + attachment.getId() + "/download");
-            response.put("fileSize", file.getSize());
+            response.put("fileSize", savedSize);
             response.put("message", "Upload success");
             
             return ResponseEntity.ok(response);
             
+        } catch (SecurityException e) {
+            log.warn("Upload rejected: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(401).body(response);
         } catch (IOException e) {
             log.error("Upload failed: {}", e.getMessage(), e);
             response.put("success", false);
@@ -186,9 +222,11 @@ public class AttachmentController {
             @RequestParam("chunkIndex") int chunkIndex,
             @RequestParam("totalChunks") int totalChunks,
             @RequestParam("fileName") String fileName,
-            @RequestParam("chunkSize") long chunkSize) {
+            @RequestParam("chunkSize") long chunkSize,
+            Authentication authentication) {
         Map<String, Object> response = new HashMap<>();
         try {
+            String username = requireAuthenticatedUsername(authentication);
             String validation = validateChunkParams(uploadId, fileName, chunkIndex, totalChunks, chunkSize);
             if (validation != null) {
                 response.put("success", false);
@@ -215,11 +253,11 @@ public class AttachmentController {
             // every subsequent chunk to match. Atomic via computeIfAbsent so concurrent first-chunk
             // requests can't race in two different descriptors.
             UploadDescriptor descriptor = uploadDescriptors.computeIfAbsent(uploadId,
-                    k -> new UploadDescriptor(fileName, totalChunks, chunkSize, candidateStoredName));
-            if (!descriptor.matches(fileName, totalChunks, chunkSize)) {
-                log.warn("Rejected mismatched chunk for uploadId={}: pinned=({}, {}, {}), got=({}, {}, {})",
+                    k -> new UploadDescriptor(fileName, totalChunks, chunkSize, candidateStoredName, username));
+            if (!descriptor.matches(fileName, totalChunks, chunkSize, username)) {
+                log.warn("Rejected mismatched chunk for uploadId={}: pinned=({}, {}, {}, {}), got=({}, {}, {}, {})",
                         uploadId, descriptor.fileName, descriptor.totalChunks, descriptor.chunkSize,
-                        fileName, totalChunks, chunkSize);
+                        descriptor.username, fileName, totalChunks, chunkSize, username);
                 response.put("success", false);
                 response.put("message", "Chunk metadata does not match this uploadId (fileName/totalChunks/chunkSize mismatch)");
                 return ResponseEntity.status(400).body(response);
@@ -229,6 +267,11 @@ public class AttachmentController {
             Path targetFile = resolveUnderUploadDir(storedName);
 
             long chunkLen = file.getSize();
+            if (chunkLen == 0) {
+                response.put("success", false);
+                response.put("message", "Empty chunk refused");
+                return ResponseEntity.status(400).body(response);
+            }
 
             // Per-uploadId quota: don't let any single upload exceed MAX_FILE_SIZE, and reject early
             // if the declared totalChunks * chunkSize would already blow past the cap.
@@ -275,7 +318,7 @@ public class AttachmentController {
             log.warn("Rejected chunk upload: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
-            return ResponseEntity.status(400).body(response);
+            return ResponseEntity.status(401).body(response);
         } catch (IOException e) {
             log.error("Chunk upload failed: {}", e.getMessage(), e);
             response.put("success", false);
@@ -291,9 +334,12 @@ public class AttachmentController {
             @RequestParam("fileName") String fileName,
             @RequestParam("totalChunks") int totalChunks,
             @RequestParam("chunkSize") long chunkSize,
-            @RequestParam("fileHash") String fileHash) {
+            @RequestParam("fileHash") String fileHash,
+            Authentication authentication) {
         Map<String, Object> response = new HashMap<>();
         try {
+            HeritageUser uploader = requireAuthenticatedUser(authentication);
+            String username = uploader.getUsername();
             String validation = validateChunkParams(uploadId, fileName, 0, totalChunks, chunkSize);
             if (validation != null) {
                 response.put("success", false);
@@ -309,10 +355,10 @@ public class AttachmentController {
                 response.put("message", "No active upload for this uploadId");
                 return ResponseEntity.status(400).body(response);
             }
-            if (!descriptor.matches(fileName, totalChunks, chunkSize)) {
-                log.warn("Rejected merge mismatch for uploadId={}: pinned=({}, {}, {}), got=({}, {}, {})",
+            if (!descriptor.matches(fileName, totalChunks, chunkSize, username)) {
+                log.warn("Rejected merge mismatch for uploadId={}: pinned=({}, {}, {}, {}), got=({}, {}, {}, {})",
                         uploadId, descriptor.fileName, descriptor.totalChunks, descriptor.chunkSize,
-                        fileName, totalChunks, chunkSize);
+                        descriptor.username, fileName, totalChunks, chunkSize, username);
                 response.put("success", false);
                 response.put("message", "Merge metadata does not match the pinned upload");
                 return ResponseEntity.status(400).body(response);
@@ -410,6 +456,7 @@ public class AttachmentController {
             attachment.setFileType(fileType);
             attachment.setFileSize(fileSize);
             attachment.setCreatedAt(LocalDateTime.now());
+            attachment.setUploader(uploader);
             attachment.setResource(null); // 暂设为 null，对接组员4后改为真实 resource_id
             attachmentRepository.save(attachment);
 
@@ -428,7 +475,7 @@ public class AttachmentController {
             log.warn("Rejected merge: {}", e.getMessage());
             response.put("success", false);
             response.put("message", e.getMessage());
-            return ResponseEntity.status(400).body(response);
+            return ResponseEntity.status(401).body(response);
         } catch (IOException | NoSuchAlgorithmException e) {
             clearUploadState(uploadId);
             log.error("Finalize failed: {}", e.getMessage(), e);
@@ -438,9 +485,10 @@ public class AttachmentController {
         }
     }
 
-    // ----- Delete endpoint (unchanged) -----
+    // ----- Delete endpoint -----
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> deleteFile(@PathVariable Long id) {
+    @Transactional
+    public ResponseEntity<Map<String, Object>> deleteFile(@PathVariable Long id, Authentication authentication) {
         Map<String, Object> response = new HashMap<>();
         
         try {
@@ -451,20 +499,39 @@ public class AttachmentController {
                 response.put("message", "File not found");
                 return ResponseEntity.status(404).body(response);
             }
-            
-            // Delete physical file from server
-            Path actualPath = resolveStoredFilePath(attachment);
+
+            if (authentication == null
+                    || !authentication.isAuthenticated()
+                    || authentication instanceof AnonymousAuthenticationToken) {
+                response.put("success", false);
+                response.put("message", "Authentication required");
+                return ResponseEntity.status(401).body(response);
+            }
+            if (!canDeleteAttachment(attachment, authentication)) {
+                response.put("success", false);
+                response.put("message", "You do not have permission to delete this file");
+                return ResponseEntity.status(403).body(response);
+            }
+
+            // DB row first — if the transaction rolls back we never unlink the physical file prematurely.
+            String storedName = attachment.getStoredName();
+            attachmentRepository.deleteById(id);
+            log.info("Deleted database record, ID: {}", id);
+
+            if (storedName == null || storedName.isBlank()) {
+                response.put("success", true);
+                response.put("message", "File deleted successfully");
+                return ResponseEntity.ok(response);
+            }
+
+            Path actualPath = resolveUnderUploadDir(storedName);
             File file = actualPath.toFile();
             if (file.exists()) {
                 boolean deleted = file.delete();
-                log.info("Deleted physical file: {}, result: {}", actualPath, deleted);
+                log.info("Deleted physical file after DB delete: {}, result: {}", actualPath, deleted);
             } else {
                 log.warn("File does not exist, skipping physical deletion: {}", actualPath);
             }
-            
-            // Delete database record
-            attachmentRepository.deleteById(id);
-            log.info("Deleted database record, ID: {}", id);
             
             response.put("success", true);
             response.put("message", "File deleted successfully");
@@ -479,11 +546,17 @@ public class AttachmentController {
     }
 
     @GetMapping("/{id}/preview")
-    public ResponseEntity<Resource> previewFile(@PathVariable Long id) {
+    @Transactional(readOnly = true)
+    public ResponseEntity<Resource> previewFile(@PathVariable Long id, Authentication authentication) {
         try {
             Attachment attachment = attachmentRepository.findById(id).orElse(null);
             if (attachment == null) {
                 return ResponseEntity.notFound().build();
+            }
+
+            ResponseEntity<Resource> denied = denyIfNotAllowed(attachment, authentication);
+            if (denied != null) {
+                return denied;
             }
 
             Path filePath = resolveStoredFilePath(attachment);
@@ -506,11 +579,17 @@ public class AttachmentController {
     }
 
     @GetMapping("/{id}/download")
-    public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
+    @Transactional(readOnly = true)
+    public ResponseEntity<Resource> downloadFile(@PathVariable Long id, Authentication authentication) {
         try {
             Attachment attachment = attachmentRepository.findById(id).orElse(null);
             if (attachment == null) {
                 return ResponseEntity.notFound().build();
+            }
+
+            ResponseEntity<Resource> denied = denyIfNotAllowed(attachment, authentication);
+            if (denied != null) {
+                return denied;
             }
 
             Path filePath = resolveStoredFilePath(attachment);
@@ -530,6 +609,101 @@ public class AttachmentController {
             log.error("Download failed: {}", e.getMessage(), e);
             return ResponseEntity.status(500).build();
         }
+    }
+
+    private HeritageUser requireAuthenticatedUser(Authentication authentication) {
+        String username = requireAuthenticatedUsername(authentication);
+        return heritageUserRepository.findByUsername(username)
+                .orElseThrow(() -> new SecurityException("Authenticated user not found"));
+    }
+
+    private String requireAuthenticatedUsername(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null || authentication.getName().isBlank()) {
+            throw new SecurityException("Authentication required");
+        }
+        String name = authentication.getName();
+        if (name == null || name.isBlank()) {
+            throw new SecurityException("Authentication required");
+        }
+        return name;
+    }
+
+    private ResponseEntity<Resource> denyIfNotAllowed(Attachment attachment, Authentication authentication) {
+        if (canReadAttachment(attachment, authentication)) {
+            return null;
+        }
+        return authentication == null
+                ? ResponseEntity.status(401).build()
+                : ResponseEntity.status(403).build();
+    }
+
+    private boolean canReadAttachment(Attachment attachment, Authentication authentication) {
+        HeritageResource resource = attachment.getResource();
+        
+        // 已审核通过的资源，任何人都可以查看
+        if (resource != null && resource.getStatus() == ResourceStatus.APPROVED) {
+            return true;
+        }
+
+        if (authentication == null || authentication.getName() == null) {
+            return false;
+        }
+
+        // 管理员和审核员可以查看所有附件（包括待审核的）
+        if (hasRole(authentication, "ADMIN") || hasRole(authentication, "REVIEWER")) {
+            return true;
+        }
+
+        String username = authentication.getName();
+        HeritageUser uploader = attachment.getUploader();
+        if (uploader != null && username.equals(uploader.getUsername())) {
+            return true;
+        }
+
+        // 资源提交者可以查看自己提交的资源附件
+        return resource != null
+                && resource.getSubmitter() != null
+                && username.equals(resource.getSubmitter().getUsername());
+    }
+
+    private boolean canDeleteAttachment(Attachment attachment, Authentication authentication) {
+        if (authentication == null
+                || authentication instanceof AnonymousAuthenticationToken
+                || !authentication.isAuthenticated()
+                || authentication.getName() == null) {
+            return false;
+        }
+        if (hasRole(authentication, "ADMIN")) {
+            return true;
+        }
+
+        HeritageResource resource = attachment.getResource();
+        if (hasRole(authentication, "REVIEWER") && resource != null
+                && resource.getStatus() == ResourceStatus.PENDING_REVIEW) {
+            return true;
+        }
+
+        String username = authentication.getName();
+        if (resource != null
+                && resource.getStatus() != ResourceStatus.DRAFT
+                && resource.getStatus() != ResourceStatus.REJECTED) {
+            return false;
+        }
+
+        HeritageUser uploader = attachment.getUploader();
+        if (uploader != null && username.equals(uploader.getUsername())) {
+            return true;
+        }
+
+        return resource != null
+                && resource.getSubmitter() != null
+                && username.equals(resource.getSubmitter().getUsername());
+    }
+
+    private boolean hasRole(Authentication authentication, String role) {
+        String authority = "ROLE_" + role;
+        return authentication.getAuthorities().stream()
+                .anyMatch(grantedAuthority -> authority.equals(grantedAuthority.getAuthority()));
     }
 
     private boolean isAllowedFileType(String fileName) {
