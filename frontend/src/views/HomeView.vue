@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import ResourceCard from '../components/ResourceCard.vue'
 import { getPublicResources } from '../api/resource.js'
 
@@ -204,6 +204,13 @@ watch([provincePickerValue, heritageTypePickerValue], () => {
 onMounted(() => {
   loadMeta()
   search()
+})
+
+onUnmounted(() => {
+  if (autoSearchTimer) {
+    clearTimeout(autoSearchTimer)
+    autoSearchTimer = null
+  }
 })
 </script>
 
