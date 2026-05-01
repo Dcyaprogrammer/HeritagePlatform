@@ -8,11 +8,17 @@ export function usePublicHeader() {
   const isAdmin = ref(false)
   const isContributor = ref(false)
 
-  function refreshAuth() {
-    isLoggedIn.value = !!getToken()
+  function syncRolesFromStorage() {
     const r = getStoredRoles()
     isAdmin.value = r.includes('ADMIN')
     isContributor.value = r.includes('CONTRIBUTOR') || r.includes('ADMIN')
+  }
+
+  syncRolesFromStorage()
+
+  function refreshAuth() {
+    isLoggedIn.value = !!getToken()
+    syncRolesFromStorage()
   }
 
   function goToAdmin() {
