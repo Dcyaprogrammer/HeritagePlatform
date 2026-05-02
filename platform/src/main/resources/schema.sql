@@ -1,22 +1,22 @@
--- Create the database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS heritage_platform DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS heritage_platform
+    DEFAULT CHARACTER SET utf8mb4
+    COLLATE utf8mb4_unicode_ci;
 USE heritage_platform;
 
--- 1. Identity & Governance (Users & Roles)
 CREATE TABLE IF NOT EXISTS heritage_users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(64) NOT NULL UNIQUE,
     password_hash VARCHAR(120) NOT NULL,
-    email VARCHAR(100),
     display_name VARCHAR(120) NOT NULL,
-    avatar VARCHAR(500),
-    bio TEXT,
+    email VARCHAR(100) NULL,
+    avatar VARCHAR(500) NULL,
+    bio TEXT NULL,
     contributor_status VARCHAR(20) DEFAULT 'NONE',
-    contributor_reason TEXT,
+    contributor_reason TEXT NULL,
     failed_attempts INT DEFAULT 0,
-    lock_time DATETIME,
-    reset_token VARCHAR(255),
-    reset_token_expiry DATETIME,
+    lock_time DATETIME NULL,
+    reset_token VARCHAR(255) NULL,
+    reset_token_expiry DATETIME NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -25,273 +25,100 @@ CREATE TABLE IF NOT EXISTS heritage_user_roles (
     user_id BIGINT NOT NULL,
     role VARCHAR(32) NOT NULL,
     PRIMARY KEY (user_id, role),
-    FOREIGN KEY (user_id) REFERENCES heritage_users(id) ON DELETE CASCADE
+    CONSTRAINT fk_user_roles_user
+        FOREIGN KEY (user_id) REFERENCES heritage_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 2. Master Data (Categories & Tags)
 CREATE TABLE IF NOT EXISTS categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
-    description VARCHAR(255),
+    description VARCHAR(255) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS tags (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL UNIQUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 3. Core Resource Module
 CREATE TABLE IF NOT EXISTS resources (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    description TEXT,
-    location_name VARCHAR(255),
-    copyright_declaration VARCHAR(255),
-    status VARCHAR(20) DEFAULT 'DRAFT' COMMENT 'DRAFT, PENDING_REVIEW, APPROVED, REJECTED, ARCHIVED',
-    contributor_id BIGINT NOT NULL,
+    title VARCHAR(500) NOT NULL,
+    description TEXT NULL,
+    location_name VARCHAR(255) NULL,
+    heritage_type_code VARCHAR(64) NULL,
+    category VARCHAR(120) NULL,
     category_id INT NOT NULL,
---新加的
-    heritage_type_code VARCHAR(64) NULL COMMENT 'Leaf type code, e.g. RIT_BRONZE',
---
+    copyright_declaration VARCHAR(255) NULL,
+    submitted_at DATETIME NULL,
+    status ENUM('DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'ARCHIVED')
+        NOT NULL DEFAULT 'DRAFT',
+    version BIGINT NOT NULL DEFAULT 0,
+    contributor_id BIGINT NOT NULL,
+    submitter_id BIGINT NULL,
+    reviewed_by_id BIGINT NULL,
+    reviewed_at DATETIME NULL,
+    rejection_reason VARCHAR(4000) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (contributor_id) REFERENCES heritage_users(id),
-    FOREIGN KEY (category_id) REFERENCES categories(id)
+    KEY idx_resources_status_submitted_at (status, submitted_at),
+    KEY idx_resources_category_id (category_id),
+    KEY idx_resources_contributor_id (contributor_id),
+    KEY idx_resources_submitter_id (submitter_id),
+    KEY idx_resources_reviewed_by_id (reviewed_by_id),
+    CONSTRAINT fk_resources_category
+        FOREIGN KEY (category_id) REFERENCES categories(id),
+    CONSTRAINT fk_resources_contributor
+        FOREIGN KEY (contributor_id) REFERENCES heritage_users(id),
+    CONSTRAINT fk_resources_submitter
+        FOREIGN KEY (submitter_id) REFERENCES heritage_users(id),
+    CONSTRAINT fk_resources_reviewed_by
+        FOREIGN KEY (reviewed_by_id) REFERENCES heritage_users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Ensure columns required by review module exist on existing databases.
--- These are no-op on fresh databases that already include them.
-SET @col_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'resources'
-      AND COLUMN_NAME = 'category'
-);
-SET @ddl := IF(
-    @col_exists = 0,
-    'ALTER TABLE resources ADD COLUMN category VARCHAR(120) NULL',
-    'SELECT 1'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @col_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'resources'
-      AND COLUMN_NAME = 'submitted_at'
-);
-SET @ddl := IF(
-    @col_exists = 0,
-    'ALTER TABLE resources ADD COLUMN submitted_at DATETIME NULL',
-    'SELECT 1'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @col_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'resources'
-      AND COLUMN_NAME = 'version'
-);
-SET @ddl := IF(
-    @col_exists = 0,
-    'ALTER TABLE resources ADD COLUMN version BIGINT NOT NULL DEFAULT 0',
-    'SELECT 1'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @col_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'resources'
-      AND COLUMN_NAME = 'submitter_id'
-);
-SET @ddl := IF(
-    @col_exists = 0,
-    'ALTER TABLE resources ADD COLUMN submitter_id BIGINT NULL',
-    'SELECT 1'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @col_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'resources'
-      AND COLUMN_NAME = 'reviewed_by_id'
-);
-SET @ddl := IF(
-    @col_exists = 0,
-    'ALTER TABLE resources ADD COLUMN reviewed_by_id BIGINT NULL',
-    'SELECT 1'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @col_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'resources'
-      AND COLUMN_NAME = 'reviewed_at'
-);
-SET @ddl := IF(
-    @col_exists = 0,
-    'ALTER TABLE resources ADD COLUMN reviewed_at DATETIME NULL',
-    'SELECT 1'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
-SET @col_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'resources'
-      AND COLUMN_NAME = 'rejection_reason'
-);
-SET @ddl := IF(
-    @col_exists = 0,
-    'ALTER TABLE resources ADD COLUMN rejection_reason VARCHAR(4000) NULL',
-    'SELECT 1'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- Backfill compatibility values where possible
-UPDATE resources
-SET submitter_id = contributor_id
-WHERE submitter_id IS NULL;
-
-UPDATE resources
-SET submitted_at = created_at
-WHERE submitted_at IS NULL;
-
-UPDATE resources
-SET category = CAST(category_id AS CHAR)
-WHERE category IS NULL;
-
---新加的
-SET @col_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'resources'
-      AND COLUMN_NAME = 'heritage_type_code'
-);
-SET @ddl := IF(
-    @col_exists = 0,
-    'ALTER TABLE resources ADD COLUMN heritage_type_code VARCHAR(64) NULL COMMENT ''Leaf type code, e.g. RIT_BRONZE''',
-    'SELECT 1'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
---
-
-
-
 
 CREATE TABLE IF NOT EXISTS resource_tags (
     resource_id BIGINT NOT NULL,
     tag_id BIGINT NOT NULL,
     PRIMARY KEY (resource_id, tag_id),
-    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+    CONSTRAINT fk_resource_tags_resource
+        FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+    CONSTRAINT fk_resource_tags_tag
+        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 4. Interaction Module (Comments)
-CREATE TABLE IF NOT EXISTS comments (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    resource_id BIGINT NOT NULL,
-    user_id BIGINT NOT NULL,
-    content TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES heritage_users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 5. Attachments
 CREATE TABLE IF NOT EXISTS attachments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     resource_id BIGINT NULL,
     uploader_id BIGINT NULL,
     stored_name VARCHAR(255) NOT NULL,
     display_name VARCHAR(255) NOT NULL,
-    file_path VARCHAR(500) NOT NULL,
-    file_type VARCHAR(50) NOT NULL COMMENT 'image, pdf, word, video, audio, document',
-    file_size BIGINT,
+    file_path VARCHAR(255) NULL,
+    file_type VARCHAR(255) NULL,
+    file_size BIGINT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
-    FOREIGN KEY (uploader_id) REFERENCES heritage_users(id) ON DELETE SET NULL
+    KEY idx_attachments_resource_id (resource_id),
+    KEY idx_attachments_uploader_id (uploader_id),
+    CONSTRAINT fk_attachments_resource
+        FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+    CONSTRAINT fk_attachments_uploader
+        FOREIGN KEY (uploader_id) REFERENCES heritage_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Attachment uploads are created before the resource draft is saved, so resource_id must be nullable.
-ALTER TABLE attachments MODIFY COLUMN resource_id BIGINT NULL;
-
-SET @col_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'attachments'
-      AND COLUMN_NAME = 'uploader_id'
-);
-SET @ddl := IF(
-    @col_exists = 0,
-    'ALTER TABLE attachments ADD COLUMN uploader_id BIGINT NULL',
-    'SELECT 1'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- 4. Review & Interaction Module
 CREATE TABLE IF NOT EXISTS review_logs (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     resource_id BIGINT NOT NULL,
     reviewer_id BIGINT NOT NULL,
-    action VARCHAR(20) NOT NULL COMMENT 'APPROVE, REJECT',
-    feedback_comment TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    operated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
-    FOREIGN KEY (reviewer_id) REFERENCES heritage_users(id) ON DELETE CASCADE
+    action ENUM('APPROVE', 'APPROVED', 'REJECT', 'REJECTED') NOT NULL,
+    feedback_comment VARCHAR(4000) NULL,
+    operated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_review_logs_resource_operated_at (resource_id, operated_at),
+    KEY idx_review_logs_reviewer_id (reviewer_id),
+    CONSTRAINT fk_review_logs_resource
+        FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+    CONSTRAINT fk_review_logs_reviewer
+        FOREIGN KEY (reviewer_id) REFERENCES heritage_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- Add operated_at column if it doesn't exist (for existing databases)
-SET @col_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'review_logs'
-      AND COLUMN_NAME = 'operated_at'
-);
-SET @ddl := IF(
-    @col_exists = 0,
-    'ALTER TABLE review_logs ADD COLUMN operated_at DATETIME DEFAULT CURRENT_TIMESTAMP',
-    'SELECT 1'
-);
-PREPARE stmt FROM @ddl;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS comments (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -300,6 +127,59 @@ CREATE TABLE IF NOT EXISTS comments (
     content TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES heritage_users(id) ON DELETE CASCADE
+    KEY idx_comments_resource_id (resource_id),
+    KEY idx_comments_user_id (user_id),
+    CONSTRAINT fk_comments_resource
+        FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE,
+    CONSTRAINT fk_comments_user
+        FOREIGN KEY (user_id) REFERENCES heritage_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS user_sessions (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NULL,
+    token_jti VARCHAR(255) NULL,
+    ip_address VARCHAR(255) NULL,
+    device_info VARCHAR(255) NULL,
+    login_time DATETIME(6) NULL,
+    UNIQUE KEY uk_user_sessions_token_jti (token_jti),
+    KEY idx_user_sessions_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE resources
+    MODIFY COLUMN title VARCHAR(500) NOT NULL,
+    MODIFY COLUMN heritage_type_code VARCHAR(64) NULL,
+    MODIFY COLUMN category VARCHAR(120) NULL,
+    MODIFY COLUMN submitted_at DATETIME NULL,
+    MODIFY COLUMN status ENUM('DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'ARCHIVED')
+        NOT NULL DEFAULT 'DRAFT',
+    MODIFY COLUMN version BIGINT NOT NULL DEFAULT 0,
+    MODIFY COLUMN reviewed_at DATETIME NULL,
+    MODIFY COLUMN rejection_reason VARCHAR(4000) NULL;
+
+ALTER TABLE attachments
+    MODIFY COLUMN resource_id BIGINT NULL,
+    MODIFY COLUMN uploader_id BIGINT NULL,
+    MODIFY COLUMN file_path VARCHAR(255) NULL,
+    MODIFY COLUMN file_type VARCHAR(255) NULL,
+    MODIFY COLUMN file_size BIGINT NULL;
+
+ALTER TABLE review_logs
+    MODIFY COLUMN action ENUM('APPROVE', 'APPROVED', 'REJECT', 'REJECTED') NOT NULL,
+    MODIFY COLUMN feedback_comment VARCHAR(4000) NULL,
+    MODIFY COLUMN operated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE comments
+    MODIFY COLUMN content TEXT NOT NULL;
+
+UPDATE resources r
+LEFT JOIN categories c ON c.id = r.category_id
+SET r.submitter_id = COALESCE(r.submitter_id, r.contributor_id),
+    r.category = CASE
+        WHEN c.name IS NOT NULL THEN c.name
+        ELSE r.category
+    END
+WHERE r.submitter_id IS NULL
+   OR r.category IS NULL
+   OR r.category = ''
+   OR r.category = CAST(r.category_id AS CHAR);

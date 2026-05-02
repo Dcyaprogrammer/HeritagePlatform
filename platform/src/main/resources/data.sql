@@ -1,55 +1,115 @@
--- =========================================================
--- 初始化模拟数据 (Mock Data) 
--- 密码统一使用 BCrypt 加密，明文为: 123456
--- 使用 INSERT IGNORE 防止重复插入报错
--- =========================================================
+-- Mock users
+-- BCrypt hash below corresponds to the plain password: 123456
+INSERT IGNORE INTO heritage_users (
+    id, username, password_hash, display_name, email, bio,
+    contributor_status, contributor_reason, failed_attempts,
+    lock_time, reset_token, reset_token_expiry, created_at, updated_at
+) VALUES
+    (1, 'admin', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe',
+     'System Admin', 'admin@example.com', 'Platform administrator account.',
+     'APPROVED', NULL, 0, NULL, NULL, NULL, '2026-04-20 09:00:00', '2026-04-20 09:00:00'),
+    (2, 'reviewer', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe',
+     'Content Reviewer', 'reviewer@example.com', 'Handles publication review.',
+     'APPROVED', NULL, 0, NULL, NULL, NULL, '2026-04-20 09:05:00', '2026-04-20 09:05:00'),
+    (3, 'contributor', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe',
+     'Local Contributor', 'contributor@example.com', 'Shares local heritage stories.',
+     'APPROVED', 'Existing approved contributor.', 0, NULL, NULL, NULL, '2026-04-20 09:10:00', '2026-04-20 09:10:00'),
+    (4, 'viewer', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe',
+     'Community Viewer', 'viewer@example.com', 'Reads and comments on public resources.',
+     'NONE', NULL, 0, NULL, NULL, NULL, '2026-04-20 09:15:00', '2026-04-20 09:15:00'),
+    (5, 'applicant', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe',
+     'Pending Applicant', 'applicant@example.com', 'Waiting for contributor approval.',
+     'PENDING', 'I document oral histories from my hometown.', 0, NULL, NULL, NULL, '2026-04-20 09:20:00', '2026-04-20 09:20:00');
 
--- 1. 插入测试用户 (密码都是 123456)
-INSERT IGNORE INTO heritage_users (id, username, password_hash, email, display_name, bio, contributor_status, created_at, updated_at) VALUES
-(1, 'admin', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe', 'admin@example.com', 'System Admin', 'I am the admin.', 'APPROVED', NOW(), NOW()),
-(2, 'reviewer', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe', 'reviewer@example.com', 'Content Reviewer', 'I review submissions.', 'APPROVED', NOW(), NOW()),
-(3, 'contributor', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe', 'contributor@example.com', 'Local Contributor', 'I share heritage stories.', 'APPROVED', NOW(), NOW());
+INSERT IGNORE INTO heritage_user_roles (user_id, role) VALUES
+    (1, 'ADMIN'),
+    (2, 'ADMIN'),
+    (3, 'CONTRIBUTOR'),
+    (3, 'VIEWER'),
+    (4, 'VIEWER'),
+    (5, 'VIEWER');
 
--- 2. 分配角色
-INSERT IGNORE INTO heritage_user_roles (user_id, role) VALUES 
-(1, 'ADMIN'),
-(2, 'ADMIN'),
-(3, 'CONTRIBUTOR'),
-(3, 'VIEWER');
-
--- 4. 插入分类 (Categories)
+-- Master data
 INSERT IGNORE INTO categories (id, name, description, created_at) VALUES
-(1, 'Oral tradition', 'Oral traditions, expressions, and local proverbs', NOW()),
-(2, 'Craft & objects', 'Traditional craftsmanship and handmade artifacts', NOW()),
-(3, 'Historic sites', 'Buildings, streets, and geographical heritage', NOW());
+    (1, 'Oral tradition', 'Oral traditions, expressions, and local proverbs.', '2026-04-20 10:00:00'),
+    (2, 'Craft & objects', 'Traditional craftsmanship and material culture.', '2026-04-20 10:01:00'),
+    (3, 'Historic sites', 'Buildings, streets, and place-based heritage.', '2026-04-20 10:02:00');
 
--- 5. 插入标签 (Tags)
-INSERT IGNORE INTO tags (id, name, created_at) VALUES 
-(1, 'oral history', NOW()), 
-(2, 'historic streets', NOW()), 
-(3, 'indigo dyeing', NOW()),
-(4, 'maritime', NOW()),
-(5, 'proverbs', NOW());
+INSERT IGNORE INTO tags (id, name, created_at) VALUES
+    (1, 'oral history', '2026-04-20 10:10:00'),
+    (2, 'historic streets', '2026-04-20 10:11:00'),
+    (3, 'indigo dyeing', '2026-04-20 10:12:00'),
+    (4, 'maritime', '2026-04-20 10:13:00'),
+    (5, 'proverbs', '2026-04-20 10:14:00'),
+    (6, 'garden archive', '2026-04-20 10:15:00');
 
--- 6. 插入资源 (Resources) - 包含不同状态供不同组员测试
-INSERT IGNORE INTO resources (id, title, description, location_name, copyright_declaration, status, contributor_id, category_id, created_at, updated_at, submitted_at) VALUES
-(1, 'Oral history excerpt: Pingjiang Road historic district', 'Local chronicles from the Han dynasty, detailing the water town lifestyle.', 'Suzhou, China', 'CC BY-NC-SA 4.0', 'APPROVED', 3, 3, NOW(), NOW(), NOW()),
-(2, 'Traditional indigo resist-dyed cloth (lan yin hua bu)', 'Tongxiang blue calico uses plant indigo. This resource details the traditional dyeing patterns.', 'Tongxiang, Jiaxing', 'Educational use only', 'PENDING_REVIEW', 3, 2, NOW(), NOW(), NOW()),
-(3, 'Coastal tide and weather proverbs', 'A community-compiled set of more than fifty proverbs about the tides and weather near the coast.', 'Haining, Zhejiang', 'Community share-alike', 'REJECTED', 3, 1, NOW(), NOW(), NOW()),
-(4, 'Draft: Old city wall restoration', 'Initial notes on the old city wall structure before the 2020 restoration project.', 'Nanjing, Jiangsu', 'None', 'DRAFT', 3, 3, NOW(), NOW(), NULL);
+-- Resources across draft / pending / approved / rejected states
+INSERT IGNORE INTO resources (
+    id, title, description, location_name, heritage_type_code, category, category_id,
+    copyright_declaration, submitted_at, status, version,
+    contributor_id, submitter_id, reviewed_by_id, reviewed_at, rejection_reason,
+    created_at, updated_at
+) VALUES
+    (1, 'Oral history excerpt: Pingjiang Road historic district',
+     'Local chronicles about the water-town lifestyle around Pingjiang Road.',
+     'Suzhou, Jiangsu', 'CULT_BOOKS_DOCUMENTS', 'Historic sites', 3,
+     'CC BY-NC-SA 4.0', '2026-04-28 19:28:00', 'APPROVED', 0,
+     3, 3, 2, '2026-04-29 09:30:00', NULL,
+     '2026-04-28 19:00:00', '2026-04-29 09:30:00'),
+    (2, 'Traditional indigo resist-dyed cloth (lan yin hua bu)',
+     'An overview of Tongxiang blue calico patterns, materials, and workshop practice.',
+     'Tongxiang, Zhejiang', 'LIFE_TEXTILE', 'Craft & objects', 2,
+     'Educational use only', '2026-05-01 11:00:00', 'PENDING_REVIEW', 0,
+     3, 3, NULL, NULL, NULL,
+     '2026-05-01 10:15:00', '2026-05-01 11:00:00'),
+    (3, 'Coastal tide and weather proverbs',
+     'A community-compiled set of sayings about tides and weather near the coast.',
+     'Haining, Zhejiang', 'CULT_BOOKS_DOCUMENTS', 'Oral tradition', 1,
+     'Community share-alike', '2026-04-30 08:15:00', 'REJECTED', 1,
+     3, 3, 1, '2026-04-30 17:20:00',
+     'Please provide primary-source references before resubmitting.',
+     '2026-04-29 18:00:00', '2026-04-30 17:20:00'),
+    (4, 'Draft: Old city wall restoration notes',
+     'Initial field notes on the old city wall structure before restoration.',
+     'Nanjing, Jiangsu', 'RIT_ARCHITECTURE', 'Historic sites', 3,
+     'None', NULL, 'DRAFT', 0,
+     3, 3, NULL, NULL, NULL,
+     '2026-05-01 09:00:00', '2026-05-01 09:00:00'),
+    (5, 'Humble Administrator''s Garden maintenance ledger',
+     'A translated digest of maintenance records for the classical Suzhou garden.',
+     'Suzhou, Jiangsu', 'CULT_BOOKS_DOCUMENTS', 'Historic sites', 3,
+     'Public domain source digest', '2026-04-27 14:00:00', 'APPROVED', 2,
+     3, 3, 1, '2026-04-28 09:45:00', NULL,
+     '2026-04-27 12:30:00', '2026-04-28 09:45:00');
 
--- 7. 绑定资源标签 (Resource Tags)
-INSERT IGNORE INTO resource_tags (resource_id, tag_id) VALUES 
-(1, 1), (1, 2), 
-(2, 3), 
-(3, 4), (3, 5);
+INSERT IGNORE INTO resource_tags (resource_id, tag_id) VALUES
+    (1, 1),
+    (1, 2),
+    (2, 3),
+    (3, 4),
+    (3, 5),
+    (5, 2),
+    (5, 6);
 
--- 8. 插入审核日志 (Review Logs) - 供组员6/7测试查看历史记录
-INSERT IGNORE INTO review_logs (id, resource_id, reviewer_id, action, reason, operated_at) VALUES
-(1, 1, 2, 'APPROVED', 'Looks great, the information is accurate. Approved for publishing.', NOW()),
-(2, 3, 2, 'REJECTED', 'Please provide more reliable sources and references for these proverbs before resubmitting.', NOW());
+INSERT IGNORE INTO review_logs (
+    id, resource_id, reviewer_id, action, feedback_comment, operated_at
+) VALUES
+    (1, 1, 2, 'APPROVED',
+     'Looks accurate and ready for publication.',
+     '2026-04-29 09:30:00'),
+    (2, 3, 1, 'REJECTED',
+     'Please provide primary-source references before resubmitting.',
+     '2026-04-30 17:20:00'),
+    (3, 5, 1, 'APPROVED',
+     'Useful archival context and well-structured summary.',
+     '2026-04-28 09:45:00');
 
--- 9. 插入测试评论 (Comments) - 供评论系统测试
-INSERT IGNORE INTO comments (id, resource_id, user_id, content, created_at, updated_at) VALUES
-(1, 1, 3, 'The stone-lane photos feel very atmospheric. Thanks for compiling this.', NOW(), NOW()),
-(2, 3, 2, 'Pairing the proverbs with disaster-prep talks would work really well.', NOW(), NOW());
+INSERT IGNORE INTO comments (
+    id, resource_id, user_id, content, created_at, updated_at
+) VALUES
+    (1, 1, 4,
+     'The lane descriptions are vivid and make the place easy to picture.',
+     '2026-04-29 12:00:00', '2026-04-29 12:00:00'),
+    (2, 5, 3,
+     'This garden ledger is a good companion resource for architecture students.',
+     '2026-04-29 13:30:00', '2026-04-29 13:30:00');
