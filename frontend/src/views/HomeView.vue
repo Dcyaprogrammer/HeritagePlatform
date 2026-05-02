@@ -46,55 +46,6 @@ const filteredResources = computed(() => {
   return list.value
 })
 
-const isLoggedIn = ref(!!getToken())
-const initialRoles = getStoredRoles()
-const isAdmin = ref(initialRoles.includes('ADMIN'))
-const isContributor = ref(initialRoles.includes('CONTRIBUTOR') || initialRoles.includes('ADMIN'))
-
-// Update on route change or when storage changes
-onMounted(() => {
-  isLoggedIn.value = !!getToken()
-  const r = getStoredRoles()
-  isAdmin.value = r.includes('ADMIN')
-  isContributor.value = r.includes('CONTRIBUTOR') || r.includes('ADMIN')
-})
-
-const goToAdmin = () => {
-  router.push('/admin/resource-review')
-}
-
-const goToCreateResource = () => {
-  router.push('/resources/create')
-}
-
-const goToSubmissions = () => {
-  router.push('/resources/submissions')
-}
-
-const goToProfile = () => {
-  router.push('/profile')
-}
-
-const goToLogin = () => {
-  router.push('/login')
-}
-
-const goToRegister = () => {
-  router.push('/register')
-}
-
-//多会话入口
-const goToSessions = () => {
-  router.push('/sessions')
-}
-
-const handleLogout = () => {
-  logout()
-  isLoggedIn.value = false
-  isAdmin.value = false
-  router.push('/login')
-}
-
 /** 与后端 TaxonomyCatalog 一致；接口未返回时兜底（例如未重启的旧后端） */
 const HERITAGE_OTHER_GROUP_FALLBACK = Object.freeze({
   groupCode: 'HTG_OTHER',
@@ -265,28 +216,7 @@ onUnmounted(() => {
 
 <template>
   <div class="home">
-  <div class="wrap">
-    <header class="top">
-      <h1>Heritage Resource Hall</h1>
-      <div class="header-actions">
-        <template v-if="isLoggedIn">
-          <button v-if="isContributor" type="button" class="btn" @click="goToCreateResource">
-            + Create Draft
-          </button>
-          <button v-if="isContributor" type="button" class="btn" @click="goToSubmissions">
-            My Submissions
-          </button>
-          <button v-if="isAdmin" type="button" class="btn primary" @click="goToAdmin">Admin Panel</button>
-          <button type="button" class="btn" @click="goToProfile">Profile</button>
-          <button type="button" class="btn" @click="goToSessions">Sessions</button>
-          <button type="button" class="btn" @click="handleLogout">Logout</button>
-        </template>
-        <template v-else>
-          <button type="button" class="btn" @click="goToLogin">Login</button>
-          <button type="button" class="btn primary" @click="goToRegister">Register</button>
-        </template>
-      </div>
-    </header>
+    <div class="wrap">
 
     <div class="hero">
       <h2 class="page-title">Discover community heritage</h2>
@@ -373,7 +303,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-else-if="!filteredResources.length && !loading" class="empty-panel">
+    <div v-else-if="!filteredResources.length && !loading && !err" class="empty-panel">
       <template v-if="hasListFilters">
         <p class="empty-title">No resources match your filters.</p>
         <p class="empty-hint">Try widening your search or clearing some criteria.</p>
@@ -400,6 +330,7 @@ onUnmounted(() => {
         Next
       </button>
     </nav>
+    </div>
   </div>
 </template>
 
