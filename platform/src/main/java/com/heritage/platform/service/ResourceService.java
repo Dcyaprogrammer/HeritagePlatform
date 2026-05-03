@@ -62,10 +62,12 @@ public class ResourceService {
         resource.setStatus(ResourceStatus.DRAFT);
         resource.setSubmitter(submitter);
 
-        handleTagsAndAttachments(request, resource);
-
         HeritageResource savedResource = resourceRepository.save(resource);
-        return convertToDTO(savedResource);
+
+        handleTagsAndAttachments(request, savedResource);
+
+        HeritageResource finalResource = resourceRepository.save(savedResource);
+        return convertToDTO(finalResource);
     }
 
     @Transactional(readOnly = true)
@@ -197,6 +199,7 @@ public class ResourceService {
             boolean keep = existingId != null && requestedAttachments.containsKey(existingId);
             if (!keep) {
                 existing.setResource(null);
+                attachmentRepository.save(existing);
             }
             return !keep;
         });
@@ -225,6 +228,7 @@ public class ResourceService {
 
             attachment.setResource(resource);
             resource.getAttachments().add(attachment);
+            attachmentRepository.save(attachment);
         }
     }
 
@@ -285,6 +289,9 @@ public class ResourceService {
             attMap.put("filePath", attachment.getFilePath());
             attMap.put("fileType", attachment.getFileType());
             attMap.put("fileSize", attachment.getFileSize());
+            if (attachment.getThumbnailPath() != null) {
+                attMap.put("thumbnailUrl", "/api/attachments/" + attachment.getId() + "/thumbnail");
+            }
             attachmentsList.add(attMap);
         }
         dto.setAttachments(attachmentsList);

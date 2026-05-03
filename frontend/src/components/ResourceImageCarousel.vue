@@ -43,6 +43,14 @@ function go(i) {
 function thumbnailType(media) {
   return media._type
 }
+
+// Get thumbnail URL for video attachments
+function getVideoThumbnail(media) {
+  // Prefer thumbnail_path from server, fallback to attachment preview (first frame)
+  return media.thumbnailUrl || media.thumbnail_path ||
+    (media.id ? `/api/attachments/${media.id}/thumbnail` : null) ||
+    getAttachmentSrc(media)
+}
 </script>
 
 <template>
@@ -99,7 +107,7 @@ function thumbnailType(media) {
           <button type="button" class="thumb" :class="{ active: i === index, [`thumb-${thumbnailType(media)}`]: true }" @click="go(i)">
             <img v-if="thumbnailType(media) === 'image'" :src="getAttachmentSrc(media)" alt="" loading="lazy" />
             <div v-else class="thumb-video-placeholder">
-              <img v-if="getAttachmentSrc(media)" :src="getAttachmentSrc(media)" alt="" loading="lazy" class="thumb-video-thumb" />
+              <img v-if="getVideoThumbnail(media)" :src="getVideoThumbnail(media)" alt="" loading="lazy" class="thumb-video-thumb" />
               <div v-else class="thumb-video-empty" />
               <span class="play-overlay">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>

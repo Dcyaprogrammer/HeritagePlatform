@@ -42,6 +42,25 @@
               <img :src="file.preview" class="hover-image" />
             </div>
           </div>
+          <!-- Video thumbnail preview -->
+          <div v-else-if="file.isVideo" class="video-preview-container">
+            <img
+              v-if="file.thumbnailPreview"
+              :src="file.thumbnailPreview"
+              class="video-thumb-preview"
+              alt="Video thumbnail"
+            />
+            <div v-else class="video-thumb-placeholder">
+              <el-icon :size="24" class="file-ico file-ico--video">
+                <VideoPlay />
+              </el-icon>
+            </div>
+            <div class="video-play-overlay">
+              <el-icon :size="20" color="#fff">
+                <VideoPlay />
+              </el-icon>
+            </div>
+          </div>
           <!-- Document icon -->
           <div v-else class="file-icon">
             <el-icon v-if="file.name.toLowerCase().endsWith('.pdf')" :size="24" class="file-ico file-ico--pdf">
@@ -314,12 +333,46 @@ const addFiles = (files) => {
       uploadController: null,
       uploadPromise: null,
       _removed: false,
+      thumbnailUrl: "",
     });
     uploadedFiles.value.push(fileItem);
+
+    // Generate thumbnail preview for video files immediately
+    if (fileItem.isVideo) {
+      generateVideoThumbnailPreview(file, fileItem);
+    }
 
     // Upload to backend; track promise so removeFile can await settlement.
     fileItem.uploadPromise = uploadFile(file, fileItem).catch(() => {});
   });
+};
+
+// Generate thumbnail preview from video for display in uploader list
+const generateVideoThumbnailPreview = (file, fileItem) => {
+  const video = document.createElement("video");
+  video.preload = "metadata";
+  video.muted = true;
+  video.playsInline = true;
+
+  video.onloadeddata = () => {
+    video.currentTime = 0.1; // slightly after start to avoid black frame
+  };
+
+  video.onseeked = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth || 320;
+    canvas.height = video.videoHeight || 180;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    fileItem.thumbnailPreview = canvas.toDataURL("image/jpeg", 0.8);
+    URL.revokeObjectURL(video.src);
+  };
+
+  video.onerror = () => {
+    URL.revokeObjectURL(video.src);
+  };
+
+  video.src = URL.createObjectURL(file);
 };
 
 // ----- Chunked upload constants -----
@@ -504,6 +557,77 @@ const uploadByChunks = async (file, fileItem) => {
 };
 
 // ----- Shared helpers -----
+
+// Extract first frame from video as thumbnail
+const extractVideoThumbnail = (file) => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+
+    video.onloadeddata = () => {
+      // Seek to first frame
+      video.currentTime = 0;
+    };
+
+    video.onseeked = () => {
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 360;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            const thumbFile = new File([blob], file.name + "_thumb.jpg", { type: "image/jpeg" });
+            resolve(thumbFile);
+          } else {
+            reject(new Error("Failed to create thumbnail blob"));
+          }
+          URL.revokeObjectURL(video.src);
+        },
+        "image/jpeg",
+        0.85
+      );
+    };
+
+    video.onerror = () => {
+      URL.revokeObjectURL(video.src);
+      reject(new Error("Failed to load video"));
+    };
+
+    video.src = URL.createObjectURL(file);
+  });
+};
+
+// Upload thumbnail for video attachment
+const uploadThumbnail = async (attachmentId, thumbnailFile, fileItem) => {
+  try {
+    const formData = new FormData();
+    formData.append("thumbnail", thumbnailFile);
+
+    const token = localStorage.getItem("token");
+    const headers = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await axios.post(`/api/attachments/${attachmentId}/thumbnail`, formData, {
+      headers,
+      timeout: 60000,
+    });
+
+    if (response.data.success) {
+      fileItem.thumbnailUrl = response.data.thumbnailUrl;
+    }
+  } catch (error) {
+    console.warn("Thumbnail upload failed (non-critical):", error.message);
+  }
+};
+
 const handleUploadSuccess = (data, fileItem, file) => {
   if (!data.success) return;
   // attachmentId is the server-side row id; always set so removeFile can clean up,
@@ -517,9 +641,18 @@ const handleUploadSuccess = (data, fileItem, file) => {
   fileItem.downloadUrl =
     data.downloadUrl ||
     (data.attachmentId ? `/api/attachments/${data.attachmentId}/download` : "");
+  fileItem.thumbnailUrl = data.thumbnailUrl || "";
+
   // Don't mark uploaded if the row was already removed — removeFile will handle server cleanup.
   if (!fileItem._removed) {
     fileItem.uploaded = true;
+  }
+
+  // Auto-generate and upload thumbnail for video files
+  if (fileItem.isVideo && data.attachmentId) {
+    extractVideoThumbnail(file)
+      .then((thumbFile) => uploadThumbnail(data.attachmentId, thumbFile, fileItem))
+      .catch((err) => console.warn("Thumbnail extraction skipped:", err.message));
   }
 };
 
@@ -866,6 +999,39 @@ defineExpose({
 
 .image-preview-container:hover .image-hover {
   display: block;
+}
+
+.video-preview-container {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.video-thumb-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  background: #1c1917;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-play-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hover-image {
