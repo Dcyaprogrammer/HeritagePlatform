@@ -14,10 +14,12 @@ import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.heritage.platform.dto.ResourceDTO;
 import com.heritage.platform.dto.ResourceDraftRequest;
+import com.heritage.platform.entity.Role;
 import com.heritage.platform.model.Attachment;
 import com.heritage.platform.model.Category;
 import com.heritage.platform.model.HeritageResource;
@@ -28,7 +30,15 @@ import com.heritage.platform.repository.CategoryRepository;
 import com.heritage.platform.repository.HeritageResourceRepository;
 import com.heritage.platform.repository.HeritageUserRepository;
 
-@SpringBootTest
+/**
+ * 资源服务与持久层的集成测试：验证 REJECTED 状态下更新草稿时，显式传入的附件 id 会被保留，
+ * 且与 {@link ResourceService#handleTagsAndAttachments} 中的上传者校验一致（uploader 须为资源提交者）。
+ * <p>
+ * 主工程 {@code application.properties} 中默认 {@code spring.profiles.active=local}，会与 {@code test} 叠加并继续加载
+ * MySQL。此处用 {@code properties} 强制仅激活 {@code test}，保证 IDE / Test Runner 与 {@code mvn test} 均使用 H2。
+ */
+@SpringBootTest(properties = "spring.profiles.active=test")
+@ActiveProfiles("test")
 @Transactional
 class ResourceServiceIntegrationTest {
 
@@ -52,13 +62,15 @@ class ResourceServiceIntegrationTest {
 
     @Test
     void updateDraft_preservesExistingAttachmentsForRejectedResource() {
-        String suffix = UUID.randomUUID().toString().replace("-", "");
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
 
         HeritageUser submitter = new HeritageUser();
         submitter.setUsername("attachment-regression-" + suffix);
         submitter.setPasswordHash("secret");
         submitter.setDisplayName("Regression Tester");
-        submitter.setRoles(Set.of("ROLE_CONTRIBUTOR"));
+        submitter.setEmail("attachment-regression-" + suffix + "@example.test");
+        // 与 JwtUtil / hasRole('CONTRIBUTOR') 一致：库存角色名不带 ROLE_ 前缀
+        submitter.setRoles(Set.of(Role.CONTRIBUTOR.name()));
         submitter = userRepository.save(submitter);
 
         Category category = new Category();
@@ -86,6 +98,7 @@ class ResourceServiceIntegrationTest {
         attachment.setFileSize(1024L);
         attachment.setCreatedAt(LocalDateTime.now());
         attachment.setResource(resource);
+        attachment.setUploader(submitter);
         resource.getAttachments().add(attachment);
 
         resource = resourceRepository.saveAndFlush(resource);
@@ -117,6 +130,8 @@ class ResourceServiceIntegrationTest {
         assertThat(refreshedAttachment.getResource()).isNotNull();
         assertThat(refreshedAttachment.getResource().getId()).isEqualTo(resourceId);
         assertThat(updated.getAttachments()).hasSize(1);
-        assertThat(updated.getAttachments().get(0).get("id")).isEqualTo(attachmentId);
+        Object idInDto = updated.getAttachments().get(0).get("id");
+        assertThat(idInDto).isNotNull();
+        assertThat(((Number) idInDto).longValue()).isEqualTo(attachmentId);
     }
 }
