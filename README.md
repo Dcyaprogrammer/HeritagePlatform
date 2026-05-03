@@ -102,3 +102,4 @@ Run these from the root `HeritagePlatform/` directory:
 - Run backend tests: `npm run test:backend`
 - Build backend: `npm run build:backend`
 - Build frontend: `npm run build:frontend`
+
