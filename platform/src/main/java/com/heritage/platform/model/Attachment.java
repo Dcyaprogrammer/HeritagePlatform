@@ -34,6 +34,9 @@ public class Attachment {
     @Column(name = "file_size")
     private Long fileSize;     
     
+    @Column(name = "thumbnail_path")
+    private String thumbnailPath;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
@@ -67,4 +70,7 @@ public class Attachment {
     
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public String getThumbnailPath() { return thumbnailPath; }
+    public void setThumbnailPath(String thumbnailPath) { this.thumbnailPath = thumbnailPath; }
 }

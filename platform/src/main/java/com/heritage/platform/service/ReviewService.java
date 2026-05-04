@@ -122,6 +122,9 @@ public class ReviewService {
             item.put("filePath", attachment.getFilePath());
             item.put("fileType", attachment.getFileType());
             item.put("fileSize", attachment.getFileSize());
+            if (attachment.getThumbnailPath() != null) {
+                item.put("thumbnailUrl", "/api/attachments/" + attachment.getId() + "/thumbnail");
+            }
             attachments.add(item);
         });
         d.attachments = attachments;

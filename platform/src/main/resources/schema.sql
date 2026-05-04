@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS attachments (
     file_path VARCHAR(255) NULL,
     file_type VARCHAR(255) NULL,
     file_size BIGINT NULL,
+    thumbnail_path VARCHAR(255) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     KEY idx_attachments_resource_id (resource_id),
     KEY idx_attachments_uploader_id (uploader_id),

@@ -155,7 +155,11 @@ public class PublicDiscoveryService {
 				SELECT r.id, r.title, r.description, r.location_name, r.category_id, c.name AS category_name,
 				       r.heritage_type_code,
 				       r.created_at, r.updated_at,
-				       (SELECT a.file_path FROM attachments a WHERE a.resource_id = r.id AND a.file_type = 'image' ORDER BY a.created_at ASC LIMIT 1) AS cover_url
+				       COALESCE(
+				         (SELECT a.file_path FROM attachments a WHERE a.resource_id = r.id AND a.file_type = 'image' ORDER BY a.created_at ASC LIMIT 1),
+				         (SELECT a.thumbnail_path FROM attachments a WHERE a.resource_id = r.id AND a.file_type = 'video' AND a.thumbnail_path IS NOT NULL ORDER BY a.created_at ASC LIMIT 1)
+				       ) AS cover_url,
+				       EXISTS(SELECT 1 FROM attachments a WHERE a.resource_id = r.id AND a.file_type = 'video') AS has_video
 				""" + BASE_FROM + extra + """
 				ORDER BY r.updated_at DESC
 				LIMIT :limit OFFSET :offset
@@ -241,7 +245,7 @@ public class PublicDiscoveryService {
 		detail.setTags(tags);
 
 		String attachmentSql = """
-				SELECT id, stored_name, display_name, file_path, file_type, file_size
+				SELECT id, stored_name, display_name, file_path, file_type, file_size, thumbnail_path
 				FROM attachments
 				WHERE resource_id = :resourceId
 				ORDER BY created_at ASC
@@ -251,9 +255,13 @@ public class PublicDiscoveryService {
 			map.put("id", rs.getLong("id"));
 			map.put("storedName", rs.getString("stored_name"));
 			map.put("displayName", rs.getString("display_name"));
-			map.put("file_path", rs.getString("file_path"));
-			map.put("file_type", rs.getString("file_type"));
+			map.put("filePath", rs.getString("file_path"));
+			map.put("fileType", rs.getString("file_type"));
 			map.put("fileSize", rs.getLong("file_size"));
+			String thumbnailPath = rs.getString("thumbnail_path");
+			if (thumbnailPath != null) {
+				map.put("thumbnailUrl", "/api/attachments/" + rs.getLong("id") + "/thumbnail");
+			}
 			return map;
 		});
 		detail.setAttachments(attachments);
@@ -343,6 +351,11 @@ public class PublicDiscoveryService {
 				s.setCoverUrl(rs.getString("cover_url"));
 			} catch (SQLException ignored) {
 				// cover_url is not selected in some queries
+			}
+			try {
+				s.setHasVideo(rs.getBoolean("has_video"));
+			} catch (SQLException ignored) {
+				// has_video is not selected in some queries
 			}
 			enrichDerived(s, rs);
 			return s;

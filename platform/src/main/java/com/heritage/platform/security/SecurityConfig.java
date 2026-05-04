@@ -43,6 +43,7 @@ public class SecurityConfig {
                  "/api/health",
                  "/api/attachments/*/preview",
                  "/api/attachments/*/download",
+                 "/api/attachments/*/thumbnail",
                  "/uploads/**",
                  "/api/public/**",
                  "/swagger-ui/**",

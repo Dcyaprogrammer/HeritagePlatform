@@ -28,6 +28,7 @@ public class PublicResourceSummary {
 	private String heritageTypeLabel;
 	private String coverUrl;
 	private List<NamedRow> tags;
+	private boolean hasVideo;
 
 	public String getCoverUrl() {
 		return coverUrl;
@@ -35,6 +36,14 @@ public class PublicResourceSummary {
 
 	public void setCoverUrl(String coverUrl) {
 		this.coverUrl = coverUrl;
+	}
+
+	public boolean isHasVideo() {
+		return hasVideo;
+	}
+
+	public void setHasVideo(boolean hasVideo) {
+		this.hasVideo = hasVideo;
 	}
 
 	public Long getId() {

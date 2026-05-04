@@ -196,6 +196,7 @@ public class AttachmentController {
             response.put("filePath", "/uploads/" + storedName);
             response.put("previewUrl", "/api/attachments/" + attachment.getId() + "/preview");
             response.put("downloadUrl", "/api/attachments/" + attachment.getId() + "/download");
+            response.put("fileType", fileType);
             response.put("fileSize", savedSize);
             response.put("message", "Upload success");
             
@@ -467,6 +468,7 @@ public class AttachmentController {
             response.put("filePath", "/uploads/" + storedName);
             response.put("previewUrl", "/api/attachments/" + attachment.getId() + "/preview");
             response.put("downloadUrl", "/api/attachments/" + attachment.getId() + "/download");
+            response.put("fileType", fileType);
             response.put("fileSize", fileSize);
             response.put("message", "Upload success");
             return ResponseEntity.ok(response);
@@ -607,6 +609,113 @@ public class AttachmentController {
                     .body(resource);
         } catch (Exception e) {
             log.error("Download failed: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    // ----- Thumbnail upload for video attachments -----
+    @PostMapping("/{id}/thumbnail")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> uploadThumbnail(
+            @PathVariable Long id,
+            @RequestParam("thumbnail") MultipartFile thumbnail,
+            Authentication authentication) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            HeritageUser uploader = requireAuthenticatedUser(authentication);
+
+            Attachment attachment = attachmentRepository.findById(id).orElse(null);
+            if (attachment == null) {
+                response.put("success", false);
+                response.put("message", "Attachment not found");
+                return ResponseEntity.status(404).body(response);
+            }
+
+            if (!"video".equals(attachment.getFileType())) {
+                response.put("success", false);
+                response.put("message", "Only video attachments can have thumbnails");
+                return ResponseEntity.status(400).body(response);
+            }
+
+            if (!attachment.getUploader().getUsername().equals(uploader.getUsername())
+                    && !hasRole(authentication, "ADMIN")) {
+                response.put("success", false);
+                response.put("message", "You do not have permission to update this attachment");
+                return ResponseEntity.status(403).body(response);
+            }
+
+            if (thumbnail.isEmpty() || thumbnail.getSize() == 0) {
+                response.put("success", false);
+                response.put("message", "Empty thumbnail file");
+                return ResponseEntity.status(400).body(response);
+            }
+
+            String contentType = thumbnail.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                response.put("success", false);
+                response.put("message", "Thumbnail must be an image");
+                return ResponseEntity.status(400).body(response);
+            }
+
+            File uploadDir = new File(UPLOAD_DIR);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs();
+            }
+
+            String originalStoredName = attachment.getStoredName();
+            String thumbnailFileName = originalStoredName + "_thumb.jpg";
+            Path thumbnailPath = Paths.get(UPLOAD_DIR + thumbnailFileName);
+            Files.copy(thumbnail.getInputStream(), thumbnailPath);
+
+            attachment.setThumbnailPath("/uploads/" + thumbnailFileName);
+            attachmentRepository.save(attachment);
+
+            log.info("Thumbnail saved for attachment {}, path: {}", id, thumbnailPath);
+
+            response.put("success", true);
+            response.put("thumbnailUrl", "/api/attachments/" + id + "/thumbnail");
+            response.put("message", "Thumbnail uploaded successfully");
+            return ResponseEntity.ok(response);
+
+        } catch (SecurityException e) {
+            log.warn("Thumbnail upload rejected: {}", e.getMessage());
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.status(401).body(response);
+        } catch (IOException e) {
+            log.error("Thumbnail upload failed: {}", e.getMessage(), e);
+            response.put("success", false);
+            response.put("message", "Thumbnail upload failed: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @GetMapping("/{id}/thumbnail")
+    @Transactional(readOnly = true)
+    public ResponseEntity<Resource> getThumbnail(@PathVariable Long id) {
+        try {
+            Attachment attachment = attachmentRepository.findById(id).orElse(null);
+            if (attachment == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String thumbnailPath = attachment.getThumbnailPath();
+            if (thumbnailPath == null || thumbnailPath.isBlank()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Path filePath = Paths.get(UPLOAD_DIR + thumbnailPath.substring("/uploads/".length()));
+            if (!Files.exists(filePath)) {
+                log.warn("Thumbnail file not found: {}", filePath);
+                return ResponseEntity.notFound().build();
+            }
+
+            Resource resource = new UrlResource(filePath.toUri());
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_JPEG)
+                    .body(resource);
+        } catch (Exception e) {
+            log.error("Get thumbnail failed: {}", e.getMessage(), e);
             return ResponseEntity.status(500).build();
         }
     }
