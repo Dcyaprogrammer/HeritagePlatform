@@ -99,6 +99,23 @@
       </el-form>
     </el-card>
 
+    <el-card class="sessions-card">
+      <template #header>
+        <div class="card-header">
+          <h3>Multi-session Control</h3>
+        </div>
+      </template>
+
+      <div class="sessions-entry">
+        <p class="hint">
+          View and revoke active logins on other devices. End a session if you no longer trust that device.
+        </p>
+        <el-button type="primary" @click="router.push({ name: 'Sessions' })">
+          Manage active sessions
+        </el-button>
+      </div>
+    </el-card>
+
     <!-- Apply Dialog -->
     <el-dialog v-model="showApplyDialog" title="Apply to be a Contributor" width="500px">
       <el-form :model="applyForm" label-width="100px">
@@ -270,8 +287,15 @@ onMounted(() => {
 
 .profile-card,
 .contributor-card,
-.password-card {
+.password-card,
+.sessions-card {
   margin-bottom: 24px;
+}
+
+.sessions-entry .hint {
+  color: #606266;
+  font-size: 14px;
+  margin: 0 0 12px 0;
 }
 
 .card-header h2,
