@@ -1,6 +1,8 @@
 package com.heritage.platform.controller;
 
 import com.heritage.platform.common.ApiResponse;
+import com.heritage.platform.discovery.dto.PublicResourceSummary;
+import com.heritage.platform.discovery.dto.SlicePage;
 import com.heritage.platform.dto.ResourceDTO;
 import com.heritage.platform.dto.ResourceDraftRequest;
 import com.heritage.platform.model.HeritageResource;
@@ -9,6 +11,7 @@ import com.heritage.platform.model.ReviewAction;
 import com.heritage.platform.model.ReviewLog;
 import com.heritage.platform.repository.HeritageResourceRepository;
 import com.heritage.platform.repository.ReviewLogRepository;
+import com.heritage.platform.service.InteractionService;
 import com.heritage.platform.service.ResourceService;
 
 import java.time.Instant;
@@ -28,6 +31,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -42,6 +46,9 @@ public class ResourceController {
 
 	@Autowired
 	private ResourceService resourceService;
+
+	@Autowired
+	private InteractionService interactionService;
 
 	@PostMapping
 	@PreAuthorize("hasRole('CONTRIBUTOR') or hasRole('ADMIN')")
@@ -169,6 +176,16 @@ public class ResourceController {
 		}
 
 		return ApiResponse.success(data);
+	}
+
+	@GetMapping("/favorites")
+	public ApiResponse<SlicePage<PublicResourceSummary>> getMyFavorites(
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "12") int size,
+			Authentication authentication) {
+		String username = requireUsername(authentication);
+		SlicePage<PublicResourceSummary> favorites = interactionService.getUserFavorites(username, page, size);
+		return ApiResponse.success(favorites);
 	}
 
 	private Optional<ReviewLog> findLatestRejectedLog(Long resourceId) {

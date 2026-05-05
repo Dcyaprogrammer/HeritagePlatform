@@ -32,4 +32,16 @@ export const getPublicResourceDetail = (id) => api.get(`/public/resources/${id}`
 
 export const getComments = (resourceId) => api.get(`/public/resources/${resourceId}/comments`)
 
-export const addComment = (resourceId, content) => api.post(`/resources/${resourceId}/comments`, { content })
+export const addComment = (resourceId, content, parentId = null) => {
+  const data = { content }
+  if (parentId) data.parentId = parentId
+  return api.post(`/resources/${resourceId}/comments`, data)
+}
+
+export const getInteractions = (resourceId) => api.get(`/public/resources/${resourceId}/interactions`)
+
+export const toggleLike = (resourceId) => api.post(`/resources/${resourceId}/like`)
+
+export const toggleFavorite = (resourceId) => api.post(`/resources/${resourceId}/favorite`)
+
+export const getMyFavorites = (params) => api.get('/resources/favorites', { params })

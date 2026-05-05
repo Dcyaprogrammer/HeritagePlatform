@@ -9,7 +9,8 @@ import java.util.List;
 @Repository
 public interface CommentRepository extends JpaRepository<Comment, Long> {
     
-    // Find all comments for a specific resource, ordered by newest first
     List<Comment> findByResourceIdOrderByCreatedAtDesc(Long resourceId);
+    
+    List<Comment> findByResourceIdAndParentIsNullOrderByCreatedAtDesc(Long resourceId);
     
 }

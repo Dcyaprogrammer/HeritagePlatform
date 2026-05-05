@@ -12,6 +12,7 @@ import HomeView from '../views/HomeView.vue'
 import Login from '../views/auth/Login.vue'
 import Profile from '../views/Profile.vue'
 import Register from '../views/auth/Register.vue'
+import FavoritesView from '../views/FavoritesView.vue'
 import ResourceDetailView from '../views/ResourceDetailView.vue'
 import SubmissionsView from '../views/SubmissionsView.vue'
 import FeedbackView from '../views/FeedbackView.vue'
@@ -48,6 +49,15 @@ const routes = [
         name: 'Profile',
         component: Profile,
         meta: { title: 'Profile', requiresAuth: true },
+      },
+      {
+        path: 'favorites',
+        name: 'Favorites',
+        component: FavoritesView,
+        meta: {
+          title: 'My Favorites',
+          requiresAuth: true,
+        },
       },
       {
         path: 'resources/create',

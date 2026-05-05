@@ -184,3 +184,32 @@ WHERE r.submitter_id IS NULL
    OR r.category IS NULL
    OR r.category = ''
    OR r.category = CAST(r.category_id AS CHAR);
+
+-- ============================================
+-- Likes and Favorites tables
+-- ============================================
+CREATE TABLE IF NOT EXISTS likes (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    resource_id BIGINT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_likes_user_resource (user_id, resource_id),
+    KEY idx_likes_resource_id (resource_id),
+    CONSTRAINT fk_likes_user
+        FOREIGN KEY (user_id) REFERENCES heritage_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_likes_resource
+        FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS favorites (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    resource_id BIGINT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_favorites_user_resource (user_id, resource_id),
+    KEY idx_favorites_resource_id (resource_id),
+    CONSTRAINT fk_favorites_user
+        FOREIGN KEY (user_id) REFERENCES heritage_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_favorites_resource
+        FOREIGN KEY (resource_id) REFERENCES resources(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

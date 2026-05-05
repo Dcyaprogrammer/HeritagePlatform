@@ -1,6 +1,8 @@
 package com.heritage.platform.dto;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CommentDTO {
     private Long id;
@@ -11,6 +13,8 @@ public class CommentDTO {
     private String content;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long parentId;
+    private List<CommentDTO> replies = new ArrayList<>();
 
     public CommentDTO() {}
 
@@ -38,4 +42,10 @@ public class CommentDTO {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public Long getParentId() { return parentId; }
+    public void setParentId(Long parentId) { this.parentId = parentId; }
+
+    public List<CommentDTO> getReplies() { return replies; }
+    public void setReplies(List<CommentDTO> replies) { this.replies = replies; }
 }

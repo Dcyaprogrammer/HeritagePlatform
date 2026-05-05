@@ -30,6 +30,9 @@ export function usePublicHeader() {
   function goToSubmissions() {
     router.push('/resources/submissions')
   }
+  function goToFavorites() {
+    router.push('/favorites')
+  }
   function goToProfile() {
     router.push('/profile')
   }
@@ -55,6 +58,7 @@ export function usePublicHeader() {
     goToAdmin,
     goToCreateResource,
     goToSubmissions,
+    goToFavorites,
     goToProfile,
     goToLogin,
     goToRegister,
