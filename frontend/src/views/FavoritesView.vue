@@ -50,11 +50,6 @@
     </div>
 
     <section v-else class="favorites-shelf">
-      <div class="favorites-shelf__head">
-        <span class="favorites-shelf__label">Collection View</span>
-        <p class="favorites-shelf__hint">Three-across shelf layout for quick scanning and comparison.</p>
-      </div>
-
       <div class="favorites-grid">
         <HeritageCard v-for="item in favorites" :key="item.id" :item="item" />
       </div>
@@ -287,30 +282,6 @@ onMounted(() => {
 
 .favorites-shelf {
   width: 100%;
-}
-
-.favorites-shelf__head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 0 0.2rem;
-  flex-wrap: wrap;
-}
-
-.favorites-shelf__label {
-  color: var(--accent-soft);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.favorites-shelf__hint {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
 }
 
 .favorites-grid {
