@@ -7,29 +7,39 @@ const props = defineProps({
 })
 
 const detailHref = computed(() => `/resources/${props.item.id}`)
+const hasCover = computed(() => Boolean(props.item?.coverUrl))
 const hasVideo = computed(() => props.item?.hasVideo || false)
 const commentCount = computed(() => props.item?.commentCount || props.item?.comment_count || 0)
 const likeCount = computed(() => props.item?.likeCount || props.item?.like_count || 0)
 const favoriteCount = computed(() => props.item?.favoriteCount || props.item?.favorite_count || 0)
+const categoryName = computed(() => props.item?.categoryName || props.item?.category?.name || 'Heritage Resource')
+const allTags = computed(() => Array.isArray(props.item?.tags) ? props.item.tags : [])
+const visibleTags = computed(() => allTags.value.slice(0, 2))
+const hiddenTagCount = computed(() => Math.max(0, allTags.value.length - visibleTags.value.length))
+const placeholderMark = computed(() => {
+  const title = props.item?.title?.trim()
+  return title ? title.charAt(0).toUpperCase() : 'H'
+})
 </script>
 
 <template>
   <article class="public-card heritage-card">
     <RouterLink :to="detailHref" class="public-card-media-link" :aria-label="`View: ${item.title}`">
-      <div class="public-card-media heritage-card__media">
+      <div class="public-card-media heritage-card__media" :class="{ 'heritage-card__media--no-cover': !hasCover }">
         <img
-          v-if="item.coverUrl"
+          v-if="hasCover"
           :src="item.coverUrl"
           :alt="`${item.title} cover`"
           loading="lazy"
           class="public-card-image"
         />
-        <div v-else class="public-card-placeholder" role="img" aria-label="No cover image">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <path d="M21 15l-5-5L5 21"/>
-          </svg>
+        <div v-else class="public-card-placeholder heritage-card__placeholder" role="img" aria-label="No cover image">
+          <div class="heritage-card__placeholder-inner">
+            <span class="heritage-card__placeholder-kicker">Archive Resource</span>
+            <strong class="heritage-card__placeholder-title">{{ categoryName }}</strong>
+            <p v-if="item.locationName" class="heritage-card__placeholder-meta">{{ item.locationName }}</p>
+            <span class="heritage-card__placeholder-mark" aria-hidden="true">{{ placeholderMark }}</span>
+          </div>
         </div>
 
         <div class="gradient-overlay" />
@@ -42,9 +52,12 @@ const favoriteCount = computed(() => props.item?.favoriteCount || props.item?.fa
     </RouterLink>
 
     <div class="public-card-body heritage-card__body">
-      <ul v-if="item.tags && item.tags.length" class="public-card-tags" aria-label="Tags">
-        <li v-for="t in item.tags" :key="t.id" class="public-tag">{{ t.name }}</li>
-      </ul>
+      <div class="heritage-card__taxonomy">
+        <div class="heritage-card__category-block" aria-label="Category">
+          <span class="heritage-card__field-label">Category</span>
+          <span class="heritage-card__category">{{ categoryName }}</span>
+        </div>
+      </div>
 
       <RouterLink :to="detailHref" class="public-card-title-link">
         <h2 class="public-card-title heritage-card__title">{{ item.title }}</h2>
@@ -61,6 +74,14 @@ const favoriteCount = computed(() => props.item?.favoriteCount || props.item?.fa
       <p v-if="item.description" class="public-card-description heritage-card__description">
         {{ item.description }}
       </p>
+
+      <div v-if="visibleTags.length" class="heritage-card__tag-section">
+        <span class="heritage-card__field-label">Tags</span>
+        <ul class="public-card-tags heritage-card__tags" aria-label="Tags">
+          <li v-for="t in visibleTags" :key="t.id" class="public-tag heritage-card__tag">{{ t.name }}</li>
+          <li v-if="hiddenTagCount" class="heritage-card__more-tag">+{{ hiddenTagCount }}</li>
+        </ul>
+      </div>
 
       <div class="public-card-footer">
         <div class="public-card-stats">
@@ -98,7 +119,13 @@ const favoriteCount = computed(() => props.item?.favoriteCount || props.item?.fa
 }
 
 .heritage-card__media {
-  height: 220px;
+  height: 184px;
+}
+
+.heritage-card__media--no-cover {
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 8%, transparent), transparent 32%),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface) 84%, white 16%), color-mix(in srgb, var(--bg-accent) 72%, white 28%));
 }
 
 .gradient-overlay {
@@ -106,8 +133,8 @@ const favoriteCount = computed(() => props.item?.favoriteCount || props.item?.fa
   inset: 0;
   background: linear-gradient(
     to bottom,
-    transparent 45%,
-    rgba(28, 25, 23, 0.06) 100%
+    transparent 40%,
+    rgba(28, 25, 23, 0.08) 100%
   );
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -115,6 +142,64 @@ const favoriteCount = computed(() => props.item?.favoriteCount || props.item?.fa
 
 .heritage-card:hover .gradient-overlay {
   opacity: 1;
+}
+
+.heritage-card__placeholder {
+  padding: 1rem 1.1rem;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.heritage-card__placeholder-inner {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: flex-end;
+  border: 1px solid color-mix(in srgb, var(--border-strong) 68%, white 32%);
+  border-radius: 16px;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.78)),
+    repeating-linear-gradient(-18deg, transparent, transparent 12px, rgba(122, 50, 39, 0.04) 12px, rgba(122, 50, 39, 0.04) 13px);
+}
+
+.heritage-card__placeholder-kicker {
+  margin-bottom: 0.45rem;
+  color: var(--accent-soft);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.heritage-card__placeholder-title {
+  max-width: 70%;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.heritage-card__placeholder-meta {
+  margin: 0.45rem 0 0;
+  max-width: 70%;
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.heritage-card__placeholder-mark {
+  position: absolute;
+  right: 0.9rem;
+  bottom: 0.85rem;
+  color: color-mix(in srgb, var(--accent) 22%, var(--border-strong));
+  font-family: var(--font-serif);
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1;
 }
 
 .heritage-card__badge {
@@ -125,7 +210,61 @@ const favoriteCount = computed(() => props.item?.favoriteCount || props.item?.fa
 }
 
 .heritage-card__body {
-  min-height: 220px;
+  min-height: 188px;
+  gap: 0.72rem;
+}
+
+.heritage-card__taxonomy {
+  display: flex;
+  align-items: flex-start;
+}
+
+.heritage-card__category-block,
+.heritage-card__tag-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.heritage-card__field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.heritage-card__field-label::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 40%, white 60%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 20%, var(--border));
+}
+
+.heritage-card__category {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  max-width: 100%;
+  padding: 0.2rem 0.78rem 0.22rem;
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 12%, var(--surface-raised)),
+    color-mix(in srgb, var(--accent) 4%, white 96%)
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.3;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .heritage-card__title,
@@ -151,12 +290,45 @@ const favoriteCount = computed(() => props.item?.favoriteCount || props.item?.fa
 }
 
 .heritage-card__description {
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 3;
+}
+
+.heritage-card__tags {
+  margin-top: 0;
+}
+
+.heritage-card__tag {
+  background: color-mix(in srgb, var(--surface-raised) 90%, white 10%);
+  border-color: color-mix(in srgb, var(--border-strong) 45%, var(--border));
+  color: var(--ink-soft);
+}
+
+.heritage-card__tag::before {
+  content: "#";
+  color: color-mix(in srgb, var(--accent) 55%, var(--muted));
+  font-weight: 800;
+}
+
+.heritage-card__more-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.15rem 0.62rem;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 18%, var(--border));
+  color: var(--ink-soft);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  list-style: none;
 }
 
 @media (max-width: 480px) {
   .heritage-card__media {
-    height: 190px;
+    height: 172px;
+  }
+
+  .heritage-card__body {
+    min-height: 176px;
   }
 
   .heritage-card__description {

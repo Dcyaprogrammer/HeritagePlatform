@@ -94,12 +94,23 @@ function formatDate(iso) {
         <div class="section-block">
           <h1 class="title">{{ resource.title }}</h1>
           <div class="meta">
-            <span v-if="resource.categoryName" class="pill">{{ resource.categoryName }}</span>
             <span v-if="resource.locationName" class="loc">{{ resource.locationName }}</span>
           </div>
-          <ul v-if="resource.tags && resource.tags.length" class="tags" aria-label="Tags">
-            <li v-for="t in resource.tags" :key="t.id" class="tag">{{ t.name }}</li>
-          </ul>
+          <div
+            v-if="resource.categoryName || (resource.tags && resource.tags.length)"
+            class="taxonomy-panel"
+          >
+            <div v-if="resource.categoryName" class="taxonomy-group">
+              <span class="taxonomy-label">Category</span>
+              <span class="category-chip">{{ resource.categoryName }}</span>
+            </div>
+            <div v-if="resource.tags && resource.tags.length" class="taxonomy-group taxonomy-group--tags">
+              <span class="taxonomy-label">Tags</span>
+              <ul class="tags" aria-label="Tags">
+                <li v-for="t in resource.tags" :key="t.id" class="tag">{{ t.name }}</li>
+              </ul>
+            </div>
+          </div>
           <dl class="meta-info">
             <div v-if="resource.contributorName" class="meta-item">
               <dt>Contributor</dt>
@@ -313,20 +324,61 @@ function formatDate(iso) {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem 0.75rem;
-  margin-bottom: 0.75rem;
-}
-.pill {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  padding: 0.2rem 0.55rem;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-  color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  margin-bottom: 1rem;
 }
 .loc {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.taxonomy-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, max-content));
+  gap: 0.9rem 1rem;
+  margin-bottom: 1rem;
+}
+.taxonomy-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+.taxonomy-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--muted);
+}
+.taxonomy-label::before {
+  content: "";
+  width: 0.46rem;
+  height: 0.46rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 40%, white 60%);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 18%, var(--border));
+}
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  max-width: 100%;
+  padding: 0.28rem 0.85rem 0.32rem;
+  border-radius: 12px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--accent) 12%, var(--surface-raised)),
+    color-mix(in srgb, var(--accent) 4%, white 96%)
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  color: var(--accent-strong);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.35;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 .tags {
   list-style: none;
@@ -338,13 +390,22 @@ function formatDate(iso) {
   margin-bottom: 0.75rem;
 }
 .tag {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 30px;
+  font-size: 0.78rem;
+  padding: 0.22rem 0.72rem;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 16%, var(--surface) 84%);
-  color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border) 78%);
-  font-weight: 500;
+  background: color-mix(in srgb, var(--surface-raised) 92%, white 8%);
+  color: var(--ink-soft);
+  border: 1px solid color-mix(in srgb, var(--border-strong) 40%, var(--border));
+  font-weight: 700;
+}
+.tag::before {
+  content: "#";
+  color: color-mix(in srgb, var(--accent) 58%, var(--muted));
+  font-weight: 800;
 }
 .meta-info {
   display: flex;

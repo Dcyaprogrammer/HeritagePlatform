@@ -407,17 +407,18 @@ onUnmounted(() => {
 }
 .skeleton-grid {
   display: grid;
-  grid-template-columns: repeat(1, 1fr);
-  gap: 1.25rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1.35rem;
+  align-items: start;
 }
 @media (min-width: 640px) {
   .skeleton-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (min-width: 960px) {
   .skeleton-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 .skeleton-card {
@@ -453,18 +454,22 @@ onUnmounted(() => {
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(1, 1fr);
-  gap: 1.25rem;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1.35rem;
+  align-items: stretch;
 }
 @media (min-width: 640px) {
   .grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 @media (min-width: 960px) {
   .grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+.grid > * {
+  min-width: 0;
 }
 .pager {
   display: flex;
