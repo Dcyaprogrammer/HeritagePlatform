@@ -16,6 +16,9 @@ const isLoggedIn = ref(false)
 const currentUserName = ref('')
 
 const id = computed(() => Number(route.params.id))
+const visualAttachments = computed(() =>
+  (resource.value?.attachments || []).filter(a => ['image', 'video'].includes(getAttachmentType(a)))
+)
 
 const audioAttachments = computed(() => filterByType(resource.value?.attachments, 'audio'))
 const fileAttachments = computed(() =>
@@ -85,8 +88,17 @@ function formatDate(iso) {
       </nav>
 
       <!-- Hero image -->
-      <section class="hero-card">
-        <ResourceImageCarousel :attachments="resource.attachments || []" />
+      <section class="hero-card" :class="{ 'hero-card--empty': !visualAttachments.length }">
+        <ResourceImageCarousel v-if="visualAttachments.length" :attachments="visualAttachments" />
+        <div v-else class="hero-empty">
+          <div class="hero-empty__inner">
+            <span class="hero-empty__eyebrow">Resource Media</span>
+            <strong class="hero-empty__title">{{ resource.categoryName || 'Archive Resource' }}</strong>
+            <p class="hero-empty__body">
+              This record does not include image or video media. Continue below for description, files, audio, and discussion.
+            </p>
+          </div>
+        </div>
       </section>
 
       <!-- Main content sections -->
@@ -205,6 +217,7 @@ function formatDate(iso) {
 }
 .detail-page {
   padding: 0;
+  width: 100%;
 }
 .notfound {
   padding-top: 4rem;
@@ -217,10 +230,15 @@ function formatDate(iso) {
   width: 100%;
   margin: 0 auto;
   padding: 1.25rem 1.5rem 4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
 }
 
 /* ===== Breadcrumb ===== */
 .crumb {
+  width: 100%;
   font-size: 0.875rem;
   color: var(--muted);
   margin-bottom: 1.25rem;
@@ -238,6 +256,8 @@ function formatDate(iso) {
 
 /* ===== Hero Card ===== */
 .hero-card {
+  width: 100%;
+  flex: 0 0 auto;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -247,12 +267,20 @@ function formatDate(iso) {
   margin-bottom: 1.25rem;
 }
 .hero-card :deep(.carousel) {
+  width: 100%;
   gap: 0.9rem;
 }
 .hero-card :deep(.stage) {
   aspect-ratio: 16 / 8.4;
   min-height: clamp(300px, 40vw, 640px);
   border-radius: calc(var(--radius) - 4px);
+}
+.hero-card :deep(.empty) {
+  width: 100%;
+  min-height: clamp(300px, 40vw, 640px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .hero-card :deep(.thumbs) {
   gap: 0.65rem;
@@ -263,9 +291,56 @@ function formatDate(iso) {
   height: 60px;
   border-radius: 8px;
 }
+.hero-empty {
+  width: 100%;
+  min-height: clamp(300px, 40vw, 640px);
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0.25rem;
+}
+.hero-empty__inner {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 100%;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  padding: clamp(1.5rem, 2vw, 2.2rem);
+  border-radius: calc(var(--radius) - 4px);
+  border: 1px solid color-mix(in srgb, var(--border-strong) 72%, white 28%);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 8%, transparent), transparent 26%),
+    linear-gradient(145deg, color-mix(in srgb, var(--surface) 82%, white 18%), color-mix(in srgb, var(--bg-accent) 72%, white 28%));
+}
+.hero-empty__eyebrow {
+  color: var(--accent-soft);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.hero-empty__title {
+  max-width: 28rem;
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
+  font-weight: 700;
+  line-height: 1.25;
+}
+.hero-empty__body {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.98rem;
+  line-height: 1.75;
+}
 
 /* ===== Main Content ===== */
 .main-content {
+  width: 100%;
+  flex: 0 0 auto;
   min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -277,6 +352,7 @@ function formatDate(iso) {
 /* ===== Section Blocks & Dividers ===== */
 .section-block {
   padding: 0;
+  width: 100%;
 }
 .section-divider {
   border: none;
@@ -321,19 +397,23 @@ function formatDate(iso) {
 }
 .meta {
   display: flex;
+  width: 100%;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem 0.75rem;
   margin-bottom: 1rem;
 }
 .loc {
+  display: inline-flex;
+  width: 100%;
   font-size: 0.9375rem;
   font-weight: 600;
   color: var(--ink-soft);
 }
 .taxonomy-panel {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, max-content));
+  width: 100%;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
   gap: 0.9rem 1rem;
   margin-bottom: 1rem;
 }
@@ -341,6 +421,7 @@ function formatDate(iso) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  min-width: 0;
   gap: 0.45rem;
 }
 .taxonomy-label {
@@ -365,7 +446,8 @@ function formatDate(iso) {
   display: inline-flex;
   align-items: center;
   min-height: 34px;
-  max-width: 100%;
+  width: 100%;
+  max-width: 320px;
   padding: 0.28rem 0.85rem 0.32rem;
   border-radius: 12px;
   background: linear-gradient(
@@ -379,6 +461,9 @@ function formatDate(iso) {
   font-weight: 700;
   line-height: 1.35;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tags {
   list-style: none;
@@ -387,6 +472,7 @@ function formatDate(iso) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+  width: 100%;
   margin-bottom: 0.75rem;
 }
 .tag {
@@ -409,6 +495,7 @@ function formatDate(iso) {
 }
 .meta-info {
   display: flex;
+  width: 100%;
   flex-wrap: wrap;
   gap: 1rem 2rem;
   margin-top: 0.5rem;
@@ -434,6 +521,7 @@ function formatDate(iso) {
 /* ===== Media Sections ===== */
 .media-section {
   margin-bottom: 1.25rem;
+  width: 100%;
 }
 .media-section:last-child {
   margin-bottom: 0;
@@ -454,6 +542,7 @@ function formatDate(iso) {
   margin: 0;
   padding: 0;
   display: flex;
+  width: 100%;
   flex-direction: column;
   gap: 0.85rem;
 }
@@ -478,6 +567,7 @@ function formatDate(iso) {
   margin: 0;
   padding: 0;
   display: flex;
+  width: 100%;
   flex-direction: column;
   gap: 0.55rem;
 }
@@ -541,6 +631,9 @@ function formatDate(iso) {
   }
   .sidebar {
     padding: 1.15rem 1.1rem;
+  }
+  .taxonomy-panel {
+    grid-template-columns: 1fr;
   }
 }
 </style>

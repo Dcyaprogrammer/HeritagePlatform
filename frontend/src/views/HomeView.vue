@@ -346,16 +346,18 @@ onUnmounted(() => {
 .search-panel {
   margin-bottom: 1rem;
   padding: 1rem 1rem 1.05rem;
+  width: 100%;
 }
 .toolbar {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) 340px;
   gap: 1rem;
   align-items: flex-end;
 }
 .field--grow {
-  flex: 1 1 220px;
-  min-width: min(100%, 220px);
+  min-width: 0;
+  width: 100%;
 }
 .home-search-control {
   min-height: 50px;
@@ -364,9 +366,11 @@ onUnmounted(() => {
 .advanced {
   margin-bottom: 1.75rem;
   padding: 1rem;
+  width: 100%;
 }
 .advanced-head {
   display: flex;
+  width: 100%;
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
@@ -382,18 +386,22 @@ onUnmounted(() => {
 .advanced-grid {
   margin-top: 1rem;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  width: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 340px));
   gap: 1rem;
+  justify-content: start;
 }
 .advanced-actions {
   margin-top: 1rem;
   display: flex;
+  width: 100%;
   gap: 0.6rem;
   flex-wrap: wrap;
 }
 .field {
-  min-width: min(100%, 220px);
-  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 340px;
 }
 .home :deep(.public-select) optgroup {
   font-weight: 700;
@@ -429,6 +437,7 @@ onUnmounted(() => {
   padding: 0 0 0.75rem;
 }
 .empty-panel {
+  width: 100%;
   padding: 2.5rem 1rem;
   text-align: center;
   margin-bottom: 1.5rem;
@@ -446,6 +455,7 @@ onUnmounted(() => {
   font-size: var(--text-sm);
 }
 .grid-wrap {
+  width: 100%;
   transition: opacity 0.18s ease;
 }
 .grid-wrap--dim {
@@ -454,22 +464,25 @@ onUnmounted(() => {
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
+  width: 100%;
+  grid-template-columns: repeat(1, minmax(0, 340px));
   gap: 1.35rem;
   align-items: stretch;
+  justify-content: center;
 }
 @media (min-width: 640px) {
   .grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 340px));
   }
 }
 @media (min-width: 960px) {
   .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 340px));
   }
 }
 .grid > * {
   min-width: 0;
+  width: 340px;
 }
 .pager {
   display: flex;
@@ -484,5 +497,20 @@ onUnmounted(() => {
 .pager-meta {
   font-size: var(--text-sm);
   color: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .field,
+  .field--grow {
+    max-width: none;
+  }
+
+  .advanced-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

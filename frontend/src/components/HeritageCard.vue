@@ -13,6 +13,8 @@ const commentCount = computed(() => props.item?.commentCount || props.item?.comm
 const likeCount = computed(() => props.item?.likeCount || props.item?.like_count || 0)
 const favoriteCount = computed(() => props.item?.favoriteCount || props.item?.favorite_count || 0)
 const categoryName = computed(() => props.item?.categoryName || props.item?.category?.name || 'Heritage Resource')
+const locationName = computed(() => props.item?.locationName?.trim() || 'Location pending')
+const descriptionText = computed(() => props.item?.description?.trim() || 'No summary available yet.')
 const allTags = computed(() => Array.isArray(props.item?.tags) ? props.item.tags : [])
 const visibleTags = computed(() => allTags.value.slice(0, 2))
 const hiddenTagCount = computed(() => Math.max(0, allTags.value.length - visibleTags.value.length))
@@ -37,7 +39,7 @@ const placeholderMark = computed(() => {
           <div class="heritage-card__placeholder-inner">
             <span class="heritage-card__placeholder-kicker">Archive Resource</span>
             <strong class="heritage-card__placeholder-title">{{ categoryName }}</strong>
-            <p v-if="item.locationName" class="heritage-card__placeholder-meta">{{ item.locationName }}</p>
+            <p class="heritage-card__placeholder-meta">{{ locationName }}</p>
             <span class="heritage-card__placeholder-mark" aria-hidden="true">{{ placeholderMark }}</span>
           </div>
         </div>
@@ -63,23 +65,24 @@ const placeholderMark = computed(() => {
         <h2 class="public-card-title heritage-card__title">{{ item.title }}</h2>
       </RouterLink>
 
-      <p v-if="item.locationName" class="public-card-meta heritage-card__location">
+      <p class="public-card-meta heritage-card__location" :class="{ 'heritage-card__location--fallback': !item.locationName }">
         <svg class="loc-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
           <circle cx="12" cy="9" r="2.5"/>
         </svg>
-        {{ item.locationName }}
+        {{ locationName }}
       </p>
 
-      <p v-if="item.description" class="public-card-description heritage-card__description">
-        {{ item.description }}
+      <p class="public-card-description heritage-card__description" :class="{ 'heritage-card__description--fallback': !item.description }">
+        {{ descriptionText }}
       </p>
 
-      <div v-if="visibleTags.length" class="heritage-card__tag-section">
+      <div class="heritage-card__tag-section">
         <span class="heritage-card__field-label">Tags</span>
         <ul class="public-card-tags heritage-card__tags" aria-label="Tags">
           <li v-for="t in visibleTags" :key="t.id" class="public-tag heritage-card__tag">{{ t.name }}</li>
           <li v-if="hiddenTagCount" class="heritage-card__more-tag">+{{ hiddenTagCount }}</li>
+          <li v-if="!visibleTags.length" class="heritage-card__empty-tag">Unlabeled</li>
         </ul>
       </div>
 
@@ -116,6 +119,8 @@ const placeholderMark = computed(() => {
 <style scoped>
 .heritage-card {
   height: 100%;
+  width: 100%;
+  max-width: 340px;
 }
 
 .heritage-card__media {
@@ -210,6 +215,8 @@ const placeholderMark = computed(() => {
 }
 
 .heritage-card__body {
+  display: grid;
+  grid-template-rows: minmax(3.2rem, auto) minmax(3.25rem, auto) 1.5rem 5rem 2.25rem auto;
   min-height: 188px;
   gap: 0.72rem;
 }
@@ -217,6 +224,8 @@ const placeholderMark = computed(() => {
 .heritage-card__taxonomy {
   display: flex;
   align-items: flex-start;
+  min-height: 3.2rem;
+  width: 100%;
 }
 
 .heritage-card__category-block,
@@ -265,6 +274,9 @@ const placeholderMark = computed(() => {
   font-weight: 700;
   line-height: 1.3;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .heritage-card__title,
@@ -276,12 +288,19 @@ const placeholderMark = computed(() => {
 
 .heritage-card__title {
   -webkit-line-clamp: 2;
+  min-height: 3.25rem;
 }
 
 .heritage-card__location {
   display: flex;
   align-items: center;
   gap: 0.4rem;
+  min-height: 1.4rem;
+  width: 100%;
+}
+
+.heritage-card__location--fallback {
+  color: var(--muted);
 }
 
 .loc-icon {
@@ -291,10 +310,20 @@ const placeholderMark = computed(() => {
 
 .heritage-card__description {
   -webkit-line-clamp: 3;
+  min-height: 4.95rem;
+  width: 100%;
+}
+
+.heritage-card__description--fallback {
+  color: var(--muted-soft);
+  font-style: italic;
 }
 
 .heritage-card__tags {
   margin-top: 0;
+  min-height: 1.8rem;
+  width: 100%;
+  overflow: hidden;
 }
 
 .heritage-card__tag {
@@ -320,6 +349,23 @@ const placeholderMark = computed(() => {
   font-size: var(--text-2xs);
   font-weight: 700;
   list-style: none;
+}
+
+.heritage-card__empty-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.15rem 0.62rem;
+  border-radius: 999px;
+  border: 1px dashed color-mix(in srgb, var(--border-strong) 60%, var(--border));
+  color: var(--muted-soft);
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  list-style: none;
+}
+
+.heritage-card .public-card-footer {
+  width: 100%;
 }
 
 @media (max-width: 480px) {

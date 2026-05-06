@@ -125,6 +125,7 @@ function getVideoThumbnail(media) {
 .carousel {
   display: flex;
   flex-direction: column;
+  width: 100%;
   gap: 0.75rem;
 }
 .stage {
@@ -262,6 +263,7 @@ function getVideoThumbnail(media) {
   background: rgba(0, 0, 0, 0.35);
 }
 .empty {
+  width: 100%;
   border-radius: var(--radius);
   background: #e7e5e4;
   color: var(--muted);
