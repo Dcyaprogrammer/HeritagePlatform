@@ -29,6 +29,9 @@ public class PublicResourceSummary {
 	private String coverUrl;
 	private List<NamedRow> tags;
 	private boolean hasVideo;
+	private int commentCount;
+	private int likeCount;
+	private int favoriteCount;
 
 	public String getCoverUrl() {
 		return coverUrl;
@@ -44,6 +47,30 @@ public class PublicResourceSummary {
 
 	public void setHasVideo(boolean hasVideo) {
 		this.hasVideo = hasVideo;
+	}
+
+	public int getCommentCount() {
+		return commentCount;
+	}
+
+	public void setCommentCount(int commentCount) {
+		this.commentCount = commentCount;
+	}
+
+	public int getLikeCount() {
+		return likeCount;
+	}
+
+	public void setLikeCount(int likeCount) {
+		this.likeCount = likeCount;
+	}
+
+	public int getFavoriteCount() {
+		return favoriteCount;
+	}
+
+	public void setFavoriteCount(int favoriteCount) {
+		this.favoriteCount = favoriteCount;
 	}
 
 	public Long getId() {

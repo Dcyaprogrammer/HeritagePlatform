@@ -2,6 +2,8 @@ package com.heritage.platform.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "comments")
@@ -18,6 +20,14 @@ public class Comment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private HeritageUser user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Comment parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("createdAt ASC")
+    private List<Comment> replies = new ArrayList<>();
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
@@ -48,6 +58,12 @@ public class Comment {
 
     public HeritageUser getUser() { return user; }
     public void setUser(HeritageUser user) { this.user = user; }
+
+    public Comment getParent() { return parent; }
+    public void setParent(Comment parent) { this.parent = parent; }
+
+    public List<Comment> getReplies() { return replies; }
+    public void setReplies(List<Comment> replies) { this.replies = replies; }
 
     public String getContent() { return content; }
     public void setContent(String content) { this.content = content; }

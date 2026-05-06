@@ -125,8 +125,7 @@ const mockCommentsByResource = {
       user_id: 11,
       authorName: 'guest_qinghe',
       content: 'The stone-lane photos feel very atmospheric. Thanks for compiling this.',
-      created_at: '2025-11-22T09:30:00Z',
-      updated_at: '2025-11-22T09:30:00Z',
+      createdAt: '2025-11-22T09:30:00Z',
     },
   ],
   2: [],
@@ -137,8 +136,7 @@ const mockCommentsByResource = {
       user_id: 12,
       authorName: 'Maritime volunteer',
       content: 'Pairing the proverbs with disaster-prep talks would work really well.',
-      created_at: '2025-10-01T15:00:00Z',
-      updated_at: '2025-10-01T15:00:00Z',
+      createdAt: '2025-10-01T15:00:00Z',
     },
   ],
 }
@@ -172,8 +170,7 @@ export function postComment(resourceId, userId, content, authorName = 'Demo user
     user_id: userId,
     authorName,
     content: content.trim(),
-    created_at: now,
-    updated_at: now,
+    createdAt: now,
   }
   mockCommentsByResource[resourceId] = [next, ...(mockCommentsByResource[resourceId] ?? [])]
   return next

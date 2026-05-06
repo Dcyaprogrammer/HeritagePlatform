@@ -29,7 +29,7 @@ public class CommentService {
 
     @Transactional(readOnly = true)
     public List<CommentDTO> getCommentsByResourceId(Long resourceId) {
-        List<Comment> comments = commentRepository.findByResourceIdOrderByCreatedAtDesc(resourceId);
+        List<Comment> comments = commentRepository.findByResourceIdAndParentIsNullOrderByCreatedAtDesc(resourceId);
         return comments.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 
@@ -45,6 +45,12 @@ public class CommentService {
         comment.setUser(user);
         comment.setContent(request.getContent());
         
+        if (request.getParentId() != null) {
+            Comment parent = commentRepository.findById(request.getParentId())
+                    .orElseThrow(() -> new RuntimeException("Parent comment not found with id: " + request.getParentId()));
+            comment.setParent(parent);
+        }
+        
         Comment savedComment = commentRepository.save(comment);
 
         return convertToDTO(savedComment);
@@ -55,7 +61,6 @@ public class CommentService {
         dto.setId(comment.getId());
         dto.setResourceId(comment.getResource().getId());
         
-        // Load user info safely (requires active transaction which is guaranteed by @Transactional)
         HeritageUser user = comment.getUser();
         dto.setUserId(user.getId());
         dto.setAuthorName(user.getDisplayName() != null ? user.getDisplayName() : user.getUsername());
@@ -64,6 +69,18 @@ public class CommentService {
         dto.setContent(comment.getContent());
         dto.setCreatedAt(comment.getCreatedAt());
         dto.setUpdatedAt(comment.getUpdatedAt());
+        
+        if (comment.getParent() != null) {
+            dto.setParentId(comment.getParent().getId());
+        }
+        
+        if (comment.getReplies() != null && !comment.getReplies().isEmpty()) {
+            List<CommentDTO> replyDTOs = comment.getReplies().stream()
+                    .map(this::convertToDTO)
+                    .collect(Collectors.toList());
+            dto.setReplies(replyDTOs);
+        }
+        
         return dto;
     }
 }

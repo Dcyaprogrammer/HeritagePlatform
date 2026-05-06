@@ -23,6 +23,7 @@
             >
               My Submissions
             </button>
+            <button type="button" class="public-btn" @click="goToFavorites">My Favorites</button>
             <button
               v-if="isAdmin"
               type="button"
@@ -63,6 +64,7 @@ const {
   goToAdmin,
   goToCreateResource,
   goToSubmissions,
+  goToFavorites,
   goToProfile,
   goToLogin,
   goToRegister,

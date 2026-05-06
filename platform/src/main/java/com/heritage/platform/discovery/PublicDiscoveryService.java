@@ -159,7 +159,10 @@ public class PublicDiscoveryService {
 				         (SELECT a.file_path FROM attachments a WHERE a.resource_id = r.id AND a.file_type = 'image' ORDER BY a.created_at ASC LIMIT 1),
 				         (SELECT a.thumbnail_path FROM attachments a WHERE a.resource_id = r.id AND a.file_type = 'video' AND a.thumbnail_path IS NOT NULL ORDER BY a.created_at ASC LIMIT 1)
 				       ) AS cover_url,
-				       EXISTS(SELECT 1 FROM attachments a WHERE a.resource_id = r.id AND a.file_type = 'video') AS has_video
+				       EXISTS(SELECT 1 FROM attachments a WHERE a.resource_id = r.id AND a.file_type = 'video') AS has_video,
+				       COALESCE((SELECT COUNT(*) FROM comments cm WHERE cm.resource_id = r.id), 0) AS comment_count,
+				       COALESCE((SELECT COUNT(*) FROM likes l WHERE l.resource_id = r.id), 0) AS like_count,
+				       COALESCE((SELECT COUNT(*) FROM favorites f WHERE f.resource_id = r.id), 0) AS favorite_count
 				""" + BASE_FROM + extra + """
 				ORDER BY r.updated_at DESC
 				LIMIT :limit OFFSET :offset
@@ -356,6 +359,21 @@ public class PublicDiscoveryService {
 				s.setHasVideo(rs.getBoolean("has_video"));
 			} catch (SQLException ignored) {
 				// has_video is not selected in some queries
+			}
+			try {
+				s.setCommentCount(rs.getInt("comment_count"));
+			} catch (SQLException ignored) {
+				// comment_count is not selected in some queries
+			}
+			try {
+				s.setLikeCount(rs.getInt("like_count"));
+			} catch (SQLException ignored) {
+				// like_count is not selected in some queries
+			}
+			try {
+				s.setFavoriteCount(rs.getInt("favorite_count"));
+			} catch (SQLException ignored) {
+				// favorite_count is not selected in some queries
 			}
 			enrichDerived(s, rs);
 			return s;

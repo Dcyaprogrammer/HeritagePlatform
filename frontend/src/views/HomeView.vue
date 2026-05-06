@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import ResourceCard from '../components/ResourceCard.vue'
+import HeritageCard from '../components/HeritageCard.vue'
 import { getPublicResources } from '../api/resource.js'
 
 const allResources = ref([])
@@ -319,7 +319,7 @@ onUnmounted(() => {
 
     <div v-else class="grid-wrap" :class="{ 'grid-wrap--dim': loading }">
       <div class="grid">
-        <ResourceCard v-for="item in filteredResources" :key="item.id" :item="item" />
+        <HeritageCard v-for="item in filteredResources" :key="item.id" :item="item" />
       </div>
     </div>
 
