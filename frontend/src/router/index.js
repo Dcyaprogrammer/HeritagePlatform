@@ -48,7 +48,7 @@ const routes = [
         path: 'profile',
         name: 'Profile',
         component: Profile,
-        meta: { title: 'Profile', requiresAuth: true },
+        meta: { title: 'Profile', requiresAuth: true, shellWidth: 'wide' },
       },
       {
         path: 'favorites',

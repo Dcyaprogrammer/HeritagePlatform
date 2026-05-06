@@ -44,18 +44,19 @@
         </div>
       </div>
     </header>
-    <main class="public-shell public-main">
+    <main class="public-shell public-main" :class="shellClass">
       <router-view />
     </main>
   </div>
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, onMounted, onUnmounted } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { usePublicHeader } from '../composables/usePublicHeader.js'
 
 const router = useRouter()
+const route = useRoute()
 const {
   isLoggedIn,
   isAdmin,
@@ -70,6 +71,10 @@ const {
   goToRegister,
   handleLogout,
 } = usePublicHeader()
+
+const shellClass = computed(() => {
+  return route.meta?.shellWidth === 'wide' ? 'public-shell--wide' : ''
+})
 
 onMounted(() => {
   refreshAuth()
@@ -142,5 +147,9 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   padding-bottom: 2rem;
+}
+
+.public-shell--wide {
+  max-width: 1480px;
 }
 </style>
