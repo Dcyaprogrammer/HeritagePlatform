@@ -57,6 +57,7 @@ const routes = [
         meta: {
           title: 'My Favorites',
           requiresAuth: true,
+          shellWidth: 'wide',
         },
       },
       {

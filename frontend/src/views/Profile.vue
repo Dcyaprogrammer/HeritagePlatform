@@ -8,7 +8,7 @@
         </button>
         <button type="button" class="public-btn public-btn--ghost profile-home-btn" @click="router.push('/')">
           <el-icon><House /></el-icon>
-          Archive Home
+          Home
         </button>
       </div>
 
@@ -807,7 +807,7 @@ onMounted(() => {
   padding-top: 0.75rem;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 900px) {
   .profile-hero__content,
   .profile-meta-strip,
   .profile-grid {

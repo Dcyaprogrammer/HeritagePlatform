@@ -150,6 +150,6 @@ onUnmounted(() => {
 }
 
 .public-shell--wide {
-  max-width: 1480px;
+  max-width: 1680px;
 }
 </style>
