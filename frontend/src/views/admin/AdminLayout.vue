@@ -6,8 +6,8 @@
         <div class="sidebar-header">
           <h3>Admin Panel</h3>
         </div>
-        <el-menu :default-active="$route.path" router class="admin-menu" background-color="var(--ink)"
-          text-color="#e2ddd4" active-text-color="#faf8f3">
+        <el-menu :default-active="$route.path" router class="admin-menu" background-color="var(--surface)"
+          text-color="var(--muted)" active-text-color="var(--accent)">
           <el-menu-item index="/admin/users">
             <el-icon>
               <UserFilled />
@@ -46,8 +46,8 @@
         <!-- Top Header -->
         <el-header class="top-header">
           <div class="header-right">
-            <el-button type="primary" plain class="home-btn" @click="router.push('/')">
-              <el-icon><House /></el-icon>
+            <el-button type="primary" class="home-btn" @click="router.push('/')">
+              Home
             </el-button>
             <el-dropdown @command="handleCommand">
               <span class="user-info">
@@ -81,7 +81,6 @@ import {
   UserFilled,
   DocumentChecked,
   ArrowDown,
-  House,
   Stamp,
   FolderOpened,
   Setting,
@@ -113,25 +112,28 @@ const handleCommand = (command) => {
 }
 
 .sidebar {
-  background-color: var(--ink);
-  color: var(--surface);
+  background-color: var(--surface);
+  border-right: 1px solid var(--border);
 }
 
 .sidebar-header {
-  padding: 20px;
+  padding: 24px 20px;
   text-align: center;
-  border-bottom: 1px solid color-mix(in srgb, var(--ink) 75%, #fff 25%);
+  border-bottom: 1px solid var(--border);
 }
 
 .sidebar-header h3 {
   margin: 0;
-  color: var(--surface);
-  font-size: 18px;
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
   font-family: var(--font-serif);
 }
 
 .admin-menu {
   border-right: none;
+  padding: 8px;
 }
 
 .right-container {
@@ -155,8 +157,19 @@ const handleCommand = (command) => {
 }
 
 .home-btn {
-  border-radius: 50%;
-  padding: 8px;
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 500;
+}
+
+.home-btn:hover {
+  background-color: var(--accent-soft);
+  border-color: var(--accent-soft);
+  color: white;
+  transform: translateY(-1px);
 }
 
 .user-info {
@@ -175,11 +188,32 @@ const handleCommand = (command) => {
 
 .username {
   font-size: 14px;
-  color: var(--muted);
+  color: var(--ink-soft);
+  font-weight: 600;
 }
 
 .main-content {
-  padding: 20px;
+  padding: 32px;
   overflow-y: auto;
+  width: 100%;
+  max-width: 1680px;
+  margin: 0 auto;
+}
+
+/* Menu item styling */
+.admin-menu :deep(.el-menu-item) {
+  margin-bottom: 4px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.admin-menu :deep(.el-menu-item:hover) {
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.admin-menu :deep(.el-menu-item.is-active) {
+  background-color: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--accent);
 }
 </style>

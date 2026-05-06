@@ -83,7 +83,7 @@
       </div>
     </article>
 
-    <el-card class="action-card">
+    <el-card class="admin-panel-card action-card">
       <template #header>
         <span class="card-title">Review Actions</span>
       </template>
@@ -222,7 +222,7 @@ onMounted(fetchDetail)
 
 <style scoped>
 .inner {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 0 1.25rem;
 }
@@ -234,8 +234,8 @@ onMounted(fetchDetail)
   text-align: center;
 }
 .crumb {
-  font-size: 0.875rem;
-  color: var(--muted);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
   margin-bottom: 1.25rem;
   margin-top: 1rem;
 }
@@ -270,43 +270,49 @@ onMounted(fetchDetail)
   margin-bottom: 0.65rem;
 }
 .pill {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  padding: 0.2rem 0.55rem;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
-  color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface-raised));
+  color: var(--accent-strong);
+  border: 1px solid color-mix(in srgb, var(--accent-soft) 35%, var(--border));
 }
 .loc {
-  font-size: 0.875rem;
-  color: var(--muted);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
 }
 
 .action-card {
   margin-top: 1.5rem;
-  border-radius: var(--radius);
 }
 
 .card-title {
-  font-weight: 600;
-  color: #303133;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .prose {
   margin-top: 1.5rem;
 }
 .desc {
-  font-size: 1.05rem;
-  line-height: 1.6;
+  font-size: var(--text-base);
+  line-height: 1.78;
   margin-bottom: 1.5rem;
 }
 .legal {
-  background: var(--surface);
-  padding: 1rem;
-  border-left: 4px solid var(--border);
-  font-size: 0.875rem;
+  background: color-mix(in srgb, var(--surface) 84%, white 16%);
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  font-size: var(--text-sm);
   margin-bottom: 1.5rem;
+  border-radius: 12px;
 }
 .tags {
   list-style: none;
@@ -317,33 +323,35 @@ onMounted(fetchDetail)
   margin: 0;
 }
 .tag {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.6rem;
+  font-size: var(--text-2xs);
+  padding: 0.25rem 0.7rem;
   border-radius: 999px;
-  background: #1d4ed8;
-  color: #ffffff;
-  border: none;
-  font-weight: 500;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-raised));
+  color: var(--accent-strong);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  font-weight: 700;
 }
 .facts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 88%, white 12%);
   padding: 1.25rem;
-  border-radius: var(--radius);
+  border-radius: 16px;
   border: 1px solid var(--border);
 }
 .fact dt {
-  font-size: 0.75rem;
+  font-size: var(--text-2xs);
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   margin-bottom: 0.25rem;
+  font-weight: 700;
 }
 .fact dd {
   margin: 0;
-  font-weight: 500;
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
 .actions {
@@ -354,21 +362,22 @@ onMounted(fetchDetail)
 
 .reject-tip {
   margin: 12px 0 0;
-  color: #909399;
-  font-size: 13px;
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 500;
 }
 
 /* Media sections */
 .media-section {
   margin-top: 1.5rem;
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 88%, white 12%);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: 16px;
   padding: 1.1rem 1.25rem;
 }
 .media-heading {
   margin: 0 0 0.85rem;
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -392,8 +401,8 @@ onMounted(fetchDetail)
   gap: 0.4rem;
 }
 .audio-name {
-  font-size: 0.8125rem;
-  color: var(--muted);
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -416,15 +425,15 @@ onMounted(fetchDetail)
 }
 .file-type-badge {
   flex: 0 0 auto;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 0.2rem 0.5rem;
-  border-radius: 5px;
-  letter-spacing: 0.02em;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  letter-spacing: 0.05em;
 }
 .file-name {
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--accent);
   text-decoration: none;
   white-space: nowrap;
@@ -433,4 +442,3 @@ onMounted(fetchDetail)
 }
 .file-name:hover { text-decoration: underline; }
 </style>
-

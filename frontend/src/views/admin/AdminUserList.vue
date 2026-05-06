@@ -1,21 +1,21 @@
 <template>
-  <div class="user-management">
+  <div class="admin-page user-management">
     <!-- Page Header -->
-    <div class="page-header">
-      <h2>User Management</h2>
+    <div class="admin-page-header page-header">
+      <div class="admin-page-copy">
+        <h2>User Management</h2>
+        <p class="admin-page-subtitle subtitle">Manage roles, contributor status, and profile visibility from one place.</p>
+      </div>
       <el-button type="primary" @click="fetchUserList" :loading="loading">
-        <el-icon>
-          <Refresh />
-        </el-icon>
         Refresh
       </el-button>
     </div>
 
     <!-- Search and Filter Section -->
-    <el-card class="filter-card">
-      <el-form :inline="true" :model="searchForm" class="filter-form">
+    <el-card class="admin-filter-card filter-card">
+      <el-form :inline="true" :model="searchForm" class="admin-filter-form filter-form">
         <el-form-item label="Role">
-          <el-select v-model="searchForm.role" placeholder="All Roles" clearable @change="handleRoleChange">
+          <el-select v-model="searchForm.role" placeholder="All Roles" clearable @change="handleRoleChange" class="role-select">
             <el-option label="All" value="" />
             <el-option label="Admin" value="ADMIN" />
             <el-option label="Contributor" value="CONTRIBUTOR" />
@@ -24,7 +24,7 @@
         </el-form-item>
 
         <el-form-item label="Search">
-          <el-input v-model="searchForm.keyword" placeholder="Username" clearable @keyup.enter="handleSearch">
+          <el-input v-model="searchForm.keyword" placeholder="Username" clearable @keyup.enter="handleSearch" @clear="handleSearch" class="search-input">
             <template #prefix>
               <el-icon>
                 <Search />
@@ -51,36 +51,36 @@
     </el-card>
 
     <!-- Statistics Cards -->
-    <el-row :gutter="20" class="stats-row">
+    <el-row :gutter="20" class="admin-stats-row stats-row">
       <el-col :span="6">
-        <el-card class="stat-card" @click="filterByRole('')">
-          <div class="stat-value">{{ stats.total }}</div>
-          <div class="stat-label">Total Users</div>
+        <el-card class="admin-stat-card stat-card" @click="filterByRole('')">
+          <div class="admin-stat-value stat-value">{{ stats.total }}</div>
+          <div class="admin-stat-label stat-label">Total Users</div>
         </el-card>
       </el-col>
       <el-col :span="6">
-        <el-card class="stat-card admin" @click="filterByRole('ADMIN')">
-          <div class="stat-value admin">{{ stats.admin }}</div>
-          <div class="stat-label">Admins</div>
+        <el-card class="admin-stat-card stat-card" @click="filterByRole('ADMIN')">
+          <div class="admin-stat-value stat-value">{{ stats.admin }}</div>
+          <div class="admin-stat-label stat-label">Admins</div>
         </el-card>
       </el-col>
       <el-col :span="6">
-        <el-card class="stat-card contributor" @click="filterByRole('CONTRIBUTOR')">
-          <div class="stat-value contributor">{{ stats.contributor }}</div>
-          <div class="stat-label">Contributors</div>
+        <el-card class="admin-stat-card stat-card" @click="filterByRole('CONTRIBUTOR')">
+          <div class="admin-stat-value stat-value">{{ stats.contributor }}</div>
+          <div class="admin-stat-label stat-label">Contributors</div>
         </el-card>
       </el-col>
       <el-col :span="6">
-        <el-card class="stat-card viewer" @click="filterByRole('VIEWER')">
-          <div class="stat-value viewer">{{ stats.viewer }}</div>
-          <div class="stat-label">Viewers</div>
+        <el-card class="admin-stat-card stat-card" @click="filterByRole('VIEWER')">
+          <div class="admin-stat-value stat-value">{{ stats.viewer }}</div>
+          <div class="admin-stat-label stat-label">Viewers</div>
         </el-card>
       </el-col>
     </el-row>
 
     <!-- User Table -->
-    <el-card class="table-card">
-      <el-table :data="userList" v-loading="loading" stripe style="width: 100%">
+    <el-card class="admin-table-card table-card">
+      <el-table :data="userList" v-loading="loading" stripe style="width: 100%" class="admin-table user-table">
         <el-table-column type="index" width="50" />
 
         <el-table-column label="User" min-width="200">
@@ -146,7 +146,7 @@
       </el-table>
 
       <!-- Pagination -->
-      <div class="pagination-container">
+      <div class="admin-pagination pagination-container">
         <el-pagination v-model:current-page="pagination.page" v-model:page-size="pagination.size"
           :page-sizes="[10, 20, 50, 100]" :total="pagination.total"
           layout="total, sizes, prev, pager, next, jumper" @size-change="handleSizeChange"
@@ -229,7 +229,6 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Refresh,
   Search,
   RefreshRight,
   View,
@@ -474,73 +473,33 @@ onMounted(() => {
 
 <style scoped>
 .user-management {
-  padding: 20px;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 24px;
-  color: #303133;
 }
 
 .filter-card {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
-.filter-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+/* Set width for select and search */
+.role-select {
+  width: 200px;
+  min-width: 200px;
+}
+
+.search-input {
+  width: 240px;
+  min-width: 240px;
 }
 
 .stats-row {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .stat-card {
-  text-align: center;
   cursor: pointer;
-  transition: all 0.3s;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.stat-value {
-  font-size: 32px;
-  font-weight: bold;
-  color: #409eff;
-  margin-bottom: 8px;
-}
-
-.stat-value.admin {
-  color: #f56c6c;
-}
-
-.stat-value.contributor {
-  color: #67c23a;
-}
-
-.stat-value.viewer {
-  color: #909399;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #606266;
 }
 
 .table-card {
-  margin-bottom: 20px;
+  overflow: hidden;
 }
 
 .user-info {
@@ -555,13 +514,14 @@ onMounted(() => {
 }
 
 .username {
-  font-weight: 500;
-  color: #303133;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .display-name {
-  font-size: 12px;
-  color: #909399;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  font-weight: 500;
 }
 
 .roles-container {
@@ -575,15 +535,8 @@ onMounted(() => {
 }
 
 .no-status {
-  color: #c0c4cc;
-}
-
-.pagination-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid #ebeef5;
+  color: var(--ink-soft);
+  font-weight: 500;
 }
 
 .user-detail {
@@ -597,7 +550,7 @@ onMounted(() => {
 
 .detail-header h3 {
   margin: 15px 0 10px;
-  color: #303133;
+  color: var(--ink);
 }
 
 .role-edit-content {
@@ -606,5 +559,8 @@ onMounted(() => {
 
 .role-edit-content p {
   margin-bottom: 15px;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.6;
 }
 </style>

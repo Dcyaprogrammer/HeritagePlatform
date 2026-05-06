@@ -1,100 +1,164 @@
 <template>
   <div class="create-resource-page">
-    <div class="header">
-      <h1>{{ isEditMode ? 'Edit Heritage Resource' : 'Create New Heritage Resource' }}</h1>
-      <p>
-        {{
-          isEditMode
-            ? 'Update your draft before saving it again or submitting it later.'
-            : 'Share local culture, places, traditions, stories, or objects.'
-        }}
-      </p>
-    </div>
-
-    <div v-if="pageLoading" class="page-state">Loading draft...</div>
-
-    <form v-else @submit.prevent="handleSaveDraft" class="resource-form">
-      <div class="form-group">
-        <label for="title">Title *</label>
-        <input v-model="form.title" type="text" id="title" required placeholder="Enter an engaging title" />
-      </div>
-
-      <div class="form-group">
-        <label for="description">Description *</label>
-        <textarea v-model="form.description" id="description" rows="5" required placeholder="Describe the heritage resource in detail..."></textarea>
-      </div>
-
-      <div class="form-group row-group">
-        <div class="col">
-          <label for="locationName">Location / Place</label>
-          <select v-model="form.locationName" id="locationName">
-            <option value="">Select a Province</option>
-            <option v-for="p in locationOptions" :key="p" :value="p">{{ p }}</option>
-          </select>
+    <header class="public-page-intro create-resource__header">
+      <p class="public-eyebrow">{{ isEditMode ? 'Contributor Draft' : 'Contributor Workspace' }}</p>
+      <div class="create-resource__title-row">
+        <div class="create-resource__title-copy">
+          <h1 class="public-page-title">{{ isEditMode ? 'Edit heritage resource' : 'Create heritage resource' }}</h1>
+          <p class="public-lead">
+            {{
+              isEditMode
+                ? 'Refine the draft, keep the description readable, and attach the material you want reviewers to evaluate.'
+                : 'Capture a place, story, tradition, object, or practice with enough context for the archive and review team.'
+            }}
+          </p>
         </div>
-        <div class="col">
-          <label for="category">Category</label>
-          <select v-model="form.categoryId" id="category">
-            <option value="">Select a Category</option>
-            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-          </select>
-        </div>
+        <span class="public-badge" :class="formStatusClass">{{ formStatusLabel }}</span>
       </div>
+    </header>
 
-      <div class="form-group">
-        <label for="heritageType">Heritage Type</label>
-        <select v-model="form.heritageTypeCode" id="heritageType">
-          <option value="">Select a Heritage Type</option>
-          <optgroup v-for="group in heritageTypeGroups" :key="group.groupCode" :label="group.groupName">
-            <option v-for="type in group.types" :key="type.code" :value="type.code">
-              {{ type.name }}
-            </option>
-          </optgroup>
-        </select>
-      </div>
+    <div v-if="pageLoading" class="public-panel create-resource__state">Loading draft...</div>
 
-      <div class="form-group">
-        <label>Tags</label>
-        <div class="tags-container">
-          <label v-for="tag in availableTags" :key="tag.id" class="tag-checkbox">
-            <input type="checkbox" :value="tag.id" v-model="form.tagIds" />
-            <span class="tag-label">{{ tag.name }}</span>
+    <form v-else @submit.prevent="handleSaveDraft" class="public-form create-resource__form">
+      <section class="public-panel public-form-section">
+        <h2 class="public-form-section-title">Core information</h2>
+        <p class="public-form-section-lead">
+          Start with the name and narrative. This is the part readers will rely on first.
+        </p>
+
+        <div class="public-form-grid">
+          <label class="public-field public-field--full" for="title">
+            <span class="public-label">Title *</span>
+            <input
+              id="title"
+              v-model="form.title"
+              type="text"
+              class="public-input"
+              required
+              placeholder="Enter a clear, specific title"
+            />
+          </label>
+
+          <label class="public-field public-field--full" for="description">
+            <span class="public-label">Description *</span>
+            <textarea
+              id="description"
+              v-model="form.description"
+              rows="6"
+              class="public-textarea"
+              required
+              placeholder="Describe what this heritage resource is, why it matters, where it belongs, and any historical or cultural context."
+            />
+            <span class="public-help">Aim for readable prose, not keywords. Reviewers need enough context to judge accuracy and relevance.</span>
           </label>
         </div>
-      </div>
+      </section>
 
-      <div class="form-group">
-        <label for="copyright">Copyright & Usage Declaration</label>
-        <input v-model="form.copyrightDeclaration" type="text" id="copyright" placeholder="E.g., CC BY-NC 4.0 or All Rights Reserved" />
-      </div>
-
-      <div class="form-group">
-        <label>Media Attachments (Images, Videos, Documents)</label>
-        <FileUploader ref="uploaderRef" :initial-files="initialUploaderFiles" />
-        <p class="help-text">
-          Please wait for each file upload to finish before saving or submitting.
+      <section class="public-panel public-form-section">
+        <h2 class="public-form-section-title">Classification</h2>
+        <p class="public-form-section-lead">
+          Use structured metadata so the resource can be found, grouped, and reviewed correctly.
         </p>
-      </div>
 
-      <div class="actions">
-        <button type="button" class="btn btn-secondary" @click="goBack">Cancel</button>
-        <button type="submit" class="btn btn-primary" :disabled="loading || submitting || hasPendingUploads">
-          <span v-if="loading">{{ isEditMode ? 'Updating...' : 'Saving...' }}</span>
-          <span v-else>{{ isEditMode ? 'Update Draft' : 'Save as Draft' }}</span>
-        </button>
-        <button
-          type="button"
-          class="btn btn-submit"
-          :disabled="loading || submitting || hasPendingUploads"
-          @click="handleSubmitForReview"
-        >
-          <span v-if="submitting">Submitting...</span>
-          <span v-else>Submit for Review</span>
-        </button>
-      </div>
+        <div class="public-form-grid public-form-grid--two">
+          <label class="public-field" for="locationName">
+            <span class="public-label">Location / Place</span>
+            <select id="locationName" v-model="form.locationName" class="public-select">
+              <option value="">Select a province</option>
+              <option v-for="p in locationOptions" :key="p" :value="p">{{ p }}</option>
+            </select>
+          </label>
 
-      <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
-      <div v-if="successMsg" class="success-msg">{{ successMsg }}</div>
+          <label class="public-field" for="category">
+            <span class="public-label">Category</span>
+            <select id="category" v-model="form.categoryId" class="public-select">
+              <option value="">Select a category</option>
+              <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+            </select>
+          </label>
+
+          <label class="public-field public-field--full" for="heritageType">
+            <span class="public-label">Heritage Type</span>
+            <select id="heritageType" v-model="form.heritageTypeCode" class="public-select">
+              <option value="">Select a heritage type</option>
+              <optgroup v-for="group in heritageTypeGroups" :key="group.groupCode" :label="group.groupName">
+                <option v-for="type in group.types" :key="type.code" :value="type.code">
+                  {{ type.name }}
+                </option>
+              </optgroup>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="public-panel public-form-section">
+        <h2 class="public-form-section-title">Tags and rights</h2>
+        <p class="public-form-section-lead">
+          Tags should describe content. Rights information should clarify how others may use the material.
+        </p>
+
+        <div class="public-form-grid">
+          <div class="public-field public-field--full">
+            <span class="public-label">Tags</span>
+            <div v-if="availableTags.length" class="public-choice-grid">
+              <label v-for="tag in availableTags" :key="tag.id" class="public-choice">
+                <input type="checkbox" :value="tag.id" v-model="form.tagIds" />
+                <span class="public-choice-label">{{ tag.name }}</span>
+              </label>
+            </div>
+            <span v-else class="public-help">No tags available yet.</span>
+          </div>
+
+          <label class="public-field public-field--full" for="copyright">
+            <span class="public-label">Copyright &amp; usage declaration</span>
+            <input
+              id="copyright"
+              v-model="form.copyrightDeclaration"
+              type="text"
+              class="public-input"
+              placeholder="Example: CC BY-NC 4.0, Public Domain, or All Rights Reserved"
+            />
+          </label>
+        </div>
+      </section>
+
+      <section class="public-panel public-form-section">
+        <h2 class="public-form-section-title">Attachments</h2>
+        <p class="public-form-section-lead">
+          Upload images, video, audio, or supporting documents. Wait until uploads finish before saving or submitting.
+        </p>
+
+        <div class="public-form-grid">
+          <div class="public-field public-field--full">
+            <FileUploader ref="uploaderRef" :initial-files="initialUploaderFiles" />
+            <p class="public-help-text">
+              Files remain attached to the draft. Removing failed uploads before submission avoids review interruptions.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="public-panel public-form-section create-resource__actions-panel">
+        <div class="actions">
+          <button type="button" class="public-btn public-btn--ghost" @click="goBack">Cancel</button>
+          <button type="submit" class="public-btn" :disabled="loading || submitting || hasPendingUploads">
+            <span v-if="loading">{{ isEditMode ? 'Updating...' : 'Saving...' }}</span>
+            <span v-else>{{ isEditMode ? 'Update Draft' : 'Save Draft' }}</span>
+          </button>
+          <button
+            type="button"
+            class="public-btn public-btn--primary"
+            :disabled="loading || submitting || hasPendingUploads"
+            @click="handleSubmitForReview"
+          >
+            <span v-if="submitting">Submitting...</span>
+            <span v-else>Submit for Review</span>
+          </button>
+        </div>
+
+        <div v-if="errorMsg" class="public-callout public-callout--error">{{ errorMsg }}</div>
+        <div v-if="successMsg" class="public-callout public-callout--success">{{ successMsg }}</div>
+      </section>
     </form>
   </div>
 </template>
@@ -160,10 +224,22 @@ const locationOptions = computed(() => {
   }
   return names
 })
-
 const hasPendingUploads = computed(() => {
   const files = uploaderRef.value?.uploadedFiles || []
   return files.some((file) => !file._removed && (file.uploading || (file.rawFile && !file.attachmentId && !file.uploadError)))
+})
+const formStatusLabel = computed(() => {
+  const raw = resourceStatus.value || 'DRAFT'
+  return raw
+    .toLowerCase()
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+})
+const formStatusClass = computed(() => {
+  if (resourceStatus.value === 'APPROVED') return 'public-badge--success'
+  if (resourceStatus.value === 'REJECTED') return 'public-badge--danger'
+  return 'public-badge--accent'
 })
 
 function resetMessages() {
@@ -401,156 +477,55 @@ watch(() => route.params.id, () => {
 
 <style scoped>
 .create-resource-page {
-  max-width: 800px;
-  margin: 2rem auto;
-  padding: 2rem;
-  background: var(--surface, #fff);
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  padding: 0.5rem 0 2.5rem;
 }
 
-.header h1 {
-  font-family: var(--font-serif);
-  color: var(--primary-dark, #2c3e50);
-  margin-bottom: 0.5rem;
+.create-resource__header {
+  margin-bottom: 1.1rem;
 }
 
-.header p {
-  color: var(--muted, #7f8c8d);
-  margin-bottom: 2rem;
-}
-
-.page-state {
-  padding: 2rem 0;
-  color: var(--muted, #7f8c8d);
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.form-group label {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: var(--text, #333);
-}
-
-.form-group input[type="text"],
-.form-group textarea,
-.form-group select {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--border, #ccc);
-  border-radius: 6px;
-  font-family: inherit;
-  font-size: 1rem;
-}
-
-.form-group input[type="text"]:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-  outline: none;
-  border-color: var(--primary, #3498db);
-  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-.row-group {
+.create-resource__title-row {
   display: flex;
-  gap: 1.5rem;
-}
-
-.row-group .col {
-  flex: 1;
-}
-
-.tags-container {
-  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
   flex-wrap: wrap;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid var(--border, #ccc);
 }
 
-.tag-checkbox {
+.create-resource__title-copy {
+  max-width: 52rem;
+}
+
+.create-resource__state {
+  padding: 1.25rem;
+  color: var(--muted);
+  font-size: var(--text-base);
+}
+
+.create-resource__form {
+  gap: 1rem;
+}
+
+.create-resource__actions-panel {
   display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  cursor: pointer;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border, #ccc);
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
-.btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
+@media (max-width: 640px) {
+  .actions {
+    justify-content: stretch;
+  }
 
-.btn-primary {
-  background: var(--primary, #3498db);
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #2980b9;
-}
-
-.btn-primary:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.btn-submit {
-  background: #16a34a;
-  color: white;
-}
-
-.btn-submit:hover:not(:disabled) {
-  background: #15803d;
-}
-
-.btn-submit:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.btn-secondary {
-  background: #ecf0f1;
-  color: #333;
-}
-
-.btn-secondary:hover {
-  background: #bdc3c7;
-}
-
-.help-text {
-  font-size: 0.85rem;
-  color: var(--muted, #7f8c8d);
-  margin-top: 0.5rem;
-}
-
-.error-msg {
-  color: #e74c3c;
-  margin-top: 1rem;
-  font-weight: 600;
-}
-
-.success-msg {
-  color: #27ae60;
-  margin-top: 1rem;
-  font-weight: 600;
+  .actions .public-btn {
+    width: 100%;
+  }
 }
 </style>

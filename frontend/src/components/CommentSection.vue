@@ -116,12 +116,12 @@ async function submitReply(parentCommentId) {
         id="comment-body"
         v-model="draft"
         rows="3"
-        class="input"
+        class="public-textarea input"
         maxlength="2000"
         placeholder="Share your thoughts on this resource..."
       />
       <div class="composer-footer">
-        <button type="submit" class="btn" :disabled="submitting || !draft.trim()">
+        <button type="submit" class="public-btn public-btn--compact" :disabled="submitting || !draft.trim()">
           {{ submitting ? 'Posting…' : 'Post comment' }}
         </button>
       </div>
@@ -152,21 +152,21 @@ async function submitReply(parentCommentId) {
           <textarea
             v-model="replyDraft"
             rows="2"
-            class="input"
+            class="public-textarea input"
             maxlength="2000"
             :placeholder="`Reply to ${c.authorName}...`"
           />
           <div class="reply-actions">
             <button
               type="button"
-              class="btn btn-text"
+              class="public-btn public-btn--ghost public-btn--compact"
               @click="cancelReply"
             >
               Cancel
             </button>
             <button
               type="button"
-              class="btn"
+              class="public-btn public-btn--compact"
               @click="submitReply(c.id)"
               :disabled="replySubmitting || !replyDraft.trim()"
             >
@@ -231,66 +231,14 @@ async function submitReply(parentCommentId) {
 }
 
 .input {
-  width: 100%;
-  resize: vertical;
   min-height: 5rem;
-  padding: 0.875rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-family: inherit;
-  font-size: 0.9375rem;
   line-height: 1.6;
-  background: #ffffff;
-  color: var(--ink);
-  transition: border-color 0.2s ease;
-}
-
-.input::placeholder {
-  color: var(--muted);
-  opacity: 0.7;
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--accent-soft);
 }
 
 .composer-footer {
   margin-top: 0.75rem;
   display: flex;
   justify-content: flex-end;
-}
-
-.btn {
-  padding: 0.5rem 1.25rem;
-  border: none;
-  border-radius: 6px;
-  background: var(--accent);
-  color: #fff;
-  font-weight: 500;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: background-color 0.2s ease, opacity 0.2s ease;
-}
-
-.btn:hover:not(:disabled) {
-  background: var(--accent-soft);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-text {
-  background: transparent;
-  color: var(--muted);
-  padding: 0.5rem 0.75rem;
-}
-
-.btn-text:hover:not(:disabled) {
-  background: transparent;
-  color: var(--ink);
 }
 
 /* ===== Comment Thread ===== */
@@ -357,8 +305,8 @@ async function submitReply(parentCommentId) {
 .reply-form {
   margin-top: 1rem;
   padding: 1rem;
-  background: var(--surface);
-  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface) 84%, white 16%);
+  border-radius: 14px;
   border: 1px solid var(--border);
 }
 

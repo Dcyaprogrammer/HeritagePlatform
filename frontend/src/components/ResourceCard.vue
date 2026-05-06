@@ -9,151 +9,62 @@ const hasVideo = computed(() => props.item?.hasVideo || false)
 </script>
 
 <template>
-  <article class="card">
-    <RouterLink :to="detailHref" class="media-link" :aria-label="`View: ${item.title}`">
-      <div class="media">
-        <img v-if="item.coverUrl" :src="item.coverUrl" :alt="`${item.title} cover`" loading="lazy" />
-        <div v-else class="placeholder" role="img" aria-label="No cover image">
+  <article class="public-card resource-card">
+    <RouterLink :to="detailHref" class="public-card-media-link" :aria-label="`View: ${item.title}`">
+      <div class="public-card-media resource-card__media">
+        <img
+          v-if="item.coverUrl"
+          :src="item.coverUrl"
+          :alt="`${item.title} cover`"
+          loading="lazy"
+          class="public-card-image"
+        />
+        <div v-else class="public-card-placeholder" role="img" aria-label="No cover image">
           <span>No image</span>
         </div>
-        <!-- Video indicator badge on card -->
-        <span v-if="hasVideo" class="video-badge" aria-label="Contains video">
+        <span v-if="hasVideo" class="public-badge public-badge--danger resource-card__badge" aria-label="Contains video">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
           Video
         </span>
       </div>
     </RouterLink>
-    <div class="body">
-      <RouterLink :to="detailHref" class="title-link">
-        <h2 class="title">{{ item.title }}</h2>
+
+    <div class="public-card-body">
+      <RouterLink :to="detailHref" class="public-card-title-link">
+        <h2 class="public-card-title resource-card__title">{{ item.title }}</h2>
       </RouterLink>
-      <p v-if="item.locationName" class="location">{{ item.locationName }}</p>
-      <ul v-if="item.tags && item.tags.length" class="tags" aria-label="Tags">
-        <li v-for="t in item.tags" :key="t.id" class="tag">{{ t.name }}</li>
+      <p v-if="item.locationName" class="public-card-meta">{{ item.locationName }}</p>
+      <ul v-if="item.tags && item.tags.length" class="public-card-tags" aria-label="Tags">
+        <li v-for="t in item.tags" :key="t.id" class="public-tag">{{ t.name }}</li>
       </ul>
-      <RouterLink :to="detailHref" class="cta">View details</RouterLink>
+      <RouterLink :to="detailHref" class="public-link-inline resource-card__cta">View details</RouterLink>
     </div>
   </article>
 </template>
 
 <style scoped>
-.card {
-  background: var(--surface);
-  border-radius: var(--radius);
-  overflow: hidden;
-  border: 1px solid var(--border);
-  box-shadow: var(--card-shadow);
-  display: flex;
-  flex-direction: column;
+.resource-card {
   height: 100%;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
-.card:hover {
-  box-shadow: 0 4px 12px rgba(28, 25, 23, 0.08), 0 16px 40px rgba(28, 25, 23, 0.08);
-  transform: translateY(-2px);
-}
-.media-link {
-  display: block;
-  color: inherit;
-  text-decoration: none;
-}
-.media-link:hover {
-  text-decoration: none;
-}
-.media {
+
+.resource-card__media {
   aspect-ratio: 4 / 3;
-  background: color-mix(in srgb, var(--bg) 75%, var(--surface) 25%);
-  overflow: hidden;
-  position: relative;
 }
-.media img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.video-badge {
+
+.resource-card__badge {
   position: absolute;
-  bottom: 0.5rem;
-  right: 0.5rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 5px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  background: rgba(220, 38, 38, 0.88);
-  color: #fff;
-  backdrop-filter: blur(2px);
+  top: 0.8rem;
+  right: 0.8rem;
 }
-.placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--muted);
-  font-size: 0.875rem;
-  background: linear-gradient(
-    145deg,
-    color-mix(in srgb, var(--surface) 80%, var(--bg) 20%),
-    color-mix(in srgb, var(--bg) 85%, var(--ink) 15%)
-  );
+
+.resource-card__title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
-.body {
-  padding: 1rem 1.1rem 1.15rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  flex: 1;
-}
-.title-link {
-  color: inherit;
-  text-decoration: none;
-}
-.title-link:hover .title {
-  color: var(--accent);
-}
-.title {
-  margin: 0;
-  font-family: var(--font-serif);
-  font-size: 1.125rem;
-  font-weight: 600;
-  line-height: 1.35;
-  transition: color 0.15s ease;
-}
-.location {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: var(--muted);
-}
-.tags {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-.tag {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 16%, var(--surface) 84%);
-  color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border) 78%);
-  font-weight: 500;
-}
-.cta {
+
+.resource-card__cta {
   margin-top: auto;
-  padding-top: 0.35rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--accent);
-  text-decoration: none;
-}
-.cta:hover {
-  text-decoration: underline;
 }
 </style>

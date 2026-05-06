@@ -1,65 +1,40 @@
 <template>
-  <div class="contributor-review">
+  <div class="admin-page contributor-review">
     <!-- Page Header -->
-    <div class="page-header">
-      <div>
+    <div class="admin-page-header page-header">
+      <div class="admin-page-copy">
         <h2>Contributor Applications</h2>
-        <p class="subtitle">Review and manage contributor applications</p>
+        <p class="admin-page-subtitle subtitle">Approve or reject contributor access with clear status cues and fast triage.</p>
       </div>
       <el-button type="primary" @click="fetchApplications" :loading="loading">
-        <el-icon>
-          <Refresh />
-        </el-icon>
         Refresh
       </el-button>
     </div>
 
     <!-- Statistics Cards -->
-    <el-row :gutter="20" class="stats-row">
+    <el-row :gutter="20" class="admin-stats-row stats-row">
       <el-col :span="8">
-        <el-card class="stat-card pending" :class="{ active: filterStatus === 'PENDING' }" @click="setFilter('PENDING')">
-          <div class="stat-icon">
-            <el-icon>
-              <Timer />
-            </el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.pending }}</div>
-            <div class="stat-label">Pending Review</div>
-          </div>
+        <el-card class="admin-stat-card stat-card" :class="{ 'is-active': filterStatus === 'PENDING' }" @click="setFilter('PENDING')">
+          <div class="admin-stat-value stat-value">{{ stats.pending }}</div>
+          <div class="admin-stat-label stat-label">Pending Review</div>
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card class="stat-card approved" :class="{ active: filterStatus === 'APPROVED' }"
-          @click="setFilter('APPROVED')">
-          <div class="stat-icon">
-            <el-icon>
-              <CircleCheck />
-            </el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.approved }}</div>
-            <div class="stat-label">Approved</div>
-          </div>
+        <el-card class="admin-stat-card stat-card" :class="{ 'is-active': filterStatus === 'APPROVED' }" @click="setFilter('APPROVED')">
+          <div class="admin-stat-value stat-value">{{ stats.approved }}</div>
+          <div class="admin-stat-label stat-label">Approved</div>
         </el-card>
       </el-col>
       <el-col :span="8">
-        <el-card class="stat-card rejected" :class="{ active: filterStatus === 'REJECTED' }" @click="setFilter('REJECTED')">
-          <div class="stat-icon">
-            <el-icon>
-              <CircleClose />
-            </el-icon>
-          </div>
-          <div class="stat-content">
-            <div class="stat-value">{{ stats.rejected }}</div>
-            <div class="stat-label">Rejected</div>
-          </div>
+        <el-card class="admin-stat-card stat-card" :class="{ 'is-active': filterStatus === 'REJECTED' }" @click="setFilter('REJECTED')">
+          <div class="admin-stat-value stat-value">{{ stats.rejected }}</div>
+          <div class="admin-stat-label stat-label">Rejected</div>
         </el-card>
       </el-col>
     </el-row>
 
     <!-- Applications Table -->
-    <el-card class="table-card">
+    <el-card class="admin-table-card table-card">
       <template #header>
         <div class="table-header">
           <span class="title">
@@ -74,7 +49,7 @@
         </div>
       </template>
 
-      <el-table :data="filteredApplications" v-loading="loading" stripe style="width: 100%" empty-text="No applications found">
+      <el-table :data="filteredApplications" v-loading="loading" stripe style="width: 100%" empty-text="No applications found" class="admin-table">
         <el-table-column type="index" width="50" />
 
         <el-table-column label="Applicant" min-width="180">
@@ -158,7 +133,7 @@
       <div v-if="selectedApplication" class="application-detail">
         <div class="applicant-header">
           <el-avatar :size="60" :src="selectedApplication.avatar || defaultAvatar" />
-          <div class="applicant-info">
+          <div class="applicant-summary">
             <h3>{{ selectedApplication.username }}</h3>
             <p>{{ selectedApplication.displayName }}</p>
             <el-tag :type="getStatusType(selectedApplication.contributorStatus)">
@@ -220,10 +195,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
-  Refresh,
-  Timer,
-  CircleCheck,
-  CircleClose,
   Check,
   Close,
   View
@@ -453,93 +424,23 @@ onMounted(() => {
 
 <style scoped>
 .contributor-review {
-  padding: 20px;
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 20px;
-}
-
-.page-header h2 {
-  margin: 0 0 8px 0;
-  font-size: 24px;
-  color: #303133;
-}
-
-.subtitle {
-  margin: 0;
-  color: #909399;
-  font-size: 14px;
+  margin-bottom: 24px;
 }
 
 .stats-row {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .stat-card {
-  display: flex;
-  align-items: center;
-  padding: 20px;
   cursor: pointer;
-  transition: all 0.3s;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.stat-card.active {
-  border: 2px solid #409eff;
-}
-
-.stat-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  margin-right: 15px;
-}
-
-.stat-card.pending .stat-icon {
-  background-color: #fdf6ec;
-  color: #e6a23c;
-}
-
-.stat-card.approved .stat-icon {
-  background-color: #f0f9eb;
-  color: #67c23a;
-}
-
-.stat-card.rejected .stat-icon {
-  background-color: #fef0f0;
-  color: #f56c6c;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: #303133;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #909399;
-  margin-top: 4px;
 }
 
 .table-card {
-  margin-bottom: 20px;
+  overflow: hidden;
+  margin-bottom: 24px;
 }
 
 .table-header {
@@ -549,8 +450,9 @@ onMounted(() => {
 }
 
 .table-header .title {
-  font-weight: 500;
-  color: #303133;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--ink);
 }
 
 .applicant-info {
@@ -565,13 +467,14 @@ onMounted(() => {
 }
 
 .username {
-  font-weight: 500;
-  color: #303133;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .display-name {
-  font-size: 12px;
-  color: #909399;
+  font-size: var(--text-xs);
+  color: var(--ink-soft);
+  font-weight: 500;
 }
 
 .roles-container {
@@ -586,8 +489,10 @@ onMounted(() => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #606266;
-  line-height: 1.5;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.55;
 }
 
 .applicant-header {
@@ -597,15 +502,16 @@ onMounted(() => {
   margin-bottom: 20px;
 }
 
-.applicant-info h3 {
+.applicant-summary h3 {
   margin: 0 0 5px 0;
-  color: #303133;
+  color: var(--ink);
 }
 
-.applicant-info p {
+.applicant-summary p {
   margin: 0 0 8px 0;
-  color: #909399;
-  font-size: 14px;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 500;
 }
 
 .detail-section {
@@ -614,15 +520,18 @@ onMounted(() => {
 
 .detail-section h4 {
   margin: 0 0 10px 0;
-  color: #606266;
-  font-size: 14px;
+  color: var(--ink-soft);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .reason-content {
-  background-color: #f5f7fa;
+  background-color: color-mix(in srgb, var(--surface) 84%, white 16%);
   padding: 15px;
-  border-radius: 4px;
-  color: #303133;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--ink);
   line-height: 1.6;
   margin: 0;
 }

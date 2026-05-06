@@ -1,24 +1,23 @@
 <template>
-  <div class="admin-resources">
-    <div class="page-header">
-      <div>
+  <div class="admin-page admin-resources">
+    <div class="admin-page-header page-header">
+      <div class="admin-page-copy">
         <h2>All Resources</h2>
-        <p class="subtitle">Archive / restore approved resources</p>
+        <p class="admin-page-subtitle subtitle">Archive or restore published records without changing review history.</p>
       </div>
       <el-button type="primary" @click="fetchList" :loading="loading">
-        <el-icon><Refresh /></el-icon>
         Refresh
       </el-button>
     </div>
 
-    <el-card class="filter-card">
-      <el-form :inline="true" class="filter-form">
+    <el-card class="admin-filter-card filter-card">
+      <el-form :inline="true" class="admin-filter-form filter-form">
         <el-form-item label="Status">
           <el-select
             v-model="filters.status"
             placeholder="All"
             clearable
-            class="resource-status-select"
+            class="status-select"
             :fit-input-width="false"
             @change="handleFilterChange"
           >
@@ -36,7 +35,7 @@
             placeholder="All"
             clearable
             filterable
-            class="resource-category-select"
+            class="category-select"
             :fit-input-width="false"
             @change="handleFilterChange"
           >
@@ -56,6 +55,8 @@
             placeholder="Title keyword"
             clearable
             @keyup.enter="handleFilterChange"
+            @clear="handleFilterChange"
+            class="keyword-input"
           />
         </el-form-item>
 
@@ -66,8 +67,8 @@
       </el-form>
     </el-card>
 
-    <el-card class="table-card">
-      <el-table :data="items" v-loading="loading" stripe style="width: 100%">
+    <el-card class="admin-table-card table-card">
+      <el-table :data="items" v-loading="loading" stripe style="width: 100%" class="admin-table">
         <el-table-column type="index" width="50" />
         <el-table-column prop="title" label="Title" min-width="260" show-overflow-tooltip />
         <el-table-column prop="categoryName" label="Category" width="160" show-overflow-tooltip />
@@ -106,7 +107,7 @@
         </el-table-column>
       </el-table>
 
-      <div class="pagination">
+      <div class="admin-pagination pagination">
         <el-pagination
           v-model:current-page="pagination.page"
           v-model:page-size="pagination.size"
@@ -124,7 +125,6 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
 import api, { archiveResource, getAdminResources, restoreResource } from '../../api/user.js'
 
 const loading = ref(false)
@@ -269,64 +269,25 @@ onMounted(async () => {
 .admin-resources {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.keyword-input {
+  width: 240px;
+  min-width: 240px;
 }
 
-.page-header h2 {
-  margin: 0;
-  font-size: 22px;
-  color: #303133;
-}
-
-.subtitle {
-  margin: 6px 0 0;
-  color: #909399;
-  font-size: 14px;
-}
-
-.filter-card {
-  border-radius: 10px;
-}
-
-.filter-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.filter-form :deep(.el-form-item) {
-  /* Prevent inline filter flex layout from shrinking el-select width */
-  flex: 0 0 auto;
-}
-
-.resource-status-select {
+.status-select {
   width: 200px;
   min-width: 200px;
 }
 
-.resource-category-select {
+.category-select {
   width: 260px;
   min-width: 260px;
 }
 
-.table-card {
-  border-radius: 10px;
-}
-
-.pagination {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
 .muted {
-  color: #c0c4cc;
+  color: var(--muted);
 }
 </style>
-

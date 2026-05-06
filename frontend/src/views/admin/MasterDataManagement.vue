@@ -1,23 +1,22 @@
 <template>
-  <div class="master-data">
-    <div class="page-header">
-      <div>
+  <div class="admin-page admin-page--wide master-data">
+    <div class="admin-page-header page-header">
+      <div class="admin-page-copy">
         <h2>Master Data Management</h2>
-        <p class="subtitle">Manage categories and tags available to contributors</p>
+        <p class="admin-page-subtitle subtitle">Maintain the shared classification vocabulary used by contributors and reviewers.</p>
       </div>
       <el-button type="primary" @click="refreshAll" :loading="loadingAll">
-        <el-icon><Refresh /></el-icon>
         Refresh
       </el-button>
     </div>
 
-    <el-card class="card">
+    <el-card class="admin-panel-card card">
       <el-tabs v-model="activeTab" @tab-change="handleTabChange">
         <el-tab-pane label="Categories" name="categories">
           <div class="toolbar">
             <el-button type="primary" @click="openCreateCategory">New Category</el-button>
           </div>
-          <el-table :data="categoryRows" v-loading="loadingCategories" stripe style="width: 100%">
+          <el-table :data="categoryRows" v-loading="loadingCategories" stripe style="width: 100%" class="admin-table">
             <el-table-column type="index" width="50" />
             <el-table-column prop="name" label="Name" min-width="200" />
             <el-table-column prop="description" label="Description" min-width="260" show-overflow-tooltip />
@@ -34,7 +33,7 @@
           <div class="toolbar">
             <el-button type="primary" @click="openCreateTag">New Tag</el-button>
           </div>
-          <el-table :data="tagRows" v-loading="loadingTags" stripe style="width: 100%">
+          <el-table :data="tagRows" v-loading="loadingTags" stripe style="width: 100%" class="admin-table">
             <el-table-column type="index" width="50" />
             <el-table-column prop="name" label="Name" min-width="240" />
             <el-table-column label="Actions" width="220" fixed="right">
@@ -82,7 +81,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh } from '@element-plus/icons-vue'
 import {
   createCategory,
   createTag,
@@ -276,35 +274,17 @@ onMounted(refreshAll)
 .master-data {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.page-header h2 {
-  margin: 0;
-  font-size: 22px;
-  color: #303133;
-}
-
-.subtitle {
-  margin: 6px 0 0;
-  color: #909399;
-  font-size: 14px;
-}
-
-.card {
-  border-radius: 10px;
+.card :deep(.el-card__body) {
+  padding: 24px;
 }
 
 .toolbar {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
-</style>
 
+</style>

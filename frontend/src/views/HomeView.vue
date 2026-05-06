@@ -217,34 +217,39 @@ onUnmounted(() => {
 <template>
   <div class="home">
     <div class="wrap">
-
-    <div class="hero">
-      <h2 class="page-title">Discover community heritage</h2>
-      <p class="lead">Browse published heritage resources.</p>
+    <div class="hero public-page-intro">
+      <p class="public-eyebrow">Public Archive</p>
+      <h2 class="public-page-title">Discover community heritage</h2>
+      <p class="public-lead">
+        Browse published resources, narrow the archive with focused filters, and move quickly between stories,
+        places, and cultural records.
+      </p>
     </div>
 
-    <div class="toolbar">
-      <label class="field field--grow">
-        <span class="label">Search</span>
+    <section class="public-panel public-panel--soft search-panel">
+      <div class="toolbar">
+      <label class="public-field field--grow">
+        <span class="public-label">Search</span>
         <input
           v-model="q"
           type="search"
-          class="control home-control"
+          class="public-input home-control home-search-control"
           placeholder="Title, place, tags, description"
         />
       </label>
-      <label class="field">
-        <span class="label">Category</span>
-        <select v-model="categoryId" class="control home-control">
+      <label class="public-field field">
+        <span class="public-label">Category</span>
+        <select v-model="categoryId" class="public-select home-control">
           <option :value="null">All</option>
           <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
       </label>
-    </div>
+      </div>
+    </section>
 
-    <section class="advanced">
+    <section class="public-panel advanced">
       <div class="advanced-head">
-        <button type="button" class="public-btn" @click="showFilterPanel = !showFilterPanel">
+        <button type="button" class="public-btn public-btn--ghost" @click="showFilterPanel = !showFilterPanel">
           {{ showFilterPanel ? 'Hide Advanced Filters' : 'Show Advanced Filters' }}
         </button>
         <label class="auto">
@@ -254,17 +259,17 @@ onUnmounted(() => {
       </div>
 
       <div v-if="showFilterPanel" class="advanced-grid">
-        <label class="field">
-          <span class="label">Province</span>
-          <select v-model="provincePickerValue" class="control home-control">
+        <label class="public-field field">
+          <span class="public-label">Province</span>
+          <select v-model="provincePickerValue" class="public-select home-control">
             <option :value="ALL_OPTION">All</option>
             <option v-for="p in sortedProvinces" :key="p.code" :value="p.code">{{ p.name }}</option>
           </select>
         </label>
 
-        <label class="field">
-          <span class="label">Heritage Type</span>
-          <select v-model="heritageTypePickerValue" class="control home-control">
+        <label class="public-field field">
+          <span class="public-label">Heritage Type</span>
+          <select v-model="heritageTypePickerValue" class="public-select home-control">
             <option :value="ALL_OPTION">All</option>
             <optgroup
               v-for="group in groupedHeritageTypeOptions"
@@ -283,7 +288,7 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <div v-if="err" class="panel-error" role="alert">
+    <div v-if="err" class="panel-error public-callout public-callout--error" role="alert">
       <p>{{ err }}</p>
       <button type="button" class="public-btn public-btn--primary" @click="search">Retry</button>
     </div>
@@ -303,7 +308,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-else-if="!filteredResources.length && !loading && !err" class="empty-panel">
+    <div v-else-if="!filteredResources.length && !loading && !err" class="empty-panel public-panel public-panel--soft">
       <template v-if="hasListFilters">
         <p class="empty-title">No resources match your filters.</p>
         <p class="empty-hint">Try widening your search or clearing some criteria.</p>
@@ -338,38 +343,27 @@ onUnmounted(() => {
 .home {
   padding-top: 0.25rem;
 }
-.hero {
-  margin: 1.25rem 0 1.5rem;
-}
-.page-title {
-  margin: 0 0 0.5rem;
-  font-family: var(--font-serif);
-  font-size: clamp(1.75rem, 3vw, 2.25rem);
-  font-weight: 700;
-}
-.lead {
-  margin: 0;
-  max-width: 62ch;
-  color: var(--muted);
-  font-size: 0.975rem;
+.search-panel {
+  margin-bottom: 1rem;
+  padding: 1rem 1rem 1.05rem;
 }
 .toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-bottom: 1rem;
   align-items: flex-end;
 }
 .field--grow {
   flex: 1 1 220px;
   min-width: min(100%, 220px);
 }
+.home-search-control {
+  min-height: 50px;
+  font-size: 1rem;
+}
 .advanced {
   margin-bottom: 1.75rem;
-  padding: 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+  padding: 1rem;
 }
 .advanced-head {
   display: flex;
@@ -380,56 +374,31 @@ onUnmounted(() => {
 .auto {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  color: var(--muted);
-  font-size: 0.875rem;
+  gap: 0.5rem;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 .advanced-grid {
-  margin-top: 0.9rem;
+  margin-top: 1rem;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.9rem;
+  gap: 1rem;
 }
 .advanced-actions {
-  margin-top: 0.9rem;
+  margin-top: 1rem;
   display: flex;
   gap: 0.6rem;
   flex-wrap: wrap;
 }
 .field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
   min-width: min(100%, 220px);
   flex: 1;
 }
-.label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--muted);
-}
-.control {
-  padding: 0.55rem 0.75rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  font-family: inherit;
-  font-size: 0.9375rem;
-  background: var(--surface);
-  color: var(--ink);
-}
-.home :deep(.control):focus-visible,
-.home .home-control:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent) 55%, var(--ink) 45%);
-  outline-offset: 2px;
-}
-.control optgroup {
+.home :deep(.public-select) optgroup {
   font-weight: 700;
 }
 .panel-error {
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius);
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
   margin-bottom: 1.25rem;
 }
 .panel-error p {
@@ -461,20 +430,19 @@ onUnmounted(() => {
 .empty-panel {
   padding: 2.5rem 1rem;
   text-align: center;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--surface) 92%, var(--bg) 8%);
   margin-bottom: 1.5rem;
 }
 .empty-title {
   margin: 0 0 0.5rem;
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-size: 1.2rem;
+  font-weight: 700;
   color: var(--ink);
 }
 .empty-hint {
   margin: 0 0 1.25rem;
   color: var(--muted);
-  font-size: 0.9375rem;
+  font-size: var(--text-sm);
 }
 .grid-wrap {
   transition: opacity 0.18s ease;
@@ -509,7 +477,7 @@ onUnmounted(() => {
   border-top: 1px solid var(--border);
 }
 .pager-meta {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 </style>

@@ -10,7 +10,7 @@
             <button
               v-if="isContributor"
               type="button"
-              class="public-btn"
+              class="public-btn public-btn--primary"
               @click="goToCreateResource"
             >
               + Create Draft
@@ -23,20 +23,20 @@
             >
               My Submissions
             </button>
-            <button type="button" class="public-btn" @click="goToFavorites">My Favorites</button>
+            <button type="button" class="public-btn public-btn--ghost" @click="goToFavorites">My Favorites</button>
             <button
               v-if="isAdmin"
               type="button"
-              class="public-btn public-btn--primary"
+              class="public-btn"
               @click="goToAdmin"
             >
               Admin Panel
             </button>
-            <button type="button" class="public-btn" @click="goToProfile">Profile</button>
-            <button type="button" class="public-btn" @click="handleLogout">Logout</button>
+            <button type="button" class="public-btn public-btn--ghost" @click="goToProfile">Profile</button>
+            <button type="button" class="public-btn public-btn--ghost" @click="handleLogout">Logout</button>
           </template>
           <template v-else>
-            <button type="button" class="public-btn" @click="goToLogin">Login</button>
+            <button type="button" class="public-btn public-btn--ghost" @click="goToLogin">Login</button>
             <button type="button" class="public-btn public-btn--primary" @click="goToRegister">
               Register
             </button>
@@ -94,7 +94,8 @@ onUnmounted(() => {
   position: relative;
   z-index: 1;
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 90%, white 10%);
+  background: color-mix(in srgb, var(--surface) 92%, white 8%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 .public-header::before {
   content: '';
@@ -103,7 +104,7 @@ onUnmounted(() => {
   left: 50%;
   transform: translateX(-50%);
   width: 100vw;
-  background: color-mix(in srgb, var(--surface) 90%, white 10%);
+  background: color-mix(in srgb, var(--surface) 92%, white 8%);
   z-index: -1;
 }
 .public-header-inner {
@@ -124,14 +125,15 @@ onUnmounted(() => {
 .public-title {
   margin: 0;
   font-family: var(--font-serif);
-  font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+  font-size: clamp(1.18rem, 2.5vw, 1.55rem);
   font-weight: 700;
   color: var(--ink);
+  letter-spacing: 0.01em;
 }
 .public-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: 0.55rem;
   align-items: center;
 }
 .public-main {
