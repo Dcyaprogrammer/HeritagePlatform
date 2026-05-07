@@ -1,105 +1,137 @@
 # HeritagePlatform
 
-Group Coursework for CPT202: A web-based community heritage resource sharing and curation platform.
+A web-based community heritage resource sharing and curation platform.
 
 ## Tech Stack
-- **Java**: 21 (JDK 21+ required)
-- **Backend**: Spring Boot 4.0.3, Spring Data JPA
-- **Database**: MySQL 8.x
-- **Frontend**: Vue 3 + Vite 5
-- **Build Tool**: Maven Wrapper (no Maven pre-install required)
+
+### Frontend
+- Vue 3
+- Vue Router 4
+- Vite 5
+- Element Plus
+- Axios
+
+### Backend
+- Java 17+
+- Spring Boot 4.0.3
+- Spring Web MVC
+- Spring Security
+- Spring Data JPA / Hibernate
+- JWT (`jjwt`)
+- Spring Mail
+- Springdoc OpenAPI / Swagger UI
+
+### Database and Tooling
+- MySQL 8+
+- Maven Wrapper
+- Node.js 18+
+- npm
 
 ## Project Structure
-```
+
+```text
 HeritagePlatform/
-├─ platform/                # Backend (Spring Boot API)
-│  ├─ src/main/java/...     # Business logic & Controllers
-│  ├─ src/main/resources/   # Application config & schema.sql
-│  └─ pom.xml
-├─ frontend/                # Frontend (Vue 3 + Vite)
-│  ├─ src/                  # Vue components and assets
-│  └─ package.json
-├─ package.json             # Monorepo scripts
+├─ frontend/                     # Vue application
+├─ platform/                     # Spring Boot application
+│  └─ src/main/resources/
+│     ├─ application.properties
+│     ├─ schema.sql
+│     └─ data.sql
+├─ package.json                  # Root scripts
 └─ README.md
 ```
 
-## Prerequisites & Development Environment
-1. **JDK 21** or later installed.
-2. **Node.js 18+** (LTS recommended) installed.
-3. **MySQL 8.x** installed and running locally.
-4. An IDE like **IntelliJ IDEA** (recommended for backend) or **VS Code**.
+## How to Run
 
----
+### 1. Install dependencies
 
-## 🚀 Quick Start Guide for Team Members
+From the project root:
 
-Follow these steps exactly to set up your local development environment.
-
-### Step 1: Database Setup (One-time only)
-1. Ensure your local MySQL server is running.
-2. Log into your MySQL server:
-   ```bash
-   mysql -u root -p
-   ```
-   *(If your root user has no password, just omit the `-p`)*
-3. Create the database:
-   ```sql
-   CREATE DATABASE IF NOT EXISTS heritage_platform DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   exit;
-   ```
-
-### Step 2: Backend Configuration (One-time only)
-Because database credentials contain sensitive information, `application.properties` is ignored by Git. You must create your own local copy:
-
-1. Navigate to the backend resources folder: `platform/src/main/resources/`
-2. Modify `application.properties` and fill in your local MySQL username and password:
-   ```properties
-   spring.datasource.username=root
-   spring.datasource.password=YOUR_LOCAL_MYSQL_PASSWORD
-   ```
-   *(If your password is empty, leave it blank: `spring.datasource.password=`)*
-
-> **Note:** Spring Boot will automatically run `schema.sql` on startup to create all tables for you. Do not execute it manually!
-
-### Step 3: Frontend Setup (One-time only)
-Install the necessary Node.js dependencies for the Vue frontend.
-Open a terminal in the root directory and run:
 ```bash
+npm install
 npm --prefix frontend install
 ```
-*(Alternatively, you can `cd frontend` and run `npm install`)*
 
-### Step 4: Run the Application
+### 2. Prepare MySQL
 
-You can start both the backend and frontend using the convenient npm scripts in the root directory.
+Make sure your local MySQL server is running.
 
-**1) Start backend (Spring Boot)**
-Open a terminal in the root directory and run:
+Create the database if needed:
+
+```sql
+CREATE DATABASE IF NOT EXISTS heritage_platform
+  DEFAULT CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+```
+
+### 3. Configure the backend
+
+Backend configuration lives under `platform/src/main/resources/`.
+
+Use one of these approaches:
+
+- Edit `application.properties` directly for local development.
+- Or copy `application-local.properties.example` to `application-local.properties` and put local overrides there.
+
+At minimum, confirm your MySQL settings are correct:
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/heritage_platform?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true
+spring.datasource.username=root
+spring.datasource.password=YOUR_PASSWORD
+```
+
+On each backend startup, Spring Boot attempts to run `schema.sql` and `data.sql`.
+These scripts are written to be mostly idempotent, so they can be re-applied during local development without recreating the database from scratch.
+
+### 4. Start the backend
+
+From the project root:
+
 ```bash
 npm run dev:backend
 ```
-*(Under the hood, this runs `cd platform && ./mvnw spring-boot:run`)*
-*(The backend will start on `http://localhost:8080`)*
 
-**2) Start frontend (Vue)**
-Open a second terminal in the root directory and run:
+This runs:
+
+```bash
+cd platform && ./mvnw spring-boot:run
+```
+
+Backend URL:
+
+```text
+http://localhost:8080
+```
+
+### 5. Start the frontend
+
+In a second terminal, from the project root:
+
 ```bash
 npm run dev:frontend
 ```
-*(The frontend will start on `http://localhost:5173`)*
 
----
+Frontend URL:
 
-## 🔗 Connection Verification
-To verify that everything is working:
-1. Open your browser and go to: `http://localhost:5173`
-2. If you see the text **"后端状态：ok"**, congratulations! The frontend has successfully connected to the Spring Boot backend, and the backend has successfully connected to MySQL.
+```text
+http://localhost:5173
+```
 
-## 🛠 Common Commands
-Run these from the root `HeritagePlatform/` directory:
-- Start backend dev server: `npm run dev:backend`
-- Start frontend dev server: `npm run dev:frontend`
-- Run backend tests: `npm run test:backend`
-- Build backend: `npm run build:backend`
-- Build frontend: `npm run build:frontend`
+## Useful Commands
 
+Run these from the project root:
+
+```bash
+npm run dev:backend
+npm run dev:frontend
+npm run test:backend
+npm run build:backend
+npm run build:frontend
+```
+
+## Notes
+
+- The backend uses the Maven Wrapper, so a separate Maven install is not required.
+- The frontend is served by Vite in development.
+- Swagger UI is available through the Spring Boot app when the backend is running.
