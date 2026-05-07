@@ -6,9 +6,8 @@
         <div class="page-header">
           <div class="header-content">
             <h1 class="page-title">My Favorites</h1>
-            <p class="page-subtitle">A curated shelf of resources you want to revisit, compare, or keep close at hand.</p>
           </div>
-          <RouterLink to="/" class="back-link">
+          <RouterLink to="/" class="public-btn public-btn--primary back-link">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
@@ -21,7 +20,6 @@
         <div class="shelf-card">
           <span class="shelf-card__label">Saved items</span>
           <strong class="shelf-card__value">{{ favorites.length }}</strong>
-          <p class="shelf-card__note">Your personal shortlist inside the archive.</p>
         </div>
       </div>
     </section>
@@ -36,7 +34,6 @@
         <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
       </svg>
       <h2>Sign in to view your favorites</h2>
-      <p>Save resources you love and access them anytime</p>
       <RouterLink to="/login" class="public-btn public-btn--primary">Sign In</RouterLink>
     </div>
 
@@ -45,7 +42,6 @@
         <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
       </svg>
       <h2>No favorites yet</h2>
-      <p>Start exploring and save resources you love</p>
       <RouterLink to="/" class="public-btn public-btn--primary">Discover Resources</RouterLink>
     </div>
 
@@ -159,32 +155,15 @@ onMounted(() => {
   color: var(--ink);
 }
 
-.page-subtitle {
-  margin: 0.5rem 0 0;
-  max-width: 50rem;
-  font-size: 1rem;
-  line-height: 1.75;
-  color: var(--ink-soft);
-}
-
 .back-link {
   display: inline-flex;
   align-items: center;
+  justify-self: end;
   gap: 6px;
   font-size: 0.875rem;
   font-weight: 700;
-  color: var(--accent);
+  color: #fff;
   text-decoration: none;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-raised) 90%, white 10%);
-  border: 1px solid color-mix(in srgb, var(--border-strong) 55%, var(--border));
-  transition: all 0.2s ease;
-}
-
-.back-link:hover {
-  background: color-mix(in srgb, var(--surface) 95%, var(--accent) 5%);
-  border-color: var(--accent-soft);
 }
 
 .shelf-card {
@@ -213,13 +192,6 @@ onMounted(() => {
   font-size: 2.4rem;
   font-weight: 700;
   line-height: 1;
-}
-
-.shelf-card__note {
-  margin: 0.7rem 0 0;
-  color: var(--ink-soft);
-  font-size: 0.92rem;
-  line-height: 1.65;
 }
 
 .loading-state {
@@ -268,16 +240,9 @@ onMounted(() => {
 
 .auth-prompt h2,
 .empty-state h2 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 1.5rem;
   font-size: 1.25rem;
   color: var(--ink);
-}
-
-.auth-prompt p,
-.empty-state p {
-  margin: 0 0 1.5rem;
-  font-size: 0.9375rem;
-  color: var(--muted);
 }
 
 .favorites-shelf {
@@ -321,12 +286,7 @@ onMounted(() => {
   }
 
   .page-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .back-link {
-    align-self: flex-start;
+    grid-template-columns: 1fr;
   }
 
   .favorites-grid {

@@ -23,7 +23,6 @@
             >
               My Submissions
             </button>
-            <button type="button" class="public-btn public-btn--ghost" @click="goToFavorites">My Favorites</button>
             <button
               v-if="isAdmin"
               type="button"
@@ -32,6 +31,7 @@
             >
               Admin Panel
             </button>
+            <button type="button" class="public-btn public-btn--ghost" @click="goToFavorites">My Favorites</button>
             <button type="button" class="public-btn public-btn--ghost" @click="goToProfile">Profile</button>
             <button type="button" class="public-btn public-btn--ghost" @click="handleLogout">Logout</button>
           </template>

@@ -69,7 +69,6 @@
             <p class="panel-kicker">Profile</p>
             <h2 class="panel-title">Personal details</h2>
           </div>
-          <p class="panel-note">Adjust how your account is presented across the archive.</p>
         </div>
 
         <el-form :model="form" label-position="top" class="profile-form">
@@ -113,7 +112,6 @@
             <p class="panel-kicker">Access</p>
             <h2 class="panel-title">Contributor pathway</h2>
           </div>
-          <p class="panel-note">Manage publishing privileges and contribution access.</p>
         </div>
 
         <div class="contributor-state" :class="`contributor-state--${contributorTone}`">
@@ -158,7 +156,6 @@
             <p class="panel-kicker">Security</p>
             <h2 class="panel-title">Change password</h2>
           </div>
-          <p class="panel-note">Keep your account secure by refreshing credentials when needed.</p>
         </div>
 
         <el-form :model="pwdForm" label-position="top" :rules="pwdRules" ref="pwdFormRef" class="profile-form">
@@ -186,7 +183,6 @@
             <p class="panel-kicker">Sessions</p>
             <h2 class="panel-title">Device control</h2>
           </div>
-          <p class="panel-note">Review active sign-ins and remove sessions you no longer trust.</p>
         </div>
 
         <div class="sessions-callout">

@@ -26,6 +26,17 @@ const statusLabelMap = {
   ARCHIVED: 'Archived'
 }
 
+function formatDateTime(value) {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 async function loadSubmissions() {
   loading.value = true
   try {
@@ -167,7 +178,11 @@ onMounted(() => {
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="submittedAt" label="Updated At" min-width="210" />
+        <el-table-column label="Updated At" min-width="210">
+          <template #default="{ row }">
+            {{ formatDateTime(row.submittedAt) }}
+          </template>
+        </el-table-column>
         <el-table-column label="Actions" min-width="240">
           <template #default="{ row }">
             <div class="actions">
