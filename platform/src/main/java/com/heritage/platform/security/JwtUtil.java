@@ -18,7 +18,8 @@ public class JwtUtil {
 
     public JwtUtil(@Value("${jwt.secret}") String secretKey) {
         if (secretKey == null || secretKey.length() < 32) {
-            throw new IllegalStateException("JWT密钥长度必须至少32字节，当前长度: " + (secretKey != null ? secretKey.length() : 0));
+            throw new IllegalStateException("JWT secret must be at least 32 characters long. Current length: "
+                    + (secretKey != null ? secretKey.length() : 0));
         }
         this.secretKey = secretKey;
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes());

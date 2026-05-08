@@ -118,6 +118,24 @@ Frontend URL:
 http://localhost:5173
 ```
 
+## Test Accounts
+
+The local seed data provides these three test users:
+
+```text
+admin / abc123
+viewer / abc123
+contributor / abc123
+```
+
+Emails:
+
+```text
+admin@example.com
+viewer@example.com
+contributor@example.com
+```
+
 ## Useful Commands
 
 Run these from the project root:

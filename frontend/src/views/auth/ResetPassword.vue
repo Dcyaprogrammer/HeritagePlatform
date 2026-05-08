@@ -56,6 +56,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { resetPassword } from '../../api/auth.js'
+import { validatePasswordPolicy } from '../../utils/passwordPolicy.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -68,7 +69,7 @@ const resetForm = reactive({
 const rules = {
   newPassword: [
     { required: true, message: 'Please enter new password', trigger: 'blur' },
-    { min: 6, message: 'Password must be at least 6 characters', trigger: 'blur' }
+    { validator: validatePasswordPolicy, trigger: 'blur' }
   ],
   confirmPassword: [
     { required: true, message: 'Please confirm your password', trigger: 'blur' },

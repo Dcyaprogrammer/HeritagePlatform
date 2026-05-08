@@ -24,7 +24,7 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-        ApiResponse<Object> response = ApiResponse.error(400, "参数校验失败");
+        ApiResponse<Object> response = ApiResponse.error(400, "Validation failed");
         response.setData(errors);
         return response;
     }
@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public ApiResponse<Void> handleAccessDeniedException(AccessDeniedException e) {
-        return ApiResponse.error(403, "权限不足: " + e.getMessage());
+        return ApiResponse.error(403, "Access denied: " + e.getMessage());
     }
 
     @ExceptionHandler(RuntimeException.class)
@@ -50,6 +50,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<Void> handleException(Exception e) {
-        return ApiResponse.error(500, "服务器内部错误: " + e.getMessage());
+        return ApiResponse.error(500, "Internal server error: " + e.getMessage());
     }
 }

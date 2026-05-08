@@ -233,6 +233,7 @@ import { ElMessage } from 'element-plus'
 import { Timer, CircleClose, CircleCheck, House } from '@element-plus/icons-vue'
 import { getCurrentUser } from '../api/auth.js'
 import { getUser, updateUser, updatePassword, applyContributor } from '../api/user.js'
+import { validatePasswordPolicy } from '../utils/passwordPolicy.js'
 
 const router = useRouter()
 const loading = ref(false)
@@ -293,7 +294,10 @@ const contributorDescription = computed(() => {
 
 const pwdRules = {
   oldPassword: [{ required: true, message: 'Please enter current password', trigger: 'blur' }],
-  newPassword: [{ required: true, message: 'Please enter new password', trigger: 'blur' }]
+  newPassword: [
+    { required: true, message: 'Please enter new password', trigger: 'blur' },
+    { validator: validatePasswordPolicy, trigger: 'blur' }
+  ]
 }
 
 function formatRole(role) {

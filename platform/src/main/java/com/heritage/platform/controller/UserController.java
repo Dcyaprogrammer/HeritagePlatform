@@ -29,6 +29,7 @@ import com.heritage.platform.dto.ChangePasswordRequest;
 import com.heritage.platform.dto.UserDTO;
 import com.heritage.platform.model.HeritageUser;
 import com.heritage.platform.repository.HeritageUserRepository;
+import com.heritage.platform.security.PasswordPolicy;
 
 /**
  * User Management Controller / 用户管理控制器
@@ -244,6 +245,11 @@ public class UserController {
 		if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
 			return ResponseEntity.badRequest()
 					.body(ApiResponse.error(400, "Old password is incorrect"));
+		}
+
+		if (!PasswordPolicy.isValid(request.getNewPassword())) {
+			return ResponseEntity.badRequest()
+					.body(ApiResponse.error(400, PasswordPolicy.ERROR_MESSAGE));
 		}
 
 		user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));

@@ -20,17 +20,17 @@ public class EmailService {
         String resetLink = "http://localhost:5173/reset-password?token=" + resetToken;
 
         SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(fromEmail);           // 发件人
-        message.setTo(toEmail);               // 收件人
-        message.setSubject("【Heritage Platform】密码重置请求");  // 邮件标题
-        message.setText("您好，\n\n" +
-                "您收到了这封邮件是因为您（或其他人）请求重置 Heritage Platform 的密码。\n\n" +
-                "请点击下面的链接重置密码（链接 30 分钟内有效）：\n" +
+        message.setFrom(fromEmail);
+        message.setTo(toEmail);
+        message.setSubject("[Heritage Platform] Password Reset Request");
+        message.setText("Hello,\n\n" +
+                "We received a request to reset your Heritage Platform password.\n\n" +
+                "Use the link below to reset your password. This link will expire in 30 minutes:\n" +
                 resetLink + "\n\n" +
-                "如果您没有请求重置密码，请忽略这封邮件。\n\n" +
-                "感谢使用我们的平台！");
+                "If you did not request a password reset, you can ignore this email.\n\n" +
+                "Thank you for using Heritage Platform.");
 
         mailSender.send(message);
-        System.out.println("✅ 密码重置邮件已发送至：" + toEmail);
+        System.out.println("Password reset email delivered to: " + toEmail);
     }
 }

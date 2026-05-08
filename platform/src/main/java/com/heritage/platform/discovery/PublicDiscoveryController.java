@@ -86,10 +86,10 @@ public class PublicDiscoveryController {
 			@RequestParam(defaultValue = "0") int page,
 			@RequestParam(defaultValue = "10") int size) {
 		if ((eraFrom != null) != (eraTo != null)) {
-			return ApiEnvelope.error(400, "年代起止需同时填写或同时留空");
+			return ApiEnvelope.error(400, "Both eraFrom and eraTo must be provided together or omitted together");
 		}
 		if (eraFrom != null && eraTo != null && eraFrom.isAfter(eraTo)) {
-			return ApiEnvelope.error(400, "起始时间不能晚于截止时间");
+			return ApiEnvelope.error(400, "eraFrom cannot be later than eraTo");
 		}
 
 		List<String> dNorms = null;
@@ -102,7 +102,7 @@ public class PublicDiscoveryController {
 				}
 				String d = taxonomy.normalizeDynastyCode(t).orElse(null);
 				if (d == null) {
-					return ApiEnvelope.error(400, "无效的朝代代码");
+					return ApiEnvelope.error(400, "Invalid dynasty code");
 				}
 				if (!parsed.contains(d)) {
 					parsed.add(d);
@@ -123,7 +123,7 @@ public class PublicDiscoveryController {
 				}
 				String norm = taxonomy.normalizeProvinceCode(t).orElse(null);
 				if (norm == null) {
-					return ApiEnvelope.error(400, "无效的地区代码");
+					return ApiEnvelope.error(400, "Invalid province code");
 				}
 				if (!parsed.contains(norm)) {
 					parsed.add(norm);
@@ -144,7 +144,7 @@ public class PublicDiscoveryController {
 				}
 				Optional<List<String>> resolved = taxonomy.resolveHeritageTypeCodesForFilter(t);
 				if (resolved.isEmpty()) {
-					return ApiEnvelope.error(400, "无效的文物类型代码");
+					return ApiEnvelope.error(400, "Invalid heritage type code");
 				}
 				for (String c : resolved.get()) {
 					if (!parsed.contains(c)) {

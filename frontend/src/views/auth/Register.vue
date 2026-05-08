@@ -56,6 +56,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { register, login, setToken, setUserInfo } from '../../api/auth.js'
 import AuthPageFrame from '../../components/auth/AuthPageFrame.vue'
+import { validatePasswordPolicy } from '../../utils/passwordPolicy.js'
 
 const asidePoints = [
   'One account for browsing and optional submissions',
@@ -93,7 +94,7 @@ const rules = {
   ],
   password: [
     { required: true, message: 'Please enter password', trigger: 'blur' },
-    { min: 6, message: 'Password must be at least 6 characters', trigger: 'blur' }
+    { validator: validatePasswordPolicy, trigger: 'blur' }
   ],
   confirmPassword: [
     { required: true, message: 'Please confirm password', trigger: 'blur' },

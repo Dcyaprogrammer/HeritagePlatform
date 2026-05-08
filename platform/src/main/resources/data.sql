@@ -1,33 +1,25 @@
 -- Mock users
--- BCrypt hash below corresponds to the plain password: 123456
+-- BCrypt hash below corresponds to the plain password: abc123
 INSERT IGNORE INTO heritage_users (
     id, username, password_hash, display_name, email, bio,
     contributor_status, contributor_reason, failed_attempts,
     lock_time, reset_token, reset_token_expiry, created_at, updated_at
 ) VALUES
-    (1, 'admin', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe',
+    (1, 'admin', '$2a$10$rUZ9uB0z5/KeXJFv76qNduG4mwS8frtmLat931jPA2uTPy2PBSDNi',
      'System Admin', 'admin@example.com', 'Platform administrator account.',
-     'APPROVED', NULL, 0, NULL, NULL, NULL, '2026-04-20 09:00:00', '2026-04-20 09:00:00'),
-    (2, 'reviewer', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe',
-     'Content Reviewer', 'reviewer@example.com', 'Handles publication review.',
-     'APPROVED', NULL, 0, NULL, NULL, NULL, '2026-04-20 09:05:00', '2026-04-20 09:05:00'),
-    (3, 'contributor', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe',
-     'Local Contributor', 'contributor@example.com', 'Shares local heritage stories.',
-     'APPROVED', 'Existing approved contributor.', 0, NULL, NULL, NULL, '2026-04-20 09:10:00', '2026-04-20 09:10:00'),
-    (4, 'viewer', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe',
+     'NONE', NULL, 0, NULL, NULL, NULL, '2026-04-20 09:00:00', '2026-04-20 09:00:00'),
+    (2, 'viewer', '$2a$10$rUZ9uB0z5/KeXJFv76qNduG4mwS8frtmLat931jPA2uTPy2PBSDNi',
      'Community Viewer', 'viewer@example.com', 'Reads and comments on public resources.',
-     'NONE', NULL, 0, NULL, NULL, NULL, '2026-04-20 09:15:00', '2026-04-20 09:15:00'),
-    (5, 'applicant', '$2a$10$1aGW5m83a7AYqMeqbR0nseBQX.z4pmMhXfeitdqXUMjtZ7OJsbHhe',
-     'Pending Applicant', 'applicant@example.com', 'Waiting for contributor approval.',
-     'PENDING', 'I document oral histories from my hometown.', 0, NULL, NULL, NULL, '2026-04-20 09:20:00', '2026-04-20 09:20:00');
+     'NONE', NULL, 0, NULL, NULL, NULL, '2026-04-20 09:05:00', '2026-04-20 09:05:00'),
+    (3, 'contributor', '$2a$10$rUZ9uB0z5/KeXJFv76qNduG4mwS8frtmLat931jPA2uTPy2PBSDNi',
+     'Local Contributor', 'contributor@example.com', 'Shares local heritage stories.',
+     'APPROVED', 'Existing approved contributor.', 0, NULL, NULL, NULL, '2026-04-20 09:10:00', '2026-04-20 09:10:00');
 
 INSERT IGNORE INTO heritage_user_roles (user_id, role) VALUES
     (1, 'ADMIN'),
-    (2, 'ADMIN'),
+    (2, 'VIEWER'),
     (3, 'CONTRIBUTOR'),
-    (3, 'VIEWER'),
-    (4, 'VIEWER'),
-    (5, 'VIEWER');
+    (3, 'VIEWER');
 
 -- Master data
 INSERT IGNORE INTO categories (id, name, description, created_at) VALUES
@@ -54,7 +46,7 @@ INSERT IGNORE INTO resources (
      'Local chronicles about the water-town lifestyle around Pingjiang Road.',
      'Suzhou, Jiangsu', 'CULT_BOOKS_DOCUMENTS', 'Historic sites', 3,
      'CC BY-NC-SA 4.0', '2026-04-28 19:28:00', 'APPROVED', 0,
-     3, 3, 2, '2026-04-29 09:30:00', NULL,
+     3, 3, 1, '2026-04-29 09:30:00', NULL,
      '2026-04-28 19:00:00', '2026-04-29 09:30:00'),
     (2, 'Traditional indigo resist-dyed cloth (lan yin hua bu)',
      'An overview of Tongxiang blue calico patterns, materials, and workshop practice.',
@@ -94,7 +86,7 @@ INSERT IGNORE INTO resource_tags (resource_id, tag_id) VALUES
 INSERT IGNORE INTO review_logs (
     id, resource_id, reviewer_id, action, feedback_comment, operated_at
 ) VALUES
-    (1, 1, 2, 'APPROVED',
+    (1, 1, 1, 'APPROVED',
      'Looks accurate and ready for publication.',
      '2026-04-29 09:30:00'),
     (2, 3, 1, 'REJECTED',
@@ -107,7 +99,7 @@ INSERT IGNORE INTO review_logs (
 INSERT IGNORE INTO comments (
     id, resource_id, user_id, content, created_at, updated_at
 ) VALUES
-    (1, 1, 4,
+    (1, 1, 2,
      'The lane descriptions are vivid and make the place easy to picture.',
      '2026-04-29 12:00:00', '2026-04-29 12:00:00'),
     (2, 5, 3,
